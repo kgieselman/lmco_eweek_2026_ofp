@@ -8,6 +8,15 @@
 
 
 /** Function Definitions ----------------------------------------------------*/
+void drive_train::update(int speed, int turn, int strafe)
+{
+
+}
+
+void drive_train::calibrate(void)
+{
+
+}
 
 
 /* EOF ----------------------------------------------------------------------*/

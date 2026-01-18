@@ -9,19 +9,17 @@
 #include "pico/stdlib.h"
 
 
+/* Globals ------------------------------------------------------------------*/
+flysky_ibus_cls* pInstance = nullptr;
+
+
 /* Class Definition ---------------------------------------------------------*/
 class flysky_ibus_cls
 {
   public:
-    /**************************************************************************
-     * @brief Constructs FlySky IBus interface
-     *************************************************************************/
-    flysky_ibus_cls();
+    flysky_ibus_cls(const flysky_ibus_cls& obj) = delete;
 
-    /**************************************************************************
-     * @brief Destructs FlySky IBus interface
-     *************************************************************************/
-    ~flysky_ibus_cls();
+    static flysky_ibus_cls* get_instance();
 
     
     /* Public Types ---------------------------------------------------------*/
@@ -41,26 +39,21 @@ class flysky_ibus_cls
     } channel_e;
 
 
-    /* Public Constants -----------------------------------------------------*/
-    // UART settings for FlySky IBus
-    static const int UART_BAUD_RATE        = 115200;
-    static const bool UART_CTS_EN          = false;
-    static const bool UART_RTS_EN          = false;
-    static const int UART_START_BITS       = 1;
-    static const int UART_DATA_BITS        = 8;
-    static const int UART_STOP_BITS        = 1;
-    static const uart_parity_t UART_PARITY = UART_PARITY_NONE;
-
-    // UART calculations for timeout
-    // TODO: Could just use 3ms (3000us) timeout for message xfer (show work in comment)
-    static const int UART_MSG_XFER_SIZE_BYTES     = 32;
-    static const unsigned int SECONDS_TO_US       = 1000000;
-    static const unsigned int UART_BITS_PER_BYTE  = UART_START_BITS + UART_DATA_BITS + UART_STOP_BITS;
-    static const unsigned int UART_XFER_SIZE_BITS = UART_BITS_PER_BYTE * UART_MSG_XFER_SIZE_BYTES;
-    static const unsigned int UART_XFER_TIME_US   = (SECONDS_TO_US * UART_XFER_SIZE_BITS) / UART_BAUD_RATE;
-
-
     /* Public Functions -----------------------------------------------------*/
+    /**************************************************************************
+     * @brief Initializes the IBus class
+     * @param pUart  - Pointer to UART connect to the receiver
+     * @param pin_rx - Rx pin number
+     * @param pin_tx - Tx pin number
+     *************************************************************************/
+    void init(uart_inst_t* pUart, int pin_tx, int pin_rx);
+
+    /**************************************************************************
+     * @brief Checks if there is new message data to read
+     * @return true if there is new data, false if data is stale
+     *************************************************************************/
+    bool newMessage(void);
+
     /**************************************************************************
      * @brief Gets value for a given channel off the IBus
      * @param chan      - Channel to get the current value for
@@ -93,6 +86,45 @@ class flysky_ibus_cls
       uint16_t rsvd_chan13; // unsupported
       uint16_t crc;
     } msg_def_t;
+
+
+    /* Public Constants -----------------------------------------------------*/
+    // UART settings for FlySky IBus
+    static const int IBUS_BAUD_RATE        = 115200;
+    static const bool IBUS_CTS_EN          = false;
+    static const bool IBUS_RTS_EN          = false;
+    static const int IBUS_START_BITS       = 1;
+    static const int IBUS_DATA_BITS        = 8;
+    static const int IBUS_STOP_BITS        = 1;
+    static const uart_parity_t IBUS_PARITY = UART_PARITY_NONE;
+
+
+    // UART Transfer time
+    // xfer (seconds) = num bits / baud rate
+    // IBus element = 1 start bit + 8 data bits + 1 stop bit = 10bits
+    // number of bits for IBus = 32 elements * 10 bits per element = 320 bits per message
+    // xfer(senconds) = 320/115200
+    // xfer(us) = (320 * 1000000) / 115200 = 2777 us
+    // Set a timeout fo 3000us
+    static const unsigned int IBUS_TRANSFER_TIMEOUT_US = 3000;
+
+
+    /* Private Variables ----------------------------------------------------*/
+    uart_inst_t* pIBusUART;
+    int rxDMAChannelNumber;
+
+    /* Private Functions ----------------------------------------------------*/
+    /**************************************************************************
+     * @brief Constructs FlySky IBus interface
+     *************************************************************************/
+    flysky_ibus_cls() : pIBusUART(nullptr),
+                        rxDMAChannelNumber(-1)
+    {}
+
+    /**************************************************************************
+     * @brief Destructs FlySky IBus interface
+     *************************************************************************/
+    ~flysky_ibus_cls() {}
 };
 
 
