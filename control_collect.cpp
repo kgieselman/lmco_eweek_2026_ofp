@@ -9,6 +9,11 @@
 
 
 /** Function Definitions ----------------------------------------------------*/
+control_collect::control_collect()
+{
+
+}
+
 void control_collect::update(void)
 {
 

@@ -9,19 +9,14 @@
 #include "pico/stdlib.h"
 
 
-/* Globals ------------------------------------------------------------------*/
-flysky_ibus_cls* pInstance = nullptr;
-
-
 /* Class Definition ---------------------------------------------------------*/
-class flysky_ibus_cls
+class flysky_ibus
 {
   public:
-    flysky_ibus_cls(const flysky_ibus_cls& obj) = delete;
+    flysky_ibus(uart_inst_t* pUart, int pin_tx, int pin_rx);
+    ~flysky_ibus();
 
-    static flysky_ibus_cls* get_instance();
 
-    
     /* Public Types ---------------------------------------------------------*/
     // Enumeration of supported channels on the IBus 
     typedef enum
@@ -40,14 +35,6 @@ class flysky_ibus_cls
 
 
     /* Public Functions -----------------------------------------------------*/
-    /**************************************************************************
-     * @brief Initializes the IBus class
-     * @param pUart  - Pointer to UART connect to the receiver
-     * @param pin_rx - Rx pin number
-     * @param pin_tx - Tx pin number
-     *************************************************************************/
-    void init(uart_inst_t* pUart, int pin_tx, int pin_rx);
-
     /**************************************************************************
      * @brief Checks if there is new message data to read
      * @return true if there is new data, false if data is stale
@@ -112,19 +99,6 @@ class flysky_ibus_cls
     /* Private Variables ----------------------------------------------------*/
     uart_inst_t* pIBusUART;
     int rxDMAChannelNumber;
-
-    /* Private Functions ----------------------------------------------------*/
-    /**************************************************************************
-     * @brief Constructs FlySky IBus interface
-     *************************************************************************/
-    flysky_ibus_cls() : pIBusUART(nullptr),
-                        rxDMAChannelNumber(-1)
-    {}
-
-    /**************************************************************************
-     * @brief Destructs FlySky IBus interface
-     *************************************************************************/
-    ~flysky_ibus_cls() {}
 };
 
 

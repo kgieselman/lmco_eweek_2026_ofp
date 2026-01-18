@@ -41,39 +41,27 @@ void __ISR_uart_1_rx(void)
 
 /* Class Function Definitions -----------------------------------------------*/
 
-flysky_ibus_cls* flysky_ibus_cls::get_instance()
+flysky_ibus::flysky_ibus(uart_inst_t* pUart, int pin_tx, int pin_rx) :
+  pIBusUART(nullptr),
+  rxDMAChannelNumber(-1)
 {
-  if (pInstance == nullptr)
-  {
-    pInstance = new flysky_ibus_cls();
-  }
-
-  return pInstance;
-}
-
-void flysky_ibus_cls::init(uart_inst_t* pUart, int pin_tx, int pin_rx)
-{
-  //TODO: Error checking
   pIBusUART = pUart;
 
   // UART Configuration
   uart_init(pIBusUART, IBUS_BAUD_RATE);
   gpio_set_function(pin_tx, GPIO_FUNC_UART); // 4
   gpio_set_function(pin_rx, GPIO_FUNC_UART); // 5
-  uart_set_hw_flow(pIBusUART,
-                   flysky_ibus_cls::IBUS_CTS_EN,
-                   flysky_ibus_cls::IBUS_RTS_EN);
+  uart_set_hw_flow(pIBusUART, IBUS_CTS_EN, IBUS_RTS_EN);
   uart_set_format(pIBusUART,
-                  flysky_ibus_cls::IBUS_DATA_BITS,
-                  flysky_ibus_cls::IBUS_STOP_BITS,
-                  flysky_ibus_cls::IBUS_PARITY);
+                  IBUS_DATA_BITS,
+                  IBUS_STOP_BITS,
+                  IBUS_PARITY);
 
   uart_set_fifo_enabled(pIBusUART, true);
 
+
+
   // TODO: ISR?
-
-
-
 
 
   // DMA Configuration
@@ -92,7 +80,14 @@ void flysky_ibus_cls::init(uart_inst_t* pUart, int pin_tx, int pin_rx)
   dma_channel_set_irq0_enabled(rxDMAChannelNumber, true);
 }
 
-uint8_t flysky_ibus_cls::readChannel(channel_e chan, bool normalize)
+bool flysky_ibus::newMessage(void)
+{
+  // TODO: Return if there is a full message has been recieved
+    // since this function was last called.
+  return false;
+}
+
+uint8_t flysky_ibus::readChannel(channel_e chan, bool normalize)
 {
   return 0;
 }

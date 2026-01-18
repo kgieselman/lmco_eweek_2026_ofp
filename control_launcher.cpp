@@ -8,6 +8,11 @@
 
 
 /** Function Definitions ----------------------------------------------------*/
+control_launcher::control_launcher()
+{
+
+}
+
 void control_launcher::update(void)
 {
 

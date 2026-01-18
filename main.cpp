@@ -45,9 +45,7 @@ int main(void)
   // Configure UART STDIO for debugging
   stdio_init_all(); 
 
-  flysky_ibus_cls* pIBus = flysky_ibus_cls::get_instance();
-  pIBus->init(uart1, 4, 5); // Configures uart1 for IBus interface to receiver
-
+  flysky_ibus myIBus(uart1, 4, 5);
   drive_train myDriveTrain;
   control_collect myCollect;
   control_deposit myDeposit;
@@ -56,7 +54,7 @@ int main(void)
   bool loopContinue = true;
   while(loopContinue)
   {
-    if (pIBus->newMessage())
+    if (myIBus.newMessage())
     {
       myDriveTrain.update(0, 0, 0); // Highest priority
       myCollect.update();

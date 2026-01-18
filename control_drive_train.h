@@ -45,7 +45,7 @@ class drive_train
     int trim_rr_rev;
     int trim_rl_fwd;
     int trim_rl_rev;
-}
+};
 
 
 /* EOF ----------------------------------------------------------------------*/

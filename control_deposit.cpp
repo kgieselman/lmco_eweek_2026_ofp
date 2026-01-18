@@ -8,6 +8,11 @@
 
 
 /** Function Definitions ----------------------------------------------------*/
+control_deposit::control_deposit()
+{
+    
+}
+
 void control_deposit::update(void)
 {
 

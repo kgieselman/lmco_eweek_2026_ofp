@@ -8,6 +8,11 @@
 
 
 /** Function Definitions ----------------------------------------------------*/
+drive_train::drive_train()
+{
+
+}
+
 void drive_train::update(int speed, int turn, int strafe)
 {
 
