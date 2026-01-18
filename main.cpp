@@ -10,6 +10,10 @@
 #include "pico/stdlib.h"
 #include "hardware/dma.h"
 #include "flysky_ibus.h"
+#include "control_drive_train.h"
+#include "control_collect.h"
+#include "control_deposit.h"
+#include "control_launcher.h"
 
 
 /* Defines ------------------------------------------------------------------*/
@@ -44,15 +48,20 @@ int main(void)
   flysky_ibus_cls* pIBus = flysky_ibus_cls::get_instance();
   pIBus->init(uart1, 4, 5); // Configures uart1 for IBus interface to receiver
 
+  drive_train myDriveTrain;
+  control_collect myCollect;
+  control_deposit myDeposit;
+  control_launcher myLauncher;
+
   bool loopContinue = true;
   while(loopContinue)
   {
     if (pIBus->newMessage())
     {
-      // Service drive train (highest priority)
-      // Service collect mechanism
-      // Service deposit mechanism
-      // Service launch mechanism
+      myDriveTrain.update(0, 0, 0); // Highest priority
+      myCollect.update();
+      myDeposit.update();
+      myLauncher.update();
     }
   }
 

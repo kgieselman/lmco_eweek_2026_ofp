@@ -9,7 +9,7 @@
 #include "pico/stdlib.h"
 
 
-/* Class Definitions --------------------------------------------------------*/
+/* Class Definition ---------------------------------------------------------*/
 class drive_train
 {
   public:
