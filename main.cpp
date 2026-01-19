@@ -8,7 +8,6 @@
 /* Libraries ----------------------------------------------------------------*/
 #include <stdio.h>
 #include "pico/stdlib.h"
-#include "hardware/dma.h"
 #include "flysky_ibus.h"
 #include "control_drive_train.h"
 #include "control_collect.h"
@@ -16,30 +15,11 @@
 #include "control_launcher.h"
 
 
-/* Defines ------------------------------------------------------------------*/
-
 /* Globals ------------------------------------------------------------------*/
 uint8_t uart_rx_buf[32*5]; // store up to 5 messages
 
-int dmaIRQCount = 0;
-int uartIRQCount = 0;
-int rxDMAChannel = -1;
-
-
-// note
-//constexpr uint8_t kRxBuffLengthPow = 5;
-//constexpr uint8_t kTxBuffLengthPow = 5;
-//constexpr uint16_t kRxBuffLength = 1 << (kRxBuffLengthPow);
-//constexpr uint16_t kTxBuffLength = 1 << (kTxBuffLengthPow);
-//constexpr int kUartRxChannel = 0;
-//constexpr int kUartTxChannel = 1;
-//constexpr int kUartTxPin = 0; // I'm using uart 1 with Tx 4
-//constexpr int kUartRxPin = 1; // I'm using uart 1 with Rx 5 (THIS IS THE ONLY ONE I actually care about...)
-
 
 /* Function Definitions -----------------------------------------------------*/
-
-
 int main(void)
 {
   // Configure UART STDIO for debugging
@@ -62,8 +42,6 @@ int main(void)
       myLauncher.update();
     }
   }
-
-  // TODO: Exit code
 
   return 0;
 }
