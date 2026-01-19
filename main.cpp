@@ -15,10 +15,6 @@
 #include "control_launcher.h"
 
 
-/* Globals ------------------------------------------------------------------*/
-uint8_t uart_rx_buf[32*5]; // store up to 5 messages
-
-
 /* Function Definitions -----------------------------------------------------*/
 int main(void)
 {

@@ -18,32 +18,34 @@ void __ISR_uart_1_rx(void)
   while (uart_is_readable(uart1))
   {
     uint8_t ch = uart_getc(uart1);
-    switch (rxIdx)
+    if (rxIdx == 0 && ch == 0x20)
     {
-      case 0:
-      {
-        if (ch == 0x20) // IBus start byte
-        {
-          ibusMsg[rxIdx] = ch;
-          ++rxIdx;
-        }
-        break;
-      }
-      case 31:
-      {
-        // Last byte received, reset
-        rxIdx = 0;
-        break;
-      }
-      default:
-      {
-        ibusMsg[rxIdx] = ch;
-        break;
-      }
+      ibusMsg[rxIdx] = ch;
+      ++rxIdx;
+    }
+    else if (rxIdx)
+    {
+      ibusMsg[rxIdx] = ch;
+      ++rxIdx;
+    }
+
+    if (rxIdx >= (sizeof(ibusMsg) - 1))
+    {
+      // Reset to avoid overflow of buffer
+      rxIdx = 0;
     }
   }
 }
 
+//TODO: How to set this up?
+bool newIBusData = false;
+void __ISR_uart_1_rx_timeout(void)
+{
+  newIBusData = true;
+
+  // reset buffer values
+  rxIdx = 0;
+}
 
 /* Class Function Definitions -----------------------------------------------*/
 flysky_ibus::flysky_ibus(uart_inst_t* pUart, int pin_tx, int pin_rx)
@@ -65,8 +67,12 @@ flysky_ibus::flysky_ibus(uart_inst_t* pUart, int pin_tx, int pin_rx)
 
 bool flysky_ibus::newMessage(void)
 {
-  // TODO: Return if there is a full message has been recieved
-    // since this function was last called.
+  if (newIBusData)
+  {
+    newIBusData = false;
+    return true;
+  }
+
   return false;
 }
 

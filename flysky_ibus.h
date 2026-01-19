@@ -85,7 +85,6 @@ class flysky_ibus
     static const int IBUS_STOP_BITS        = 1;
     static const uart_parity_t IBUS_PARITY = UART_PARITY_NONE;
 
-
     // UART Transfer time
     // xfer (seconds) = num bits / baud rate
     // IBus element = 1 start bit + 8 data bits + 1 stop bit = 10bits
@@ -96,9 +95,16 @@ class flysky_ibus
     static const unsigned int IBUS_TRANSFER_TIMEOUT_US = 3000;
 
 
+    /* Private Constants ----------------------------------------------------*/
+    static const int BUFFER_MSG_COUNT =  3;
+    static const int BUFFER_MSG_SIZE_BYTES = 32;
+
+
     /* Private Variables ----------------------------------------------------*/
     uart_inst_t* pIBusUART;
-    int rxDMAChannelNumber;
+
+    int idxBuf;
+    uint8_t ibus_buffer[BUFFER_MSG_COUNT][BUFFER_MSG_SIZE_BYTES];
 };
 
 
