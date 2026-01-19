@@ -65,6 +65,8 @@ flysky_ibus::flysky_ibus(uart_inst_t* pUart, int pin_tx, int pin_rx)
   uart_set_fifo_enabled(pIBusUART, true);
 }
 
+// TODO: This function should create a shadow when called
+  // This is what will be referenced by readChannel
 bool flysky_ibus::newMessage(void)
 {
   if (newIBusData)
@@ -76,8 +78,9 @@ bool flysky_ibus::newMessage(void)
   return false;
 }
 
-uint8_t flysky_ibus::readChannel(channel_e chan, bool normalize)
+uint8_t flysky_ibus::readChannel(channel_e chan)
 {
+  // return value from the shadow
   return 0;
 }
 

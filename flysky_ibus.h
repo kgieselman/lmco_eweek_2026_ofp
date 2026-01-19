@@ -43,12 +43,11 @@ class flysky_ibus
 
     /**************************************************************************
      * @brief Gets value for a given channel off the IBus
-     * @param chan      - Channel to get the current value for
-     * @param normalize - true: 0-1000, false: 1000-2000
+     * @param chan - Channel to get the current value for
      * @return current value of the given channel
      * @todo Means to return if data is bad. Max uint8_t? 0?
      *************************************************************************/
-    uint8_t readChannel(channel_e chan, bool normalize);
+    uint8_t readChannel(channel_e chan);
 
 
   private:
