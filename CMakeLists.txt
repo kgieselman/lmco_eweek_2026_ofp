@@ -35,7 +35,14 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(2026_ofp main.cpp flysky_ibus.cpp control_drive_train.cpp control_collect.cpp control_deposit.cpp control_launcher.cpp)
+add_executable(2026_ofp 
+    main.cpp
+    flysky_ibus.cpp
+    control_drive_train.cpp
+    control_collect.cpp
+    control_deposit.cpp
+    control_launcher.cpp
+    ring_buffer.cpp)
 
 pico_set_program_name(2026_ofp "2026_ofp")
 pico_set_program_version(2026_ofp "0.1")
