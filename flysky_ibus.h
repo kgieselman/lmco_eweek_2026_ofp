@@ -30,7 +30,8 @@ class flysky_ibus
       CHAN_SWA,
       CHAN_SWB,
       CHAN_SWC,
-      CHAN_SWD
+      CHAN_SWD,
+      CHAN_COUNT
     } channel_e;
 
 
@@ -45,9 +46,9 @@ class flysky_ibus
      * @brief Gets value for a given channel off the IBus
      * @param chan - Channel to get the current value for
      * @return current value of the given channel
-     * @todo Means to return if data is bad. Max uint8_t? 0?
+     * @todo Means to return if data is bad.
      *************************************************************************/
-    uint8_t readChannel(channel_e chan);
+    int readChannel(channel_e chan);
 
 
   private:
@@ -101,9 +102,7 @@ class flysky_ibus
 
     /* Private Variables ----------------------------------------------------*/
     uart_inst_t* pIBusUART;
-
-    int idxBuf;
-    uint8_t ibus_buffer[BUFFER_MSG_COUNT][BUFFER_MSG_SIZE_BYTES];
+    msg_def_t shadowMessage;
 };
 
 

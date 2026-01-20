@@ -45,13 +45,14 @@ int main(void)
                          PIN_MOTOR_RL_DIR_B,
                          PIN_MOTOR_RL_ENC);
 
-  control_collect myCollect;
-  control_deposit myDeposit;
+  control_collect  myCollect;
+  control_deposit  myDeposit;
   control_launcher myLauncher;
 
   bool loopContinue = true;
   while(loopContinue)
   {
+    // Check if a new message has come it
     if (myIBus.newMessage())
     {
       // Update values for the motors
