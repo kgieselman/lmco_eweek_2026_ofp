@@ -49,6 +49,9 @@ int main(void)
   control_deposit  myDeposit;
   control_launcher myLauncher;
 
+  printf("Program Initialized, moving to main loop\n");
+  sleep_ms(1000);
+
   bool loopContinue = true;
   while(loopContinue)
   {

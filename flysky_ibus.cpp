@@ -43,8 +43,7 @@ void __ISR_uart1_rx(void)
   }
   else if (uart_get_hw(uart1)->mis & UART_UARTMIS_RXMIS_BITS)
   {
-    // Ignore interrupt
-    // TODO: Do I need to clear this?
+    // Ignore interrupt - wait for end of message interrupt
     ++debug_uart1Isr_rxCount;
   }
   else
@@ -76,6 +75,42 @@ flysky_ibus::flysky_ibus(uart_inst_t* pUart, int pin_tx, int pin_rx)
   uart_set_irq_enables(pIBusUART, true, false);
 }
 
+int flysky_ibus::create_sensor(sensor_type_e type)
+{
+  int sensId = -1; // Invalid Id
+
+  // Loop over the sensor array and update next available senosr
+  for (int i=0; i<IBUS_SENSOR_LIMIT; i++)
+  {
+    if (sensorArr[i].initialized == false)
+    {
+      int dataLengthBytes = 2;
+      if ((type == SENSOR_TYPE_LAT)  ||
+          (type == SENSOR_TYPE_LONG) ||
+          (type == SENSOR_TYPE_ALT)  ||
+          (type == SENSOR_TYPE_ALT_MAX))
+      {
+        dataLengthBytes = 4;
+      }
+
+      // This sensor is available for use, claim it
+      sensId = i;
+
+      sensorArr[i].initialized = true;
+      sensorArr[i].dataBytes = dataLengthBytes;
+      sensorArr[i].messageLengthBytes = IBUS_HEADER_LENGTH_BYTES + 
+                                        dataLengthBytes +
+                                        IBUS_CRC_LENGTH_BYTES;
+      
+      // Found sensor, break out of search loop
+      break;
+    }
+  }
+
+  return sensId;
+}
+
+int dbgOnce = 1;
 bool flysky_ibus::new_message(void)
 {
   bool rVal = false;
@@ -83,14 +118,26 @@ bool flysky_ibus::new_message(void)
   // Check if new message has come in
   if (newMsgUART1rx)
   {
-    // Clear flag
-    newMsgUART1rx = false;
-
     // Save a snapshot of the data for use in read channels
     memcpy(&IBusMsgSnapshot, (void*)uart1RxBuffer, sizeof(uart1RxBuffer));
 
+    // Clear flag
+    newMsgUART1rx = false;
+
     rVal = true;
   }
+
+  if (dbgOnce)
+  {
+    if ((debug_uart1Isr_timeoutCount > 100) ||
+        (debug_uart1Isr_rxCount      > 100) ||
+        (debug_uart1Isr_unknownCount > 100))
+    {
+      dbgOnce = 0;
+      debug_print();
+    }
+  }
+  
 
   return rVal;
 }
@@ -153,6 +200,46 @@ int flysky_ibus::read_channel(channel_e chan)
     default:
     {
       break;
+    }
+  }
+
+  return rVal;
+}
+
+bool flysky_ibus::update_sensor(int sensorId, int value)
+{
+  bool rVal = false;
+
+  // Verify ID is valid
+  if ((sensorId >= IBUS_SENSOR_MIN_ID) && (sensorId < IBUS_SENSOR_LIMIT))
+  {
+    // Verify sensor has been created
+    if (sensorArr[sensorId].initialized)
+    {
+      int byteIdx = 0;
+      sensorDataArr[sensorId][byteIdx++] = sensorArr[sensorId].messageLengthBytes;
+      sensorDataArr[sensorId][byteIdx++] = 0; // TODO: Command 0xa0 + sensor id???
+      sensorDataArr[sensorId][byteIdx++] = 0; //TODO: sensor value
+      sensorDataArr[sensorId][byteIdx++] = 0; // TODO: sensor value
+      if (sensorArr[sensorId].dataBytes >= 4)
+      {
+        sensorDataArr[sensorId][byteIdx++] = 0; // TODO: sensor value
+        sensorDataArr[sensorId][byteIdx++] = 0; // TODO: sensor value
+      }
+
+      // CRC is 0xFFFF - sum of data in preceding bytes
+      uint16_t crc = IBUS_INITIAL_CRC;
+      for (int i=0; i<byteIdx; i++)
+      {
+        crc -= sensorDataArr[sensorId][i];
+      }
+
+      sensorDataArr[sensorId][byteIdx++] = (crc & 0xff);
+      sensorDataArr[sensorId][byteIdx++] = (crc & 0xff00) >> 8;
+
+      // Send data to the UART Tx? Does timing matter for half-duplex?
+
+      rVal = true;
     }
   }
 
