@@ -39,8 +39,10 @@ class flysky_ibus
     /**************************************************************************
      * @brief Checks if there is new message data to read
      * @return true if there is new data, false if data is stale
+     * @note This function should be called at a faster rate than IBus
+     *       messages come in to avoid a race conditions with access to buffer.
      *************************************************************************/
-    bool newMessage(void);
+    bool new_message(void);
 
     /**************************************************************************
      * @brief Gets value for a given channel off the IBus
@@ -48,7 +50,10 @@ class flysky_ibus
      * @return current value of the given channel
      * @todo Means to return if data is bad.
      *************************************************************************/
-    int readChannel(channel_e chan);
+    int read_channel(channel_e chan);
+
+    //TODO
+    void debug_print(void);
 
 
   private:
@@ -77,14 +82,15 @@ class flysky_ibus
 
     /* Public Constants -----------------------------------------------------*/
     // UART settings for FlySky IBus
-    static const int IBUS_BAUD_RATE        = 115200;
-    static const bool IBUS_CTS_EN          = false;
-    static const bool IBUS_RTS_EN          = false;
-    static const int IBUS_START_BITS       = 1;
-    static const int IBUS_DATA_BITS        = 8;
-    static const int IBUS_STOP_BITS        = 1;
-    static const uart_parity_t IBUS_PARITY = UART_PARITY_NONE;
+    static const int           IBUS_BAUD_RATE  = 115200;
+    static const bool          IBUS_CTS_EN     = false;
+    static const bool          IBUS_RTS_EN     = false;
+    static const int           IBUS_START_BITS = 1;
+    static const int           IBUS_DATA_BITS  = 8;
+    static const int           IBUS_STOP_BITS  = 1;
+    static const uart_parity_t IBUS_PARITY     = UART_PARITY_NONE;
 
+    // TODO: May be able to remove this code...
     // UART Transfer time
     // xfer (seconds) = num bits / baud rate
     // IBus element = 1 start bit + 8 data bits + 1 stop bit = 10bits
@@ -95,14 +101,9 @@ class flysky_ibus
     static const unsigned int IBUS_TRANSFER_TIMEOUT_US = 3000;
 
 
-    /* Private Constants ----------------------------------------------------*/
-    static const int BUFFER_MSG_COUNT =  3;
-    static const int BUFFER_MSG_SIZE_BYTES = 32;
-
-
     /* Private Variables ----------------------------------------------------*/
     uart_inst_t* pIBusUART;
-    msg_def_t shadowMessage;
+    msg_def_t IBusMsgSnapshot;
 };
 
 

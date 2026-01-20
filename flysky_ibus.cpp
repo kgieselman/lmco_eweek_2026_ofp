@@ -10,6 +10,7 @@
 #include "flysky_ibus.h"
 #include "hardware/irq.h"
 #include <string.h>
+#include <stdio.h>
 
 
 /* Global ISR Definitions ---------------------------------------------------*/
@@ -20,9 +21,9 @@ volatile uint8_t uart1RxBuffer[32];
 volatile int indexUart1Rx = 0;
 
 // DEBUG
-volatile int uartRxTimeoutCount = 0;
-volatile int uartRxCount = 0;
-volatile int uartRxUnknown = 0;
+volatile int debug_uart1Isr_timeoutCount = 0;
+volatile int debug_uart1Isr_rxCount = 0;
+volatile int debug_uart1Isr_unknownCount = 0;
 // end DEBUG
 
 void __ISR_uart1_rx(void)
@@ -30,25 +31,25 @@ void __ISR_uart1_rx(void)
   // Verify interrupt is due to timeout or fifo full
   if (uart_get_hw(uart1)->mis & UART_UARTMIS_RTMIS_BITS)
   {
-    ++uartRxTimeoutCount = false;
+    ++debug_uart1Isr_timeoutCount = false;
     while (uart_is_readable(uart1))
     {
       uart1RxBuffer[indexUart1Rx] = uart_getc(uart1);
       ++indexUart1Rx;
     }
 
-    // Timeout expired and now message has been read
-      // reset to prepare for next message
     indexUart1Rx = 0;
     newMsgUART1rx = 1;
   }
   else if (uart_get_hw(uart1)->mis & UART_UARTMIS_RXMIS_BITS)
   {
-    ++uartRxCount;
+    // Ignore interrupt
+    // TODO: Do I need to clear this?
+    ++debug_uart1Isr_rxCount;
   }
   else
   {
-    ++uartRxUnknown;
+    ++debug_uart1Isr_unknownCount;
   }
 }
 
@@ -75,9 +76,7 @@ flysky_ibus::flysky_ibus(uart_inst_t* pUart, int pin_tx, int pin_rx)
   uart_set_irq_enables(pIBusUART, true, false);
 }
 
-// This function should be called frequently to ensure
-// it is called near the end of the message
-bool flysky_ibus::newMessage(void)
+bool flysky_ibus::new_message(void)
 {
   bool rVal = false;
 
@@ -88,7 +87,7 @@ bool flysky_ibus::newMessage(void)
     newMsgUART1rx = false;
 
     // Save a snapshot of the data for use in read channels
-    memcpy(&shadowMessage, (void*)uart1RxBuffer, sizeof(uart1RxBuffer));
+    memcpy(&IBusMsgSnapshot, (void*)uart1RxBuffer, sizeof(uart1RxBuffer));
 
     rVal = true;
   }
@@ -96,59 +95,59 @@ bool flysky_ibus::newMessage(void)
   return rVal;
 }
 
-int flysky_ibus::readChannel(channel_e chan)
+int flysky_ibus::read_channel(channel_e chan)
 {
   int rVal = 0;
   switch (chan)
   {
     case CHAN_RSTICK_HORIZ:
     {
-      rVal = shadowMessage.rstickHoriz;
+      rVal = IBusMsgSnapshot.rstickHoriz;
       break;
     }
     case CHAN_RSTICK_VERT:
     {
-      rVal = shadowMessage.rstickVert;
+      rVal = IBusMsgSnapshot.rstickVert;
       break;
     }
     case CHAN_LSTICK_VERT:
     {
-      rVal = shadowMessage.lstickVert;
+      rVal = IBusMsgSnapshot.lstickVert;
       break;
     }
     case CHAN_LSTICK_HORIZ:
     {
-      rVal = shadowMessage.lstickHoriz;
+      rVal = IBusMsgSnapshot.lstickHoriz;
       break;
     }
     case CHAN_VRA:
     {
-      rVal = shadowMessage.vra;
+      rVal = IBusMsgSnapshot.vra;
       break;
     }
     case CHAN_VRB:
     {
-      rVal = shadowMessage.vrb;
+      rVal = IBusMsgSnapshot.vrb;
       break;
     }
     case CHAN_SWA:
     {
-      rVal = shadowMessage.swa;
+      rVal = IBusMsgSnapshot.swa;
       break;
     }
     case CHAN_SWB:
     {
-      rVal = shadowMessage.swb;
+      rVal = IBusMsgSnapshot.swb;
       break;
     }
     case CHAN_SWC:
     {
-      rVal = shadowMessage.swc;
+      rVal = IBusMsgSnapshot.swc;
       break;
     }
     case CHAN_SWD:
     {
-      rVal = shadowMessage.swd;
+      rVal = IBusMsgSnapshot.swd;
       break;
     }
     default:
@@ -158,6 +157,13 @@ int flysky_ibus::readChannel(channel_e chan)
   }
 
   return rVal;
+}
+
+void flysky_ibus::debug_print(void)
+{
+  printf("debug UART1 ISR (%d, %d, %d)\n", debug_uart1Isr_rxCount,
+                                           debug_uart1Isr_timeoutCount,
+                                           debug_uart1Isr_unknownCount);
 }
 
 

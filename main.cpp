@@ -53,12 +53,12 @@ int main(void)
   while(loopContinue)
   {
     // Check if a new message has come it
-    if (myIBus.newMessage())
+    if (myIBus.new_message())
     {
       // Update values for the motors
-      int speed  = myIBus.readChannel(flysky_ibus::CHAN_RSTICK_VERT);
-      int steer  = myIBus.readChannel(flysky_ibus::CHAN_RSTICK_HORIZ);
-      int strafe = myIBus.readChannel(flysky_ibus::CHAN_LSTICK_HORIZ);
+      int speed  = myIBus.read_channel(flysky_ibus::CHAN_RSTICK_VERT);
+      int steer  = myIBus.read_channel(flysky_ibus::CHAN_RSTICK_HORIZ);
+      int strafe = myIBus.read_channel(flysky_ibus::CHAN_LSTICK_HORIZ);
 
       // Convert values from [1000,2000] to [-500,500]
       //                | Negative | Positive |
