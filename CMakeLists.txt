@@ -36,13 +36,15 @@ pico_sdk_init()
 # Add executable. Default name is the project name, version 0.1
 
 add_executable(2026_ofp 
-    main.cpp
-    flysky_ibus.cpp
-    control_drive_train.cpp
-    control_collect.cpp
-    control_deposit.cpp
-    control_launcher.cpp
-    ring_buffer.cpp)
+        main.cpp
+        driver/flysky_ibus.cpp
+        driver/driver_motor_l298n.cpp
+        control/control_drive_train.cpp
+        control/control_collect.cpp
+        control/control_deposit.cpp
+        control/control_launcher.cpp
+        util/ring_buffer.cpp
+        )
 
 pico_set_program_name(2026_ofp "2026_ofp")
 pico_set_program_version(2026_ofp "0.1")
@@ -61,6 +63,9 @@ target_link_libraries(2026_ofp
 # Add the standard include files to the build
 target_include_directories(2026_ofp PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
+        control/
+        driver/
+        util/
 )
 
 # Add any user requested libraries
@@ -72,4 +77,3 @@ target_link_libraries(2026_ofp
         )
 
 pico_add_extra_outputs(2026_ofp)
-

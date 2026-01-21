@@ -27,11 +27,11 @@ class drive_train
 
     /**************************************************************************
      * @brief Adds a motor to the controller
-     * @param motor   - Enumeration of the motor being added
-     * @param pinPWM  - Pin number of the PWM signal to control motor speed
-     * @param pinDirA - Pin number for direction A
-     * @param pinDirB - Pin number for direction B
-     * @param pinEnc  - Pin number for the encoder pulse
+     * @param motor     - Enumeration of the motor being added
+     * @param pinPWM    - Pin number of the PWM signal to control motor speed
+     * @param pinDirFwd - Pin number for direction forward
+     * @param pinDirRev - Pin number for direction reverse
+     * @param pinEnc    - Pin number for the encoder pulse
      * @return true if motor was added, false otherwise
      *
      * @note If a motor is spinning in the opposite direction, simply
@@ -43,8 +43,8 @@ class drive_train
      *************************************************************************/
     bool add_motor(motor_e motor,
                    int     pinPWM,
-                   int     pinDirA,
-                   int     pinDirB,
+                   int     pinDirFwd,
+                   int     pinDirRev,
                    int     pinEnc);
 
     /**************************************************************************
@@ -75,13 +75,18 @@ class drive_train
   private:
     typedef struct 
     {
-      int pinPWM;
-      int pinDirA;
-      int pinDirB;
-      int pinEncoder;
-      int trimDirA;
-      int trimDirB;
       int initialized;
+
+      int pinPWM;
+      int pinDirFwd;
+      int pinDirRev;
+      int pinEncoder;
+
+      int valPWM;
+      int valDirFwd;
+      int valDirRev;
+      int valTrimFwd;
+      int valTrimRev;
     } motor_t;
 
     motor_t motorArr[MOTOR_COUNT];
@@ -89,6 +94,8 @@ class drive_train
     int current_speed;
     int current_turn;
     int current_strafe;
+
+    float convert_motor_value(motor_t* pMotor, int currentValue);
 };
 
 
