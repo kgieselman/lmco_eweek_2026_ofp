@@ -14,11 +14,16 @@
 
 
 /* Global ISR Definitions ---------------------------------------------------*/
+/// Flag to alert that a new message has been recieved from UART1
 bool newMsgUART1rx = false;
 
 // Interrupt Service Routine (ISR)
-volatile uint8_t uart1RxBuffer[32];
-volatile int indexUart1Rx = 0;
+const int IBUS_UART_RX_BUF_COUNT = 2; // Use 2 buffers, avoid read/write conflict
+const int IBUS_UART_RX_MAX_MSG_LEN_BYTES = 32;
+volatile uint8_t uart1RxBufs[IBUS_UART_RX_BUF_COUNT][IBUS_UART_RX_MAX_MSG_LEN_BYTES];
+volatile int uart1BufWriteIdx = 0; // [0..IBUS_UART_RX_BUF_COUNT]
+volatile int uart1BufReadIdx = 0;  // [0..IBUS_UART_RX_BUF_COUNT]
+volatile int uart1BufCharIdx = 0;  // [0..IBUS_UART_RX_MAX_MSG_LEN_BYTES]
 
 void __ISR_uart1_rx(void)
 {
@@ -30,15 +35,25 @@ void __ISR_uart1_rx(void)
     // Clear interrupt so we can receive it again
     uart_get_hw(pIbusUart)->icr = (UART_UARTICR_RXIC_BITS | UART_UARTICR_RTIC_BITS);
 
+    // TODO: Try using local index for read chars...
     while (uart_is_readable(pIbusUart))
     {
-      //uint8_t ch = uart_getc(pIbusUart);
-      uart1RxBuffer[indexUart1Rx] = uart_getc(pIbusUart);
-      ++indexUart1Rx;
+      uart1RxBufs[uart1BufWriteIdx][uart1BufCharIdx] = uart_getc(pIbusUart);
+      ++uart1BufCharIdx;
     }
 
     newMsgUART1rx = 1; // Alert that new message has come in
-    indexUart1Rx = 0;  // Reset data index counter
+
+    // Update read buffer index to point to the new data
+    uart1BufReadIdx = uart1BufWriteIdx;
+
+    // Update write buffer index to point to the stale data
+    int newWriteIdx = uart1BufWriteIdx + 1;
+    if (newWriteIdx >= IBUS_UART_RX_BUF_COUNT) newWriteIdx = 0;
+    uart1BufWriteIdx = newWriteIdx;
+
+    // Reset character index in the buffer
+    uart1BufCharIdx = 0;
   }
   else if (status & UART_UARTMIS_RXMIS_BITS) // Byte received
   {
@@ -122,8 +137,11 @@ bool flysky_ibus::new_message(void)
   // Check if new message has come in
   if (newMsgUART1rx)
   {
+    volatile uint8_t* pMsg = reinterpret_cast<volatile uint8_t*>(&uart1RxBufs[uart1BufReadIdx][0]); 
     // Save a snapshot of the data for use in read channels
-    memcpy(&IBusMsgSnapshot, (void*)uart1RxBuffer, sizeof(uart1RxBuffer));
+    memcpy(&IBusMsgSnapshot,
+           (void*)pMsg,
+           IBUS_UART_RX_MAX_MSG_LEN_BYTES);
 
     // Clear flag
     newMsgUART1rx = false;
@@ -131,8 +149,6 @@ bool flysky_ibus::new_message(void)
     rVal = true;
   }
 
-  // While debugging - report data once every 2 seconds
-    // TODO: Roll over?
   uint32_t currTimeMs = to_ms_since_boot(get_absolute_time());
   if (currTimeMs - prevDebugTimeMs > 2000)
   {
@@ -249,7 +265,8 @@ bool flysky_ibus::update_sensor(int sensorId, int value)
 
 void flysky_ibus::debug_print(void)
 {
-  printf("Rstick(%d, %d) Lstick(%d, %d) VR(%d, %d) SW(%d, %d, %d, %d)\n", 
+  printf("(%d) Rstick(%d, %d) Lstick(%d, %d) VR(%d, %d) SW(%d, %d, %d, %d)\n", 
+      uart1BufReadIdx,
       read_channel(CHAN_RSTICK_HORIZ),
       read_channel(CHAN_RSTICK_VERT),
       read_channel(CHAN_LSTICK_HORIZ),
@@ -260,6 +277,13 @@ void flysky_ibus::debug_print(void)
       read_channel(CHAN_SWB),
       read_channel(CHAN_SWC),
       read_channel(CHAN_SWD));
+
+  //volatile uint16_t* pRxBufu16 = reinterpret_cast<volatile uint16_t*>(&uart1RxBufs[uart1BufReadIdx][0]);
+  //for (int i=0; i<16; i++)
+  //{
+  //  printf("%04d ", pRxBufu16[i]);
+  //}
+  //printf("\n");
 }
 
 
