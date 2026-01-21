@@ -12,6 +12,9 @@
 #include <string.h>
 #include <stdio.h>
 
+/* Debug --------------------------------------------------------------------*/
+#define DEBUG_IBUS_STDIO (0)
+
 
 /* Global ISR Definitions ---------------------------------------------------*/
 /// Flag to alert that a new message has been recieved from UART1
@@ -19,11 +22,10 @@ bool newMsgUART1rx = false;
 
 // Interrupt Service Routine (ISR)
 const int IBUS_UART_RX_BUF_COUNT = 2; // Use 2 buffers, avoid read/write conflict
-const int IBUS_UART_RX_MAX_MSG_LEN_BYTES = 32;
-volatile uint8_t uart1RxBufs[IBUS_UART_RX_BUF_COUNT][IBUS_UART_RX_MAX_MSG_LEN_BYTES];
+const int UART_RX_FIFO_MAX_LEVEL = 32;
+volatile uint8_t uart1RxBufs[IBUS_UART_RX_BUF_COUNT][UART_RX_FIFO_MAX_LEVEL];
 volatile int uart1BufWriteIdx = 0; // [0..IBUS_UART_RX_BUF_COUNT]
-volatile int uart1BufReadIdx = 0;  // [0..IBUS_UART_RX_BUF_COUNT]
-volatile int uart1BufCharIdx = 0;  // [0..IBUS_UART_RX_MAX_MSG_LEN_BYTES]
+volatile int uart1BufReadIdx  = 0; // [0..IBUS_UART_RX_BUF_COUNT]
 
 void __ISR_uart1_rx(void)
 {
@@ -32,17 +34,17 @@ void __ISR_uart1_rx(void)
 
   if (status & UART_UARTMIS_RTMIS_BITS) // Message timeout
   {
-    // Clear interrupt so we can receive it again
-    uart_get_hw(pIbusUart)->icr = (UART_UARTICR_RXIC_BITS | UART_UARTICR_RTIC_BITS);
+    // Acknowlege receiver timeout interrupt
+    uart_get_hw(pIbusUart)->icr = UART_UARTICR_RTIC_BITS;
 
-    // TODO: Try using local index for read chars...
+    int i = 0;
     while (uart_is_readable(pIbusUart))
     {
-      uart1RxBufs[uart1BufWriteIdx][uart1BufCharIdx] = uart_getc(pIbusUart);
-      ++uart1BufCharIdx;
+      uart1RxBufs[uart1BufWriteIdx][i++] = uart_getc(pIbusUart);
     }
 
-    newMsgUART1rx = 1; // Alert that new message has come in
+    // Alert that new message has come in
+    newMsgUART1rx = 1;
 
     // Update read buffer index to point to the new data
     uart1BufReadIdx = uart1BufWriteIdx;
@@ -51,13 +53,6 @@ void __ISR_uart1_rx(void)
     int newWriteIdx = uart1BufWriteIdx + 1;
     if (newWriteIdx >= IBUS_UART_RX_BUF_COUNT) newWriteIdx = 0;
     uart1BufWriteIdx = newWriteIdx;
-
-    // Reset character index in the buffer
-    uart1BufCharIdx = 0;
-  }
-  else if (status & UART_UARTMIS_RXMIS_BITS) // Byte received
-  {
-    // Ignore interrupt - wait for message timeout interrupt
   }
 }
 
@@ -94,6 +89,7 @@ flysky_ibus::flysky_ibus(uart_inst_t* pUart, int pin_tx, int pin_rx)
   uart_set_irq_enables(pIBusUART, true, false);
 }
 
+// TODO: Sensor reports are a stretch goal
 int flysky_ibus::create_sensor(sensor_type_e type)
 {
   int sensId = -1; // Invalid Id
@@ -129,7 +125,9 @@ int flysky_ibus::create_sensor(sensor_type_e type)
   return sensId;
 }
 
+#if DEBUG_IBUS_STDIO
 uint32_t prevDebugTimeMs = 0;
+#endif // DEBUG_IBUS_STDIO
 bool flysky_ibus::new_message(void)
 {
   bool rVal = false;
@@ -141,7 +139,7 @@ bool flysky_ibus::new_message(void)
     // Save a snapshot of the data for use in read channels
     memcpy(&IBusMsgSnapshot,
            (void*)pMsg,
-           IBUS_UART_RX_MAX_MSG_LEN_BYTES);
+           UART_RX_FIFO_MAX_LEVEL);
 
     // Clear flag
     newMsgUART1rx = false;
@@ -149,12 +147,14 @@ bool flysky_ibus::new_message(void)
     rVal = true;
   }
 
+#if DEBUG_IBUS_STDIO
   uint32_t currTimeMs = to_ms_since_boot(get_absolute_time());
   if (currTimeMs - prevDebugTimeMs > 2000)
   {
     prevDebugTimeMs = currTimeMs;
     debug_print();
   }
+#endif // DEBUG_IBUS_STDIO
 
   return rVal;
 }
@@ -223,6 +223,7 @@ int flysky_ibus::read_channel(channel_e chan)
   return rVal;
 }
 
+// TODO: Sensor reports are a stretch goal
 bool flysky_ibus::update_sensor(int sensorId, int value)
 {
   bool rVal = false;
@@ -265,8 +266,7 @@ bool flysky_ibus::update_sensor(int sensorId, int value)
 
 void flysky_ibus::debug_print(void)
 {
-  printf("(%d) Rstick(%d, %d) Lstick(%d, %d) VR(%d, %d) SW(%d, %d, %d, %d)\n", 
-      uart1BufReadIdx,
+  printf("Rstick(%d, %d) Lstick(%d, %d) VR(%d, %d) SW(%d, %d, %d, %d)\n",
       read_channel(CHAN_RSTICK_HORIZ),
       read_channel(CHAN_RSTICK_VERT),
       read_channel(CHAN_LSTICK_HORIZ),
