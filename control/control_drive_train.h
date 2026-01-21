@@ -49,18 +49,11 @@ class drive_train
                    int     pinDirRev);
 
     /**************************************************************************
-     * @brief Gets initialzied status for a given motor
-     * @param motor - Enumeration of the motor
-     * @return true if initialized, false otherwise
-     *************************************************************************/
-    bool motor_initialized(motor_e motor);
-
-    /**************************************************************************
      * @brief Serivces the motor controller with new values
      * @param speed  - speed value (0-1000)
      * @param turn   - turn value (0-1000).
      *                 Absolute value from 500 is the amount
-     * @param strafe - starfe value (0-1000).
+     * @param strafe - strafe value (0-1000).
      *                 Aboslue value from 400 is the amount
      * 
      * @todo Update to not be so dependant on IBUS values
@@ -93,7 +86,12 @@ class drive_train
 
 
     /*Private Constants -----------------------------------------------------*/
-    static constexpr int PWM_TOP_COUNT = 500 - 1; // 0 inclusive
+    // Top count in mecanum algorithm the max value is 1000, so use that as
+    //   top count for the PWM channels.
+    //
+    //   This allows the PWM level to be set to the value from the algorithm
+    //    without the need for normalization.
+    static constexpr int PWM_TOP_COUNT = 1000;
     static constexpr float SYS_CLK_DIV_19KHZ = 7.0;
 
 

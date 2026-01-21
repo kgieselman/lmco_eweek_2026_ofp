@@ -16,6 +16,8 @@
  * | 6     | 12     | 13     | 28         | 29         |
  * | 7     | 14     | 15     | n/a        | n/a        |
  * 
+ * @note Pico Orientation has pins GP0 - GP15 facing right
+ *                            pins GP16 - GP28 facing left
  *****************************************************************************/
 #pragma once
 
@@ -30,25 +32,27 @@ const int PIN_IBUS_TX = 4;
 const int PIN_IBUS_RX = 5;
 
 // Drive Train
-const int PIN_MOTOR_FR_PWM   = PINOUT_TODO;
-const int PIN_MOTOR_FR_DIR_A = PINOUT_TODO;
-const int PIN_MOTOR_FR_DIR_B = PINOUT_TODO;
-const int PIN_MOTOR_FR_ENC   = PINOUT_TODO;
 
-const int PIN_MOTOR_FL_PWM   = PINOUT_TODO;
-const int PIN_MOTOR_FL_DIR_A = PINOUT_TODO;
-const int PIN_MOTOR_FL_DIR_B = PINOUT_TODO;
-const int PIN_MOTOR_FL_ENC   = PINOUT_TODO;
+// Pick from pins GP0 - GP15
+const int PIN_MOTOR_FR_PWM   =  8; // PWM Slice 4 Channel A
+const int PIN_MOTOR_FR_DIR_A = 10;
+const int PIN_MOTOR_FR_DIR_B = 11;
 
-const int PIN_MOTOR_RR_PWM   = PINOUT_TODO;
-const int PIN_MOTOR_RR_DIR_A = PINOUT_TODO;
-const int PIN_MOTOR_RR_DIR_B = PINOUT_TODO;
-const int PIN_MOTOR_RR_ENC   = PINOUT_TODO;
+// Pick from pins GP16 - GP28
+const int PIN_MOTOR_FL_PWM   = 20; // PWM Slice 2 Channel A
+const int PIN_MOTOR_FL_DIR_A = 18;
+const int PIN_MOTOR_FL_DIR_B = 19;
 
-const int PIN_MOTOR_RL_PWM   = PINOUT_TODO;
-const int PIN_MOTOR_RL_DIR_A = PINOUT_TODO;
-const int PIN_MOTOR_RL_DIR_B = PINOUT_TODO;
-const int PIN_MOTOR_RL_ENC   = PINOUT_TODO;
+// Pick from pins GP0 - G15
+const int PIN_MOTOR_RR_PWM   =  9; // PWM Slice 4 Channel B
+const int PIN_MOTOR_RR_DIR_A =  6;
+const int PIN_MOTOR_RR_DIR_B =  7;
+
+// Pick from pins GP16 - GP28
+const int PIN_MOTOR_RL_PWM   = 21; // PWM Slice 2 Channel B
+const int PIN_MOTOR_RL_DIR_A = 26;
+const int PIN_MOTOR_RL_DIR_B = 27;
+
 
 // Collection Mechanism
 

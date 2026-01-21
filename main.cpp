@@ -16,6 +16,10 @@
 #include "control_launcher.h"
 
 
+/* Defines ------------------------------------------------------------------*/
+#define ENABLE_DEBUG (0)
+
+
 /* Function Definitions -----------------------------------------------------*/
 int main(void)
 {
@@ -45,8 +49,10 @@ int main(void)
   control_deposit  myDeposit;
   control_launcher myLauncher;
 
+#if ENABLE_DEBUG
   printf("Program Initialized, moving to main loop\n");
   sleep_ms(1000);
+#endif // ENABLE_DEBUG
 
   bool loopContinue = true;
   while(loopContinue)
@@ -60,7 +66,7 @@ int main(void)
       int strafe = myIBus.read_channel(flysky_ibus::CHAN_LSTICK_HORIZ);
 
       // Convert values from [1000,2000] to [-500,500]
-      //                | Negative | Positive |
+      //                 | Negative | Positive |
       speed  -= 1500; // | Reverse  | Forward  |
       steer  -= 1500; // | Left     | Right    |
       strafe -= 1500; // | Left     | Right    |
