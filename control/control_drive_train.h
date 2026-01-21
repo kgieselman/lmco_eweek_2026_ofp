@@ -13,6 +13,7 @@
 class drive_train
 {
   public:
+    /* Public Types ---------------------------------------------------------*/
     typedef enum
     {
       MOTOR_FRONT_LEFT,
@@ -22,7 +23,12 @@ class drive_train
       MOTOR_COUNT
     } motor_e;
 
+
+    /* Public Functions -----------------------------------------------------*/
+    /// Constructor
     drive_train();
+
+    /// Destructor
     ~drive_train() {}
 
     /**************************************************************************
@@ -31,21 +37,16 @@ class drive_train
      * @param pinPWM    - Pin number of the PWM signal to control motor speed
      * @param pinDirFwd - Pin number for direction forward
      * @param pinDirRev - Pin number for direction reverse
-     * @param pinEnc    - Pin number for the encoder pulse
      * @return true if motor was added, false otherwise
      *
      * @note If a motor is spinning in the opposite direction, simply
      *   swap pinDirA and pinDirB. This is easier than re-wiring the motor
      *   to match expected direction.
-     *
-     * @todo Each motor also includes an encoder and would be valuable for
-     *   calibration.
      *************************************************************************/
     bool add_motor(motor_e motor,
                    int     pinPWM,
                    int     pinDirFwd,
-                   int     pinDirRev,
-                   int     pinEnc);
+                   int     pinDirRev);
 
     /**************************************************************************
      * @brief Gets initialzied status for a given motor
@@ -72,7 +73,9 @@ class drive_train
      *************************************************************************/
     void calibrate(void);
 
+
   private:
+    /* Private Types --------------------------------------------------------*/
     typedef struct 
     {
       int initialized;
@@ -80,7 +83,6 @@ class drive_train
       int pinPWM;
       int pinDirFwd;
       int pinDirRev;
-      int pinEncoder;
 
       int valPWM;
       int valDirFwd;
@@ -89,6 +91,13 @@ class drive_train
       int valTrimRev;
     } motor_t;
 
+
+    /*Private Constants -----------------------------------------------------*/
+    static constexpr int PWM_TOP_COUNT = 500 - 1; // 0 inclusive
+    static constexpr float SYS_CLK_DIV_19KHZ = 7.0;
+
+
+    /* Private Variables ----------------------------------------------------*/
     motor_t motorArr[MOTOR_COUNT];
 
     int current_speed;

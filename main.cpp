@@ -27,23 +27,19 @@ int main(void)
   myDriveTrain.add_motor(drive_train::MOTOR_FRONT_LEFT,
                          PIN_MOTOR_FL_PWM,
                          PIN_MOTOR_FL_DIR_A,
-                         PIN_MOTOR_FL_DIR_B,
-                         PIN_MOTOR_FL_ENC);
+                         PIN_MOTOR_FL_DIR_B);
   myDriveTrain.add_motor(drive_train::MOTOR_FRONT_RIGHT,
                          PIN_MOTOR_FR_PWM,
                          PIN_MOTOR_FR_DIR_A,
-                         PIN_MOTOR_FR_DIR_B,
-                         PIN_MOTOR_FR_ENC);
+                         PIN_MOTOR_FR_DIR_B);
   myDriveTrain.add_motor(drive_train::MOTOR_REAR_RIGHT,
                          PIN_MOTOR_RR_PWM,
                          PIN_MOTOR_RR_DIR_A,
-                         PIN_MOTOR_RR_DIR_B,
-                         PIN_MOTOR_RR_ENC);
+                         PIN_MOTOR_RR_DIR_B);
   myDriveTrain.add_motor(drive_train::MOTOR_REAR_LEFT,
                          PIN_MOTOR_RL_PWM,
                          PIN_MOTOR_RL_DIR_A,
-                         PIN_MOTOR_RL_DIR_B,
-                         PIN_MOTOR_RL_ENC);
+                         PIN_MOTOR_RL_DIR_B);
 
   control_collect  myCollect;
   control_deposit  myDeposit;

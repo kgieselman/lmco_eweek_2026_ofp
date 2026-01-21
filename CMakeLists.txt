@@ -74,6 +74,7 @@ target_link_libraries(2026_ofp
         hardware_pio
         hardware_timer
         hardware_clocks
+        hardware_pwm
         )
 
 pico_add_extra_outputs(2026_ofp)

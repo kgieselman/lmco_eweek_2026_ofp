@@ -5,10 +5,13 @@
 
 /** Includes ----------------------------------------------------------------*/
 #include "control_drive_train.h"
+#include "hardware/pwm.h"
 #include <algorithm>
 
 
-/** Function Definitions ----------------------------------------------------*/
+//TODO: Public ISRs?
+
+/** Class Function Definitions ----------------------------------------------*/
 drive_train::drive_train()
 {
   // Clear motors
@@ -18,11 +21,11 @@ drive_train::drive_train()
   }
 }
 
+// TODO: Update to use driver_motor_l298n?
 bool drive_train::add_motor(motor_e motor,
                             int     pinPWM,
                             int     pinDirFwd,
-                            int     pinDirRev,
-                            int     pinEnc)
+                            int     pinDirRev)
 {
   if ((motor < MOTOR_FRONT_LEFT) || (motor >= MOTOR_COUNT))
   {
@@ -30,10 +33,49 @@ bool drive_train::add_motor(motor_e motor,
     return false;
   }
 
+  const int GPIO_PIN_MIN = 0;
+  const int GPIO_PIN_MAX = 29;
+  if ((pinPWM    < GPIO_PIN_MIN) || (pinPWM    > GPIO_PIN_MAX) ||
+      (pinDirFwd < GPIO_PIN_MIN) || (pinDirFwd > GPIO_PIN_MAX) ||
+      (pinDirRev < GPIO_PIN_MIN) || (pinDirRev > GPIO_PIN_MAX))
+  {
+    // Invalid pin
+    return false;
+  }
+
   motorArr[motor].pinPWM     = pinPWM;
-  motorArr[motor].pinDirFwd    = pinDirFwd;
-  motorArr[motor].pinDirRev    = pinDirRev;
-  motorArr[motor].pinEncoder = pinEnc;
+  motorArr[motor].pinDirFwd  = pinDirFwd;
+  motorArr[motor].pinDirRev  = pinDirRev;
+
+  // Configure the pins
+  gpio_set_function(pinPWM, GPIO_FUNC_PWM);
+  uint slice_num    = pwm_gpio_to_slice_num(pinPWM);
+  uint chan_num     = pwm_gpio_to_channel(pinPWM);
+  pwm_config config = pwm_get_default_config();
+
+  pwm_config_set_clkdiv(&config, SYS_CLK_DIV_19KHZ);
+  pwm_init(slice_num, &config, true);
+  pwm_set_wrap(slice_num, PWM_TOP_COUNT);
+  pwm_set_chan_level(slice_num, chan_num, 0); // Default to OFF
+  pwm_set_enabled(slice_num, true);
+
+
+  // Configure Discrete Direction Pins (Outputs)
+  gpio_init(pinDirFwd);
+  gpio_set_dir(pinDirFwd, GPIO_OUT);
+  gpio_put(pinDirFwd, 0); // Init to OFF
+
+  gpio_init(pinDirRev);
+  gpio_set_dir(pinDirRev, GPIO_OUT);
+  gpio_put(pinDirRev, 0); // Init to OFF
+
+
+  // Configure Encoder Pins (Interrupts???)
+  //TODO: Stretch
+
+
+
+
 
   // Since motor was just added, remove any trims
   motorArr[motor].valTrimFwd = 0;
@@ -57,7 +99,7 @@ bool drive_train::motor_initialized(motor_e motor)
 // TODO: Update to use trims from calibration routine
 void drive_train::update(int speed, int turn, int strafe)
 { 
-  int mecanumVal[MOTOR_COUNT] = {0}; // value range [-1000..1000]
+  int mecanumVal[MOTOR_COUNT]   = {0}; // value range [-1000..1000]
   mecanumVal[MOTOR_FRONT_LEFT]  = speed + strafe - turn;
   mecanumVal[MOTOR_FRONT_RIGHT] = speed - strafe - turn;
   mecanumVal[MOTOR_REAR_RIGHT]  = speed + strafe - turn;
