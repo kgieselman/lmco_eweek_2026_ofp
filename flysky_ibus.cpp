@@ -20,58 +20,30 @@ bool newMsgUART1rx = false;
 volatile uint8_t uart1RxBuffer[32];
 volatile int indexUart1Rx = 0;
 
-// DEBUG
-volatile int debug_uart1Isr_timeoutCount = 0;
-volatile int debug_uart1Isr_rxCount = 0;
-volatile int debug_uart1Isr_unknownCount = 0;
-// end DEBUG
-
 void __ISR_uart1_rx(void)
 {
-#if 0 // New ISR from gemini
   uart_inst_t* pIbusUart = uart1;
   uint32_t status = uart_get_hw(pIbusUart)->mis;
 
-  if (status & (UART_UARTMIS_RXMIS_BITS | UART_UARTMIS_RTMIS_BITS))
+  if (status & UART_UARTMIS_RTMIS_BITS) // Message timeout
   {
+    // Clear interrupt so we can receive it again
+    uart_get_hw(pIbusUart)->icr = (UART_UARTICR_RXIC_BITS | UART_UARTICR_RTIC_BITS);
+
     while (uart_is_readable(pIbusUart))
     {
-      uint8_t ch = uart_getc(pIbusUart);
-
-      // TODO: Logic for reading to local buffer
-      uart1RxBuffer[indexUart1Rx] = uart_getc(uart1);
-      // TODO: When to clear indexUart1Rx
-        // Move to ring buffer?
-    }
-
-    // Clear the interrupt
-    uart_get_hw(pIbusUart)->icr = (UART_UARTICR_RXIC_BITS | UART_UARTICR_RTIC_BITS);
-  }
-#else
-  // Verify interrupt is due to timeout or fifo full
-  // TODO: Ack interrupts?
-  if (uart_get_hw(uart1)->mis & UART_UARTMIS_RTMIS_BITS)
-  {
-    ++debug_uart1Isr_timeoutCount;
-    while (uart_is_readable(uart1))
-    {
-      uart1RxBuffer[indexUart1Rx] = uart_getc(uart1);
+      //uint8_t ch = uart_getc(pIbusUart);
+      uart1RxBuffer[indexUart1Rx] = uart_getc(pIbusUart);
       ++indexUart1Rx;
     }
 
-    indexUart1Rx = 0;
-    newMsgUART1rx = 1;
+    newMsgUART1rx = 1; // Alert that new message has come in
+    indexUart1Rx = 0;  // Reset data index counter
   }
-  else if (uart_get_hw(uart1)->mis & UART_UARTMIS_RXMIS_BITS)
+  else if (status & UART_UARTMIS_RXMIS_BITS) // Byte received
   {
-    // Ignore interrupt - wait for end of message interrupt
-    ++debug_uart1Isr_rxCount;
+    // Ignore interrupt - wait for message timeout interrupt
   }
-  else
-  {
-    ++debug_uart1Isr_unknownCount;
-  }
-#endif
 }
 
 
@@ -104,7 +76,7 @@ flysky_ibus::flysky_ibus(uart_inst_t* pUart, int pin_tx, int pin_rx)
     // TODO: Currently not supporting uart0 since it is dedicated to STDIO
   }
 
-  uart_set_irq_enables(pIBusUART, true, false); // TODO: Gemini called out this func as an issue
+  uart_set_irq_enables(pIBusUART, true, false);
 }
 
 int flysky_ibus::create_sensor(sensor_type_e type)
@@ -142,7 +114,7 @@ int flysky_ibus::create_sensor(sensor_type_e type)
   return sensId;
 }
 
-int dbgOnce = 1;
+uint32_t prevDebugTimeMs = 0;
 bool flysky_ibus::new_message(void)
 {
   bool rVal = false;
@@ -159,17 +131,14 @@ bool flysky_ibus::new_message(void)
     rVal = true;
   }
 
-  if (dbgOnce)
+  // While debugging - report data once every 2 seconds
+    // TODO: Roll over?
+  uint32_t currTimeMs = to_ms_since_boot(get_absolute_time());
+  if (currTimeMs - prevDebugTimeMs > 2000)
   {
-    if ((debug_uart1Isr_timeoutCount > 100) ||
-        (debug_uart1Isr_rxCount      > 100) ||
-        (debug_uart1Isr_unknownCount > 100))
-    {
-      dbgOnce = 0;
-      debug_print();
-    }
+    prevDebugTimeMs = currTimeMs;
+    debug_print();
   }
-  
 
   return rVal;
 }
@@ -280,9 +249,17 @@ bool flysky_ibus::update_sensor(int sensorId, int value)
 
 void flysky_ibus::debug_print(void)
 {
-  printf("debug UART1 ISR (%d, %d, %d)\n", debug_uart1Isr_rxCount,
-                                           debug_uart1Isr_timeoutCount,
-                                           debug_uart1Isr_unknownCount);
+  printf("Rstick(%d, %d) Lstick(%d, %d) VR(%d, %d) SW(%d, %d, %d, %d)\n", 
+      read_channel(CHAN_RSTICK_HORIZ),
+      read_channel(CHAN_RSTICK_VERT),
+      read_channel(CHAN_LSTICK_HORIZ),
+      read_channel(CHAN_LSTICK_VERT),
+      read_channel(CHAN_VRA),
+      read_channel(CHAN_VRB),
+      read_channel(CHAN_SWA),
+      read_channel(CHAN_SWB),
+      read_channel(CHAN_SWC),
+      read_channel(CHAN_SWD));
 }
 
 
