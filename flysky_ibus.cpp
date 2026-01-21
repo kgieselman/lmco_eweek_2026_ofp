@@ -28,10 +28,31 @@ volatile int debug_uart1Isr_unknownCount = 0;
 
 void __ISR_uart1_rx(void)
 {
+#if 0 // New ISR from gemini
+  uart_inst_t* pIbusUart = uart1;
+  uint32_t status = uart_get_hw(pIbusUart)->mis;
+
+  if (status & (UART_UARTMIS_RXMIS_BITS | UART_UARTMIS_RTMIS_BITS))
+  {
+    while (uart_is_readable(pIbusUart))
+    {
+      uint8_t ch = uart_getc(pIbusUart);
+
+      // TODO: Logic for reading to local buffer
+      uart1RxBuffer[indexUart1Rx] = uart_getc(uart1);
+      // TODO: When to clear indexUart1Rx
+        // Move to ring buffer?
+    }
+
+    // Clear the interrupt
+    uart_get_hw(pIbusUart)->icr = (UART_UARTICR_RXIC_BITS | UART_UARTICR_RTIC_BITS);
+  }
+#else
   // Verify interrupt is due to timeout or fifo full
+  // TODO: Ack interrupts?
   if (uart_get_hw(uart1)->mis & UART_UARTMIS_RTMIS_BITS)
   {
-    ++debug_uart1Isr_timeoutCount = false;
+    ++debug_uart1Isr_timeoutCount;
     while (uart_is_readable(uart1))
     {
       uart1RxBuffer[indexUart1Rx] = uart_getc(uart1);
@@ -50,6 +71,7 @@ void __ISR_uart1_rx(void)
   {
     ++debug_uart1Isr_unknownCount;
   }
+#endif
 }
 
 
@@ -68,11 +90,21 @@ flysky_ibus::flysky_ibus(uart_inst_t* pUart, int pin_tx, int pin_rx)
                   IBUS_STOP_BITS,
                   IBUS_PARITY);
 
-  uart_set_fifo_enabled(pIBusUART, true); // Enable 32 byte FIFO
+  // Enable the FIFO (32 bytes)
+  uart_set_fifo_enabled(pIBusUART, true);
 
-  irq_set_exclusive_handler(UART1_IRQ, __ISR_uart1_rx);
-  irq_set_enabled(UART1_IRQ, true);
-  uart_set_irq_enables(pIBusUART, true, false);
+  // Interrupt Configuration
+  if (pIBusUART == uart1)
+  {
+    irq_set_exclusive_handler(UART1_IRQ, __ISR_uart1_rx);
+    irq_set_enabled(UART1_IRQ, true);
+  }
+  else
+  {
+    // TODO: Currently not supporting uart0 since it is dedicated to STDIO
+  }
+
+  uart_set_irq_enables(pIBusUART, true, false); // TODO: Gemini called out this func as an issue
 }
 
 int flysky_ibus::create_sensor(sensor_type_e type)
