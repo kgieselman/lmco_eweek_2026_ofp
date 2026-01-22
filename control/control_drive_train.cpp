@@ -7,12 +7,11 @@
 #include "control_drive_train.h"
 #include "hardware/pwm.h"
 #include <algorithm>
+#include <stdio.h>
 
-
-//TODO: Public ISRs?
 
 /** Class Function Definitions ----------------------------------------------*/
-drive_train::drive_train()
+drive_train::drive_train() : debug_update(0)
 {
   // Clear motors
   for (int i=0; i<MOTOR_COUNT; i++)
@@ -53,7 +52,7 @@ bool drive_train::add_motor(motor_e motor,
   uint chan_num     = pwm_gpio_to_channel(pinPWM);
   pwm_config config = pwm_get_default_config();
 
-  pwm_config_set_clkdiv(&config, SYS_CLK_DIV_19KHZ);
+  pwm_config_set_clkdiv(&config, PWM_SYS_CLK_DIV);
   pwm_init(slice_num, &config, true);
   pwm_set_wrap(slice_num, PWM_TOP_COUNT);
   pwm_set_chan_level(slice_num, chan_num, 0); // Default to OFF
@@ -79,10 +78,12 @@ bool drive_train::add_motor(motor_e motor,
   return true;
 }
 
+// TODO: Improvement to gain better power on straights
+  // If speed is full, scale so that at least one motor is FULL
 void drive_train::update(int speed, int turn, int strafe)
-{ 
-  int mecanumVal[MOTOR_COUNT  ] = {0}; // value range [-1000..1000]
-  mecanumVal[MOTOR_FRONT_LEFT ] = speed + strafe - turn;
+{
+  int mecanumVal[MOTOR_COUNT  ] = {0}; // value range [-1500..1500]
+  mecanumVal[MOTOR_FRONT_LEFT ] = speed + strafe + turn;
   mecanumVal[MOTOR_FRONT_RIGHT] = speed - strafe - turn;
   mecanumVal[MOTOR_REAR_RIGHT ] = speed + strafe - turn;
   mecanumVal[MOTOR_REAR_LEFT  ] = speed - strafe + turn;
@@ -90,12 +91,38 @@ void drive_train::update(int speed, int turn, int strafe)
   for (int i=0; i<MOTOR_COUNT; i++)
   {
     // Update speed
-    pwm_set_gpio_level(std::abs(motorArr[i].pinPWM), mecanumVal[i]);
+    uint16_t pwmValue = std::abs(mecanumVal[i]);
+    if (pwmValue < DEADBAND_THRESHOLD)
+    {
+      pwmValue = 0;
+    }
+    pwm_set_gpio_level(motorArr[i].pinPWM, pwmValue);
 
     // Update direction
     bool isDirectionForward = (mecanumVal[i] > 0);
     gpio_put(motorArr[i].pinDirFwd, isDirectionForward);
     gpio_put(motorArr[i].pinDirRev, !isDirectionForward);
+
+    if (debug_update)
+    {
+      printf("%d pwm %d isFwd %d\n", i,
+                                     pwmValue,
+                                     isDirectionForward);
+    }
+  }
+
+  if (debug_update)
+  {
+    --debug_update;
+    //printf("fl(%d) fr(%d) rr(%d) rl(%d)\n", mecanumVal[MOTOR_FRONT_LEFT],
+    //                                        mecanumVal[MOTOR_FRONT_RIGHT],
+    //                                        mecanumVal[MOTOR_REAR_RIGHT],
+    //                                        mecanumVal[MOTOR_REAR_LEFT]);
+    //printf("fl(%d) fr(%d) rr(%d) rl(%d)\n", std::abs(mecanumVal[MOTOR_FRONT_LEFT]),
+    //                                        std::abs(mecanumVal[MOTOR_FRONT_RIGHT]),
+    //                                        std::abs(mecanumVal[MOTOR_REAR_RIGHT]),
+    //                                        std::abs(mecanumVal[MOTOR_REAR_LEFT]));
+    printf("\n");
   }
 }
 
@@ -106,40 +133,17 @@ void drive_train::calibrate(void)
   {
     motorArr[i].valTrimFwd = 0;
     motorArr[i].valTrimRev = 0;
+
+    // Force all motors to move forward
+    pwm_set_gpio_level(std::abs(motorArr[i].pinPWM), 250); // Max speed is currently 1000
+    gpio_put(motorArr[i].pinDirFwd, true);
+    gpio_put(motorArr[i].pinDirRev, false);
   }
 }
 
-
-/* Private Function Definitions ---------------------------------------------*/
-float drive_train::convert_motor_value(motor_t* pMotor, int currentValue)
+void drive_train::debug_print(void)
 {
-  if (pMotor == nullptr)
-  {
-    return 0.0;
-  }
-
-  // currentValue is a float [-1000,1000]
-  
-  // TODO: Should trim be a percentage?
-    // motor a is 95% power of motor b when going forward so weaken b to match a?
-    // handle the math here to normalize the motors
-
-  // Check if forward trim is needed
-  if (currentValue > pMotor->valTrimFwd)
-  {
-    currentValue -= pMotor->valTrimFwd;
-  }
-  // Check if reverse trim is needed
-  else if (std::abs(currentValue) > pMotor->valTrimRev)
-  {
-    currentValue += pMotor->valTrimRev;
-  }
-  else
-  {
-    currentValue = 0.0;
-  }
-
-  return static_cast<float>(currentValue);
+  ++debug_update;
 }
 
 

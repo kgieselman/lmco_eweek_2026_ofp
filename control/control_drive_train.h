@@ -66,6 +66,11 @@ class drive_train
      *************************************************************************/
     void calibrate(void);
 
+    /**************************************************************************
+     * @brief Prints debug information to STDIO
+     *************************************************************************/
+    void debug_print(void);
+
 
   private:
     /* Private Types --------------------------------------------------------*/
@@ -86,23 +91,28 @@ class drive_train
 
 
     /*Private Constants -----------------------------------------------------*/
-    // Top count in mecanum algorithm the max value is 1000, so use that as
+    // Top count in mecanum algorithm the max value is 1500, so use that as
     //   top count for the PWM channels.
     //
     //   This allows the PWM level to be set to the value from the algorithm
     //    without the need for normalization.
-    static constexpr int PWM_TOP_COUNT = 1000;
-    static constexpr float SYS_CLK_DIV_19KHZ = 7.0;
+    static constexpr int PWM_TOP_COUNT = 1510;
+    static constexpr float PWM_SYS_CLK_DIV = 4.0;
+
+    // If mecanum computes a value less that this threshold, set PWM to 0
+    static const int DEADBAND_THRESHOLD = 10;
+    static const int PWM_LEVEL_MIN = 500;
 
 
     /* Private Variables ----------------------------------------------------*/
+    int debug_update;
+
+
     motor_t motorArr[MOTOR_COUNT];
 
     int current_speed;
     int current_turn;
     int current_strafe;
-
-    float convert_motor_value(motor_t* pMotor, int currentValue);
 };
 
 

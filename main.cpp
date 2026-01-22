@@ -3,6 +3,16 @@
  * @brief Main file for 2026 Lockheed Martin E-Week competition
  * 
  * See readme for more competition information
+ * 
+ * TODO
+ * + On startup, if no controller is detected wheels spin like crazy
+ *    Need logic to determine if controller is detected/data valid
+ * + Update wiring - If debugging without external power, reciever is unpowered
+ *    Receiver is current getting +5V from left HBridge, Pico from right HBridge
+ * + Update PWM control, need a scheme for controlling the "counts"
+ *    Need a scheme for settings, maybe a count of 1000 and then use incs of 10?
+ *    This would allow for a percentage based PWM?
+ *    Update would have a Power curve and PWM math would have a percent mapping
  *****************************************************************************/
 
 /* Libraries ----------------------------------------------------------------*/
@@ -17,10 +27,14 @@
 
 
 /* Defines ------------------------------------------------------------------*/
-#define ENABLE_DEBUG (0)
+#define ENABLE_DEBUG (1)
 
 
 /* Function Definitions -----------------------------------------------------*/
+#if ENABLE_DEBUG
+uint32_t lastDebugTimeMS = 0;
+#endif // ENABLE_DEBUG
+
 int main(void)
 {
   // Configure UART STDIO for debugging
@@ -76,6 +90,16 @@ int main(void)
       myDeposit.update();
       myLauncher.update();
     }
+
+#if ENABLE_DEBUG
+    // Timer logic to periodically call debugs
+    uint32_t currTimeMS = to_ms_since_boot(get_absolute_time());
+    if (currTimeMS - lastDebugTimeMS > 3000)
+    {
+      lastDebugTimeMS = currTimeMS;
+      myDriveTrain.debug_print();
+    }
+#endif // ENABLE_DEBUG
   }
 
   return 0;
