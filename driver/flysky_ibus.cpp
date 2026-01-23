@@ -135,16 +135,21 @@ bool flysky_ibus::new_message(void)
   // Check if new message has come in
   if (newMsgUART1rx)
   {
-    volatile uint8_t* pMsg = reinterpret_cast<volatile uint8_t*>(&uart1RxBufs[uart1BufReadIdx][0]); 
-    // Save a snapshot of the data for use in read channels
-    memcpy(&IBusMsgSnapshot,
-           (void*)pMsg,
-           UART_RX_FIFO_MAX_LEVEL);
+    // Determine if this is a message we service
+    if (uart1RxBufs[uart1BufReadIdx][0] == 0x20) // Verify first byte (msg size) is expected
+    {
+      if (uart1RxBufs[uart1BufReadIdx][1] == 0x40) // Verify second byte (command) is expected
+      {
+        volatile uint8_t* pMsg = reinterpret_cast<volatile uint8_t*>(&uart1RxBufs[uart1BufReadIdx][0]); 
+        // Save a snapshot of the data for use in read channels
+        memcpy(&IBusMsgSnapshot, (void*)pMsg, UART_RX_FIFO_MAX_LEVEL);
 
-    // Clear flag
+        rVal = true;
+      }
+    }
+    
+    // Always clear flag, even if message is dropped. Wait for next one.
     newMsgUART1rx = false;
-
-    rVal = true;
   }
 
 #if DEBUG_IBUS_STDIO

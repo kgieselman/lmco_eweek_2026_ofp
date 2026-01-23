@@ -78,51 +78,46 @@ bool drive_train::add_motor(motor_e motor,
   return true;
 }
 
-// TODO: Improvement to gain better power on straights
-  // If speed is full, scale so that at least one motor is FULL
 void drive_train::update(int speed, int turn, int strafe)
 {
-  int mecanumVal[MOTOR_COUNT  ] = {0}; // value range [-1500..1500]
+  const float INPUT_PARAMETER_MAX = 500.0;
+  const float MOTOR_PWM_MAX       = 1500.0;
+
+  // Calculate raw Mecanum values (expected range [-1500..1500])
+  int mecanumVal[MOTOR_COUNT  ] = {0};
   mecanumVal[MOTOR_FRONT_LEFT ] = speed + strafe + turn;
   mecanumVal[MOTOR_FRONT_RIGHT] = speed - strafe - turn;
   mecanumVal[MOTOR_REAR_RIGHT ] = speed + strafe - turn;
   mecanumVal[MOTOR_REAR_LEFT  ] = speed - strafe + turn;
 
+  // Determine Scaling
+  // 1. Find the strongest intended user input to determine the overall "throttle" percentage.
+  // 2. Find the highest calculated wheel value to use as a normalization base.
+  // 3. Create a multiplier that scales the wheels so that the fastest motor matches the 
+  //    user's intended throttle, preventing clipping while maintaining the drive vector.
+  int inputMax = std::max({std::abs(speed), std::abs(strafe), std::abs(turn)}); // [0..500]
+
+  int calcMax  = std::max({std::abs(mecanumVal[MOTOR_FRONT_LEFT ]), 
+                           std::abs(mecanumVal[MOTOR_FRONT_RIGHT]),
+                           std::abs(mecanumVal[MOTOR_REAR_RIGHT ]),
+                           std::abs(mecanumVal[MOTOR_REAR_LEFT  ])});
+
+  float inputMaxPercent = static_cast<float>(inputMax) / INPUT_PARAMETER_MAX;
+
+  float motorMultiplier = 0.0;
+  if (calcMax > 0) // Avoid divide by 0
+  {
+    motorMultiplier = (inputMaxPercent * MOTOR_PWM_MAX) / static_cast<float>(calcMax);
+  }
+
   for (int i=0; i<MOTOR_COUNT; i++)
   {
     // Update speed
-    uint16_t pwmValue = std::abs(mecanumVal[i]);
-    if (pwmValue < DEADBAND_THRESHOLD)
-    {
-      pwmValue = 0;
-    }
+    uint16_t pwmValue = std::abs(mecanumVal[i]) * motorMultiplier;
+
     pwm_set_gpio_level(motorArr[i].pinPWM, pwmValue);
-
-    // Update direction
-    bool isDirectionForward = (mecanumVal[i] > 0);
-    gpio_put(motorArr[i].pinDirFwd, isDirectionForward);
-    gpio_put(motorArr[i].pinDirRev, !isDirectionForward);
-
-    if (debug_update)
-    {
-      printf("%d pwm %d isFwd %d\n", i,
-                                     pwmValue,
-                                     isDirectionForward);
-    }
-  }
-
-  if (debug_update)
-  {
-    --debug_update;
-    //printf("fl(%d) fr(%d) rr(%d) rl(%d)\n", mecanumVal[MOTOR_FRONT_LEFT],
-    //                                        mecanumVal[MOTOR_FRONT_RIGHT],
-    //                                        mecanumVal[MOTOR_REAR_RIGHT],
-    //                                        mecanumVal[MOTOR_REAR_LEFT]);
-    //printf("fl(%d) fr(%d) rr(%d) rl(%d)\n", std::abs(mecanumVal[MOTOR_FRONT_LEFT]),
-    //                                        std::abs(mecanumVal[MOTOR_FRONT_RIGHT]),
-    //                                        std::abs(mecanumVal[MOTOR_REAR_RIGHT]),
-    //                                        std::abs(mecanumVal[MOTOR_REAR_LEFT]));
-    printf("\n");
+    gpio_put(motorArr[i].pinDirFwd, mecanumVal[i] > 0);
+    gpio_put(motorArr[i].pinDirRev, mecanumVal[i] < 0);
   }
 }
 
