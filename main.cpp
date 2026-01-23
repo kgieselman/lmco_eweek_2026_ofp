@@ -3,16 +3,6 @@
  * @brief Main file for 2026 Lockheed Martin E-Week competition
  * 
  * See readme for more competition information
- * 
- * TODO
- * + On startup, if no controller is detected wheels spin like crazy
- *    Need logic to determine if controller is detected/data valid
- * + Update wiring - If debugging without external power, reciever is unpowered
- *    Receiver is current getting +5V from left HBridge, Pico from right HBridge
- * + Update PWM control, need a scheme for controlling the "counts"
- *    Need a scheme for settings, maybe a count of 1000 and then use incs of 10?
- *    This would allow for a percentage based PWM?
- *    Update would have a Power curve and PWM math would have a percent mapping
  *****************************************************************************/
 
 /* Libraries ----------------------------------------------------------------*/
@@ -37,8 +27,7 @@ uint32_t lastDebugTimeMS = 0;
 
 int main(void)
 {
-  // Configure UART STDIO for debugging
-  stdio_init_all(); 
+  stdio_init_all(); // Configure uart0 for stdio
 
   flysky_ibus myIBus(uart1, PIN_IBUS_TX, PIN_IBUS_RX);
   drive_train myDriveTrain;
@@ -79,7 +68,7 @@ int main(void)
       int steer  = myIBus.read_channel(flysky_ibus::CHAN_RSTICK_HORIZ);
       int strafe = myIBus.read_channel(flysky_ibus::CHAN_LSTICK_HORIZ);
 
-      // Convert values from [1000,2000] to [-500,500]
+      // Convert values from [1000,2000] to centered [-500,500]
       //                 | Negative | Positive |
       speed  -= 1500; // | Reverse  | Forward  |
       steer  -= 1500; // | Left     | Right    |

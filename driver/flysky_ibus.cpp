@@ -83,7 +83,7 @@ flysky_ibus::flysky_ibus(uart_inst_t* pUart, int pin_tx, int pin_rx)
   }
   else
   {
-    // TODO: Currently not supporting uart0 since it is dedicated to STDIO
+    // UART0 not supported since it is dedicated to STDIO
   }
 
   uart_set_irq_enables(pIBusUART, true, false);

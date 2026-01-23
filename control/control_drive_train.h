@@ -58,6 +58,7 @@ class drive_train
      * 
      * @todo Update to not be so dependant on IBUS values
      *    Convert everything to -500 to 500...
+     *    User could specify centered range max when creating the object?
      *************************************************************************/
     void update(int speed, int turn, int strafe);
 

@@ -1,8 +1,6 @@
 /******************************************************************************
  * @file flysky_ibus.h
  * Header file for the Flysky IBus implementation
- * 
- * @todo Add support for reporting sensor data
  *****************************************************************************/
 #pragma once
 
@@ -92,7 +90,6 @@ class flysky_ibus
      * @brief Gets value for a given channel off the IBus
      * @param chan - Channel to get the current value for
      * @return current value of the given channel
-     * @todo Means to return if data is bad.
      *************************************************************************/
     int read_channel(channel_e chan);
 
@@ -103,7 +100,6 @@ class flysky_ibus
      *************************************************************************/
     bool update_sensor(int sensorId, int value);
 
-    //TODO
     void debug_print(void);
 
 

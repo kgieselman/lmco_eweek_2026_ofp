@@ -20,7 +20,6 @@ drive_train::drive_train() : debug_update(0)
   }
 }
 
-// TODO: Update to use driver_motor_l298n?
 bool drive_train::add_motor(motor_e motor,
                             int     pinPWM,
                             int     pinDirFwd,

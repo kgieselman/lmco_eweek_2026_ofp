@@ -22,7 +22,6 @@ motor_l298n::motor_l298n(unsigned int pinPWM,
 
 bool motor_l298n::set_trim(unsigned int forward, unsigned int reverse)
 {
-  // TODO: Error catching for invalid values
   trimFwd = forward;
   trimRev = reverse;
 

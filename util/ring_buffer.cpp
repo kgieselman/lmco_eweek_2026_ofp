@@ -2,7 +2,8 @@
  * @file ring_buffer.cpp
  * @file Implementation for ring buffer
  * 
- * @todo buffer size is one less that passed in
+ * @note buffer size is one less that passed in to differentiate between
+ *   full and empty without using flags.
  *****************************************************************************/
 
 /* Libraries ----------------------------------------------------------------*/
