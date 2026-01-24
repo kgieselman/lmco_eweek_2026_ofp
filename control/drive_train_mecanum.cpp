@@ -1,17 +1,17 @@
 /******************************************************************************
- * @file control_drive_train.cpp
- * @brief Implementation of drive train control
+ * @file drive_train_mecanum.cpp
+ * @brief Implementation of a Mecanum drive train control
  *****************************************************************************/
 
 /** Includes ----------------------------------------------------------------*/
-#include "control_drive_train.h"
+#include "drive_train_mecanum.h"
 #include "hardware/pwm.h"
 #include <algorithm>
 #include <stdio.h>
 
 
 /** Class Function Definitions ----------------------------------------------*/
-drive_train::drive_train() : debug_update(0)
+drive_train_mecanum::drive_train_mecanum() : debug_update(0)
 {
   // Clear motors
   for (int i=0; i<MOTOR_COUNT; i++)
@@ -20,10 +20,10 @@ drive_train::drive_train() : debug_update(0)
   }
 }
 
-bool drive_train::add_motor(motor_e motor,
-                            int     pinPWM,
-                            int     pinDirFwd,
-                            int     pinDirRev)
+bool drive_train_mecanum::add_motor(motor_e motor,
+                                    int     pinPWM,
+                                    int     pinDirFwd,
+                                    int     pinDirRev)
 {
   if ((motor < MOTOR_FRONT_LEFT) || (motor >= MOTOR_COUNT))
   {
@@ -77,7 +77,7 @@ bool drive_train::add_motor(motor_e motor,
   return true;
 }
 
-void drive_train::update(int speed, int turn, int strafe)
+void drive_train_mecanum::update(int speed, int turn, int strafe)
 {
   const float INPUT_PARAMETER_MAX = 500.0;
   const float MOTOR_PWM_MAX       = 1500.0;
@@ -121,7 +121,7 @@ void drive_train::update(int speed, int turn, int strafe)
 }
 
 // TODO: Stretch goal - also requires update to the update() function
-void drive_train::calibrate(void)
+void drive_train_mecanum::calibrate(void)
 {
   for (int i=0; i<MOTOR_COUNT; i++)
   {
@@ -135,7 +135,7 @@ void drive_train::calibrate(void)
   }
 }
 
-void drive_train::debug_print(void)
+void drive_train_mecanum::debug_print(void)
 {
   ++debug_update;
 }

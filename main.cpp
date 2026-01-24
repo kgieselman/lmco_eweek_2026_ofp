@@ -10,7 +10,7 @@
 #include "pico/stdlib.h"
 #include "pinout.h"
 #include "flysky_ibus.h"
-#include "control_drive_train.h"
+#include "drive_train_mecanum.h"
 #include "mech_collect.h"
 #include "mech_deposit.h"
 #include "mech_launcher.h"
@@ -30,20 +30,21 @@ int main(void)
   stdio_init_all(); // Configure uart0 for stdio
 
   flysky_ibus myIBus(uart1, PIN_IBUS_TX, PIN_IBUS_RX);
-  drive_train myDriveTrain;
-  myDriveTrain.add_motor(drive_train::MOTOR_FRONT_LEFT,
+
+  drive_train_mecanum myDriveTrain;
+  myDriveTrain.add_motor(drive_train_mecanum::MOTOR_FRONT_LEFT,
                          PIN_MOTOR_FL_PWM,
                          PIN_MOTOR_FL_DIR_A,
                          PIN_MOTOR_FL_DIR_B);
-  myDriveTrain.add_motor(drive_train::MOTOR_FRONT_RIGHT,
+  myDriveTrain.add_motor(drive_train_mecanum::MOTOR_FRONT_RIGHT,
                          PIN_MOTOR_FR_PWM,
                          PIN_MOTOR_FR_DIR_A,
                          PIN_MOTOR_FR_DIR_B);
-  myDriveTrain.add_motor(drive_train::MOTOR_REAR_RIGHT,
+  myDriveTrain.add_motor(drive_train_mecanum::MOTOR_REAR_RIGHT,
                          PIN_MOTOR_RR_PWM,
                          PIN_MOTOR_RR_DIR_A,
                          PIN_MOTOR_RR_DIR_B);
-  myDriveTrain.add_motor(drive_train::MOTOR_REAR_LEFT,
+  myDriveTrain.add_motor(drive_train_mecanum::MOTOR_REAR_LEFT,
                          PIN_MOTOR_RL_PWM,
                          PIN_MOTOR_RL_DIR_A,
                          PIN_MOTOR_RL_DIR_B);

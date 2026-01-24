@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file control_drive_train.h
+ * @file drive_train_mecanum.h
  * @brief Header for drive train control
  *****************************************************************************/
 #pragma once
@@ -10,7 +10,7 @@
 
 
 /* Class Definition ---------------------------------------------------------*/
-class drive_train
+class drive_train_mecanum
 {
   public:
     /* Public Types ---------------------------------------------------------*/
@@ -26,10 +26,10 @@ class drive_train
 
     /* Public Functions -----------------------------------------------------*/
     /// Constructor
-    drive_train();
+    drive_train_mecanum();
 
     /// Destructor
-    ~drive_train() {}
+    ~drive_train_mecanum() {}
 
     /**************************************************************************
      * @brief Adds a motor to the controller
