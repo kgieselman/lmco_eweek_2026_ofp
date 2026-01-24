@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file control_collect.h
+ * @file mech_collect.h
  * @brief Header for the mechanism to collect ping pong balls and cabbages
  ****************************************************************************/
 #pragma once
@@ -10,11 +10,11 @@
 
 
 /** Class Definition --------------------------------------------------------*/
-class control_collect
+class mech_collect
 {
   public:
-    control_collect();
-    ~control_collect() {}
+    mech_collect();
+    ~mech_collect() {}
 
     /**************************************************************************
      * @brief TODO

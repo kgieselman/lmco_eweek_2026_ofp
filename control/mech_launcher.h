@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file control_deposit.h
- * @brief Header for the mechansim to deposit ping pong balls and cabbages 
+ * @file mech_launcher.h
+ * @brief Header for the control of the launch mechanism
  ****************************************************************************/
 #pragma once
 
@@ -10,11 +10,11 @@
 
 
 /* Class Definition ---------------------------------------------------------*/
-class control_deposit
+class mech_launcher
 {
   public:
-    control_deposit();
-    ~control_deposit() {}
+    mech_launcher();
+    ~mech_launcher() {}
 
     /**************************************************************************
      * @brief TODO

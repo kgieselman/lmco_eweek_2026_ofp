@@ -1,20 +1,19 @@
 /******************************************************************************
- * @file control_collect.cpp
- * @brief Implementation for the mechanism to collect ping pong balls and
- *   cabbages.
+ * @file mech_launcher.cpp
+ * @brief Implementation of the mechanism to control the launcher.
  *****************************************************************************/
 
 /** Includes ----------------------------------------------------------------*/
-#include "control_collect.h"
+#include "mech_launcher.h"
 
 
 /** Function Definitions ----------------------------------------------------*/
-control_collect::control_collect()
+mech_launcher::mech_launcher()
 {
 
 }
 
-void control_collect::update(void)
+void mech_launcher::update(void)
 {
 
 }

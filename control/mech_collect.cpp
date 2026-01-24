@@ -1,19 +1,20 @@
 /******************************************************************************
- * @file control_deposit.cpp
- * @brief Implementation for mechanism to deposit ping pong balls and cabbages
+ * @file mech_collect.cpp
+ * @brief Implementation for the mechanism to collect ping pong balls and
+ *   cabbages.
  *****************************************************************************/
 
 /** Includes ----------------------------------------------------------------*/
-#include "control_deposit.h"
+#include "mech_collect.h"
 
 
 /** Function Definitions ----------------------------------------------------*/
-control_deposit::control_deposit()
+mech_collect::mech_collect()
 {
-    
+
 }
 
-void control_deposit::update(void)
+void mech_collect::update(void)
 {
 
 }

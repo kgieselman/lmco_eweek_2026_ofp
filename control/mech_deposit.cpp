@@ -1,19 +1,19 @@
 /******************************************************************************
- * @file control_launcher.cpp
- * @brief Implementation of the mechanism to control the launcher.
+ * @file mech_deposit.cpp
+ * @brief Implementation for mechanism to deposit ping pong balls and cabbages
  *****************************************************************************/
 
 /** Includes ----------------------------------------------------------------*/
-#include "control_launcher.h"
+#include "mech_deposit.h"
 
 
 /** Function Definitions ----------------------------------------------------*/
-control_launcher::control_launcher()
+mech_deposit::mech_deposit()
 {
-
+    
 }
 
-void control_launcher::update(void)
+void mech_deposit::update(void)
 {
 
 }

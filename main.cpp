@@ -11,9 +11,9 @@
 #include "pinout.h"
 #include "flysky_ibus.h"
 #include "control_drive_train.h"
-#include "control_collect.h"
-#include "control_deposit.h"
-#include "control_launcher.h"
+#include "mech_collect.h"
+#include "mech_deposit.h"
+#include "mech_launcher.h"
 
 
 /* Defines ------------------------------------------------------------------*/
@@ -48,9 +48,9 @@ int main(void)
                          PIN_MOTOR_RL_DIR_A,
                          PIN_MOTOR_RL_DIR_B);
 
-  control_collect  myCollect;
-  control_deposit  myDeposit;
-  control_launcher myLauncher;
+  mech_collect  myCollect;
+  mech_deposit  myDeposit;
+  mech_launcher myLauncher;
 
 #if ENABLE_DEBUG
   printf("Program Initialized, moving to main loop\n");
