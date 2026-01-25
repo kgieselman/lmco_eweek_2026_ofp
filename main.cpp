@@ -85,7 +85,10 @@ int main(void)
       int speed  = normalize_ibus_channel_value(myIBus.read_channel(flysky_ibus::CHAN_RSTICK_VERT));
       int turn  = normalize_ibus_channel_value(myIBus.read_channel(flysky_ibus::CHAN_RSTICK_HORIZ));
       int strafe = normalize_ibus_channel_value(myIBus.read_channel(flysky_ibus::CHAN_LSTICK_HORIZ));
-      myDriveTrain.update(speed, turn, strafe);
+      myDriveTrain.set_speed(speed);
+      myDriveTrain.set_turn(turn);
+      myDriveTrain.set_strafe(strafe);
+      myDriveTrain.update();
 #else
       // Using Differntial drive train
       int speed  = normalize_ibus_channel_value(myIBus.read_channel(flysky_ibus::CHAN_RSTICK_VERT));

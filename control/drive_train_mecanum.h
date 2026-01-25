@@ -49,28 +49,35 @@ class drive_train_mecanum
                    int     pinDirRev);
 
     /**************************************************************************
-     * @brief Serivces the motor controller with new values
-     * @param speed  - speed value (0-1000)
-     * @param turn   - turn value (0-1000).
-     *                 Absolute value from 500 is the amount
-     * @param strafe - strafe value (0-1000).
-     *                 Aboslue value from 400 is the amount
-     * 
-     * @todo Update to not be so dependant on IBUS values
-     *    Convert everything to -500 to 500...
-     *    User could specify centered range max when creating the object?
+     * @brief Sets the speed value. Sent to motors on next update()
+     * @param speed - New value [-500..500]
+     * @return true if value is valid, false otherwise
      *************************************************************************/
-    void update(int speed, int turn, int strafe);
+    bool set_speed(int speed);
+
+    /**************************************************************************
+     * @brief Sets the turn value. Sent to motors on next update()
+     * @param turn - New value [-500..500]
+     * @return true if value is valid, false otherwise
+     *************************************************************************/
+    bool set_turn(int turn);
+
+    /**************************************************************************
+     * @brief Sets the strafe value. Sent to motors on next update()
+     * @param strafe - New value [-500..500]
+     * @return true if value is valid, false otherwise
+     *************************************************************************/
+    bool set_strafe(int strafe);
+
+    /**************************************************************************
+     * @brief Updates the motor controller with new values
+     *************************************************************************/
+    void update(void);
 
     /**************************************************************************
      * @brief Blocking calibration routine
      *************************************************************************/
     void calibrate(void);
-
-    /**************************************************************************
-     * @brief Prints debug information to STDIO
-     *************************************************************************/
-    void debug_print(void);
 
 
   private:
@@ -92,6 +99,10 @@ class drive_train_mecanum
 
 
     /*Private Constants -----------------------------------------------------*/
+    static const int USER_INPUT_MAX = 500;
+    static const int USER_INPUT_MIN = -500;
+
+
     // Top count in mecanum algorithm the max value is 1500, so use that as
     //   top count for the PWM channels.
     //
@@ -106,14 +117,11 @@ class drive_train_mecanum
 
 
     /* Private Variables ----------------------------------------------------*/
-    int debug_update;
-
-
     motor_t motorArr[MOTOR_COUNT];
 
-    int current_speed;
-    int current_turn;
-    int current_strafe;
+    int inputSpeed;
+    int inputTurn;
+    int inputStrafe;
 };
 
 

@@ -77,11 +77,8 @@ class drive_train_differential
       int pinDirFwd;
       int pinDirRev;
 
-      int valPWM;
-      int valDirFwd;
-      int valDirRev;
-      int valTrimFwd;
-      int valTrimRev;
+      float valTrimFwd;
+      float valTrimRev;
     } motor_t;
 
 

@@ -16,6 +16,8 @@ drive_train_differential::drive_train_differential()
   for (int i=0; i<MOTOR_COUNT; i++)
   {
     motorArr[i] = {0};
+    motorArr[i].valTrimFwd = 1.0;
+    motorArr[i].valTrimRev = 1.0;
   }
 }
 
@@ -108,9 +110,26 @@ bool drive_train_differential::set_turn(int turn)
 void drive_train_differential::update(void)
 {
   // Calculate raw Mecanum values (expected range [-1500..1500])
-  int mecanumVal[MOTOR_COUNT  ] = {0};
-  mecanumVal[MOTOR_LEFT ] = inputSpeed +  inputTurn;
-  mecanumVal[MOTOR_RIGHT] = inputSpeed - inputTurn;
+  int calcVal[MOTOR_COUNT  ] = {0};
+  calcVal[MOTOR_LEFT ] = inputSpeed +  inputTurn;
+  calcVal[MOTOR_RIGHT] = inputSpeed - inputTurn;
+
+  // Apply Trim as needed
+  for (int i=0; i<MOTOR_COUNT; i++)
+  {
+    //TODO How should trim be applied?
+      // Currently force to 0 so this has no effect
+    if (calcVal[i] > 0)
+    {
+      float trimmedVal = static_cast<float>(calcVal[i]) * motorArr[i].valTrimFwd;
+      calcVal[i] = static_cast<int>(trimmedVal);
+    }
+    else if (calcVal)
+    {
+      float trimmedVal = static_cast<float>(calcVal[i]) * motorArr[i].valTrimRev;
+      calcVal[i] = static_cast<int>(trimmedVal);
+    }
+  }
 
   // Determine Scaling
   // 1. Find the strongest intended user input to determine the overall "throttle" percentage.
@@ -119,8 +138,8 @@ void drive_train_differential::update(void)
   //    user's intended throttle, preventing clipping while maintaining the drive vector.
   int inputMax = std::max({std::abs(inputSpeed), std::abs(inputTurn)}); // [0..500]
 
-  int calcMax  = std::max({std::abs(mecanumVal[MOTOR_LEFT ]), 
-                           std::abs(mecanumVal[MOTOR_RIGHT])});
+  int calcMax  = std::max({std::abs(calcVal[MOTOR_LEFT ]), 
+                           std::abs(calcVal[MOTOR_RIGHT])});
 
   float inputMaxPercent = static_cast<float>(inputMax) / USER_INPUT_MAX;
 
@@ -133,11 +152,11 @@ void drive_train_differential::update(void)
   for (int i=0; i<MOTOR_COUNT; i++)
   {
     // Update speed
-    uint16_t pwmValue = std::abs(mecanumVal[i]) * motorMultiplier;
+    uint16_t pwmValue = std::abs(calcVal[i]) * motorMultiplier;
 
     pwm_set_gpio_level(motorArr[i].pinPWM, pwmValue);
-    gpio_put(motorArr[i].pinDirFwd, mecanumVal[i] > 0);
-    gpio_put(motorArr[i].pinDirRev, mecanumVal[i] < 0);
+    gpio_put(motorArr[i].pinDirFwd, calcVal[i] > 0);
+    gpio_put(motorArr[i].pinDirRev, calcVal[i] < 0);
   }
 }
 
@@ -145,8 +164,8 @@ void drive_train_differential::calibrate(void)
 {
   for (int i=0; i<MOTOR_COUNT; i++)
   {
-    motorArr[i].valTrimFwd = 0;
-    motorArr[i].valTrimRev = 0;
+    motorArr[i].valTrimFwd = 1.0;
+    motorArr[i].valTrimRev = 1.0;
   }
 }
 

@@ -11,7 +11,7 @@
 
 
 /** Class Function Definitions ----------------------------------------------*/
-drive_train_mecanum::drive_train_mecanum() : debug_update(0)
+drive_train_mecanum::drive_train_mecanum()
 {
   // Clear motors
   for (int i=0; i<MOTOR_COUNT; i++)
@@ -77,24 +77,62 @@ bool drive_train_mecanum::add_motor(motor_e motor,
   return true;
 }
 
-void drive_train_mecanum::update(int speed, int turn, int strafe)
+bool drive_train_mecanum::set_speed(int speed)
+{
+  if ((speed < USER_INPUT_MIN) || (speed > USER_INPUT_MAX))
+  { 
+    return false;
+  }
+
+  inputSpeed = speed;
+
+  return true;
+}
+
+bool drive_train_mecanum::set_turn(int turn)
+{
+  if ((turn < USER_INPUT_MIN) || (turn > USER_INPUT_MAX))
+  {
+    return false;
+  }
+
+  inputTurn = turn;
+
+  return true;
+}
+
+bool drive_train_mecanum::set_strafe(int strafe)
+{
+  if ((strafe < USER_INPUT_MIN) || (strafe > USER_INPUT_MAX))
+  {
+    return false;
+  }
+
+  inputStrafe = strafe;
+
+  return true;
+}
+
+void drive_train_mecanum::update(void)
 {
   const float INPUT_PARAMETER_MAX = 500.0;
   const float MOTOR_PWM_MAX       = 1500.0;
 
   // Calculate raw Mecanum values (expected range [-1500..1500])
   int mecanumVal[MOTOR_COUNT  ] = {0};
-  mecanumVal[MOTOR_FRONT_LEFT ] = speed + strafe + turn;
-  mecanumVal[MOTOR_FRONT_RIGHT] = speed - strafe - turn;
-  mecanumVal[MOTOR_REAR_RIGHT ] = speed + strafe - turn;
-  mecanumVal[MOTOR_REAR_LEFT  ] = speed - strafe + turn;
+  mecanumVal[MOTOR_FRONT_LEFT ] = inputSpeed + inputStrafe + inputTurn;
+  mecanumVal[MOTOR_FRONT_RIGHT] = inputSpeed - inputStrafe - inputTurn;
+  mecanumVal[MOTOR_REAR_RIGHT ] = inputSpeed + inputStrafe - inputTurn;
+  mecanumVal[MOTOR_REAR_LEFT  ] = inputSpeed - inputStrafe + inputTurn;
 
   // Determine Scaling
   // 1. Find the strongest intended user input to determine the overall "throttle" percentage.
   // 2. Find the highest calculated wheel value to use as a normalization base.
   // 3. Create a multiplier that scales the wheels so that the fastest motor matches the 
   //    user's intended throttle, preventing clipping while maintaining the drive vector.
-  int inputMax = std::max({std::abs(speed), std::abs(strafe), std::abs(turn)}); // [0..500]
+  int inputMax = std::max({std::abs(inputSpeed),
+                           std::abs(inputStrafe), 
+                           std::abs(inputTurn)});
 
   int calcMax  = std::max({std::abs(mecanumVal[MOTOR_FRONT_LEFT ]), 
                            std::abs(mecanumVal[MOTOR_FRONT_RIGHT]),
@@ -133,11 +171,6 @@ void drive_train_mecanum::calibrate(void)
     gpio_put(motorArr[i].pinDirFwd, true);
     gpio_put(motorArr[i].pinDirRev, false);
   }
-}
-
-void drive_train_mecanum::debug_print(void)
-{
-  ++debug_update;
 }
 
 
