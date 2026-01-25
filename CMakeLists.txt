@@ -40,6 +40,7 @@ add_executable(2026_ofp
         driver/flysky_ibus.cpp
         driver/driver_motor_l298n.cpp
         control/drive_train_mecanum.cpp
+        control/drive_train_differential.cpp
         control/mech_collect.cpp
         control/mech_deposit.cpp
         control/mech_launcher.cpp

@@ -5,19 +5,21 @@
  * See readme for more competition information
  *****************************************************************************/
 
+/* Defines ------------------------------------------------------------------*/
+#define ENABLE_DEBUG (1)
+
+
 /* Libraries ----------------------------------------------------------------*/
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pinout.h"
 #include "flysky_ibus.h"
-#include "drive_train_mecanum.h"
 #include "mech_collect.h"
 #include "mech_deposit.h"
 #include "mech_launcher.h"
 
-
-/* Defines ------------------------------------------------------------------*/
-#define ENABLE_DEBUG (1)
+#include "drive_train_mecanum.h"
+#include "drive_train_differential.h"
 
 
 /* Function Definitions -----------------------------------------------------*/
@@ -33,21 +35,30 @@ int main(void)
 
   drive_train_mecanum myDriveTrain;
   myDriveTrain.add_motor(drive_train_mecanum::MOTOR_FRONT_LEFT,
-                         PIN_MOTOR_FL_PWM,
-                         PIN_MOTOR_FL_DIR_A,
-                         PIN_MOTOR_FL_DIR_B);
+                         PIN_MECANUM_MOTOR_FL_PWM,
+                         PIN_MECANUM_MOTOR_FL_DIR_FWD,
+                         PIN_MECANUM_MOTOR_FL_DIR_REV);
   myDriveTrain.add_motor(drive_train_mecanum::MOTOR_FRONT_RIGHT,
-                         PIN_MOTOR_FR_PWM,
-                         PIN_MOTOR_FR_DIR_A,
-                         PIN_MOTOR_FR_DIR_B);
+                         PIN_MECANUM_MOTOR_FR_PWM,
+                         PIN_MECANUM_MOTOR_FR_DIR_FWD,
+                         PIN_MECANUM_MOTOR_FR_DIR_REV);
   myDriveTrain.add_motor(drive_train_mecanum::MOTOR_REAR_RIGHT,
-                         PIN_MOTOR_RR_PWM,
-                         PIN_MOTOR_RR_DIR_A,
-                         PIN_MOTOR_RR_DIR_B);
+                         PIN_MECANUM_MOTOR_RR_PWM,
+                         PIN_MECANUM_MOTOR_RR_DIR_FWD,
+                         PIN_MECANUM_MOTOR_RR_DIR_REV);
   myDriveTrain.add_motor(drive_train_mecanum::MOTOR_REAR_LEFT,
-                         PIN_MOTOR_RL_PWM,
-                         PIN_MOTOR_RL_DIR_A,
-                         PIN_MOTOR_RL_DIR_B);
+                         PIN_MECANUM_MOTOR_RL_PWM,
+                         PIN_MECANUM_MOTOR_RL_DIR_FWD,
+                         PIN_MECANUM_MOTOR_RL_DIR_REV);
+  drive_train_differential myDriveTrainDiff;
+  myDriveTrainDiff.add_motor(drive_train_differential::MOTOR_LEFT,
+                         PIN_DIFF_MOTOR_LEFT_PWM,
+                         PIN_DIFF_MOTOR_LEFT_DIR_FWD,
+                         PIN_DIFF_MOTOR_LEFT_DIR_REV);
+  myDriveTrainDiff.add_motor(drive_train_differential::MOTOR_RIGHT,
+                         PIN_DIFF_MOTOR_RIGHT_PWM,
+                         PIN_DIFF_MOTOR_RIGHT_DIR_FWD,
+                         PIN_DIFF_MOTOR_RIGHT_DIR_REV);
 
   mech_collect  myCollect;
   mech_deposit  myDeposit;
