@@ -6,8 +6,12 @@
  *****************************************************************************/
 
 /* Defines ------------------------------------------------------------------*/
+#define USE_DRIVE_TRAIN_MECANUM (1)
+
 #define ENABLE_DEBUG (1)
-#define USE_DRIVE_TRAIN_MECANUM (0)
+#if ENABLE_DEBUG
+uint32_t lastDebugTimeMS = 0;
+#endif // ENABLE_DEBUG
 
 
 /* Libraries ----------------------------------------------------------------*/
@@ -103,6 +107,16 @@ int main(void)
       myLauncher.update();
     }
   }
+
+#if ENABLE_DEBUG
+    // Timer logic to periodically call debugs
+    uint32_t currTimeMS = to_ms_since_boot(get_absolute_time());
+    if (currTimeMS - lastDebugTimeMS > 3000)
+    {
+      lastDebugTimeMS = currTimeMS;
+      //myDriveTrain.debug_print();
+    }
+#endif // ENABLE_DEBUG
 
   return 0;
 }
