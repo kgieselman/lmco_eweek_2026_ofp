@@ -7,10 +7,11 @@
 #include "drive_train_differential.h"
 #include "hardware/pwm.h"
 #include <algorithm>
+#include <stdio.h>
 
 
 /* Function Definitions -----------------------------------------------------*/
-drive_train_differential::drive_train_differential()
+drive_train_differential::drive_train_differential() : debugUpdate(0)
 {
 // Clear motors
   for (int i=0; i<MOTOR_COUNT; i++)
@@ -37,11 +38,11 @@ bool drive_train_differential::add_motor(motor_e motor,
     return false;
   }
 
-  const int GPIO_PIN_MIN = 0;
-  const int GPIO_PIN_MAX = 29;
-  if ((pinPWM    < GPIO_PIN_MIN) || (pinPWM    > GPIO_PIN_MAX) ||
-      (pinDirFwd < GPIO_PIN_MIN) || (pinDirFwd > GPIO_PIN_MAX) ||
-      (pinDirRev < GPIO_PIN_MIN) || (pinDirRev > GPIO_PIN_MAX))
+  const int PICO_GPIO_PIN_MIN = 0;
+  const int PICO_GPIO_PIN_MAX = 29;
+  if ((pinPWM    < PICO_GPIO_PIN_MIN) || (pinPWM    > PICO_GPIO_PIN_MAX) ||
+      (pinDirFwd < PICO_GPIO_PIN_MIN) || (pinDirFwd > PICO_GPIO_PIN_MAX) ||
+      (pinDirRev < PICO_GPIO_PIN_MIN) || (pinDirRev > PICO_GPIO_PIN_MAX))
   {
     // Invalid pin
     return false;
@@ -75,8 +76,8 @@ bool drive_train_differential::add_motor(motor_e motor,
 
 
   // Since motor was just added, remove any trims
-  motorArr[motor].valTrimFwd = 0;
-  motorArr[motor].valTrimRev = 0;
+  motorArr[motor].valTrimFwd = 1.0;
+  motorArr[motor].valTrimRev = 1.0;
 
   motorArr[motor].initialized = true;
 
@@ -114,11 +115,9 @@ void drive_train_differential::update(void)
   calcVal[MOTOR_LEFT ] = inputSpeed +  inputTurn;
   calcVal[MOTOR_RIGHT] = inputSpeed - inputTurn;
 
-  // Apply Trim as needed
+  // Apply Trim as needed (default value is 1.0)
   for (int i=0; i<MOTOR_COUNT; i++)
   {
-    //TODO How should trim be applied?
-      // Currently force to 0 so this has no effect
     if (calcVal[i] > 0)
     {
       float trimmedVal = static_cast<float>(calcVal[i]) * motorArr[i].valTrimFwd;
@@ -129,6 +128,12 @@ void drive_train_differential::update(void)
       float trimmedVal = static_cast<float>(calcVal[i]) * motorArr[i].valTrimRev;
       calcVal[i] = static_cast<int>(trimmedVal);
     }
+  }
+
+  if (debugUpdate)
+  {
+    --debugUpdate;
+    printf("calcVal[0] %d, calcVCal[1] %d\n\n", calcVal[0], calcVal[1]);
   }
 
   // Determine Scaling
@@ -158,8 +163,22 @@ void drive_train_differential::update(void)
     gpio_put(motorArr[i].pinDirFwd, calcVal[i] > 0);
     gpio_put(motorArr[i].pinDirRev, calcVal[i] < 0);
   }
+
+  if (debugUpdate)
+  {
+    --debugUpdate;
+  }
 }
 
+void drive_train_differential::print_update(void)
+{
+  ++debugUpdate;
+}
+
+// Value will be used as a multiplier to weaken the stronger motor so that
+  // they both are normalized. Without this, the car will not drive straight
+// TODO: How to write this? Polling? Enable interrupts on encoder and take
+  // a nap? See how many interrupts occured during nap?
 void drive_train_differential::calibrate(void)
 {
   for (int i=0; i<MOTOR_COUNT; i++)

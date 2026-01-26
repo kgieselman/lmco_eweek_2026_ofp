@@ -6,12 +6,7 @@
  *****************************************************************************/
 
 /* Defines ------------------------------------------------------------------*/
-#define USE_DRIVE_TRAIN_MECANUM (1)
-
-#define ENABLE_DEBUG (1)
-#if ENABLE_DEBUG
-uint32_t lastDebugTimeMS = 0;
-#endif // ENABLE_DEBUG
+#define USE_DRIVE_TRAIN_MECANUM (0)
 
 
 /* Libraries ----------------------------------------------------------------*/
@@ -23,15 +18,26 @@ uint32_t lastDebugTimeMS = 0;
 #include "mech_deposit.h"
 #include "mech_launcher.h"
 
+// Determine which drive train to include
+#if USE_DRIVE_TRAIN_MECANUM
 #include "drive_train_mecanum.h"
+#else
 #include "drive_train_differential.h"
+#endif
+
+
+/* Debugging ----------------------------------------------------------------*/
+#define ENABLE_DEBUG (1)
+#if ENABLE_DEBUG
+uint32_t lastDebugTimeMS = 0;
+#endif // ENABLE_DEBUG
 
 
 /* Function Definitions -----------------------------------------------------*/
 // Change value range from [1000..2000] to [-500..500]
 int normalize_ibus_channel_value(int chanValue)
 {
-  return chanValue - 1500;
+  return (chanValue - 1500);
 }
 
 int main(void)
@@ -95,10 +101,11 @@ int main(void)
       myDriveTrain.update();
 #else
       // Using Differntial drive train
-      int speed  = normalize_ibus_channel_value(myIBus.read_channel(flysky_ibus::CHAN_RSTICK_VERT));
+      int speed = normalize_ibus_channel_value(myIBus.read_channel(flysky_ibus::CHAN_RSTICK_VERT));
       int turn  = normalize_ibus_channel_value(myIBus.read_channel(flysky_ibus::CHAN_RSTICK_HORIZ));
       myDriveTrain.set_speed(speed);
       myDriveTrain.set_turn(turn);
+
       myDriveTrain.update();
 #endif // USE_DRIVE_TRAIN_MECANUM
 
@@ -106,7 +113,6 @@ int main(void)
       myDeposit.update();
       myLauncher.update();
     }
-  }
 
 #if ENABLE_DEBUG
     // Timer logic to periodically call debugs
@@ -114,9 +120,10 @@ int main(void)
     if (currTimeMS - lastDebugTimeMS > 3000)
     {
       lastDebugTimeMS = currTimeMS;
-      //myDriveTrain.debug_print();
+      myDriveTrain.print_update();
     }
 #endif // ENABLE_DEBUG
+  }
 
   return 0;
 }

@@ -66,6 +66,11 @@ class drive_train_differential
      *************************************************************************/
     void calibrate(void);
 
+    /**************************************************************************
+     * @brief Sets flag to print debug info on next update()
+     *************************************************************************/
+    void print_update(void);
+
  
   private:
     /* Private Types --------------------------------------------------------*/
@@ -92,6 +97,8 @@ class drive_train_differential
 
 
     /* Private Variables ----------------------------------------------------*/
+    int debugUpdate;
+
     motor_t motorArr[MOTOR_COUNT];
 
     int inputSpeed;

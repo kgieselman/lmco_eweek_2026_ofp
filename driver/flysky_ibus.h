@@ -90,6 +90,8 @@ class flysky_ibus
      * @brief Gets value for a given channel off the IBus
      * @param chan - Channel to get the current value for
      * @return current value of the given channel
+     * 
+     * @todo Update to have a bool for if value should be centered on 0
      *************************************************************************/
     int read_channel(channel_e chan);
 
