@@ -11,14 +11,14 @@
 
 
 /* Function Definitions -----------------------------------------------------*/
-drive_train_differential::drive_train_differential() : debugUpdate(0)
+drive_train_differential::drive_train_differential() : m_debugUpdate(0)
 {
 // Clear motors
   for (int i=0; i<MOTOR_COUNT; i++)
   {
-    motorArr[i] = {0};
-    motorArr[i].valTrimFwd = 1.0;
-    motorArr[i].valTrimRev = 1.0;
+    m_motors[i] = {0};
+    m_motors[i].valTrimFwd = 1.0;
+    m_motors[i].valTrimRev = 1.0;
   }
 }
 
@@ -48,9 +48,9 @@ bool drive_train_differential::add_motor(motor_e motor,
     return false;
   }
 
-  motorArr[motor].pinPWM     = pinPWM;
-  motorArr[motor].pinDirFwd  = pinDirFwd;
-  motorArr[motor].pinDirRev  = pinDirRev;
+  m_motors[motor].pinPWM     = pinPWM;
+  m_motors[motor].pinDirFwd  = pinDirFwd;
+  m_motors[motor].pinDirRev  = pinDirRev;
 
   // Configure the pins
   gpio_set_function(pinPWM, GPIO_FUNC_PWM);
@@ -76,10 +76,10 @@ bool drive_train_differential::add_motor(motor_e motor,
 
 
   // Since motor was just added, remove any trims
-  motorArr[motor].valTrimFwd = 1.0;
-  motorArr[motor].valTrimRev = 1.0;
+  m_motors[motor].valTrimFwd = 1.0;
+  m_motors[motor].valTrimRev = 1.0;
 
-  motorArr[motor].initialized = true;
+  m_motors[motor].initialized = true;
 
   return true;
 }
@@ -91,7 +91,7 @@ bool drive_train_differential::set_speed(int speed)
     return false;
   }
 
-  inputSpeed = speed;
+  m_speed = speed;
 
   return true;
 }
@@ -103,7 +103,7 @@ bool drive_train_differential::set_turn(int turn)
     return false;
   }
 
-  inputTurn = turn;
+  m_turn = turn;
 
   return true;
 }
@@ -112,27 +112,27 @@ void drive_train_differential::update(void)
 {
   // Calculate raw Mecanum values (expected range [-1500..1500])
   int calcVal[MOTOR_COUNT  ] = {0};
-  calcVal[MOTOR_LEFT ] = inputSpeed +  inputTurn;
-  calcVal[MOTOR_RIGHT] = inputSpeed - inputTurn;
+  calcVal[MOTOR_LEFT ] = m_speed +  m_turn;
+  calcVal[MOTOR_RIGHT] = m_speed - m_turn;
 
   // Apply Trim as needed (default value is 1.0)
   for (int i=0; i<MOTOR_COUNT; i++)
   {
     if (calcVal[i] > 0)
     {
-      float trimmedVal = static_cast<float>(calcVal[i]) * motorArr[i].valTrimFwd;
+      float trimmedVal = static_cast<float>(calcVal[i]) * m_motors[i].valTrimFwd;
       calcVal[i] = static_cast<int>(trimmedVal);
     }
     else if (calcVal)
     {
-      float trimmedVal = static_cast<float>(calcVal[i]) * motorArr[i].valTrimRev;
+      float trimmedVal = static_cast<float>(calcVal[i]) * m_motors[i].valTrimRev;
       calcVal[i] = static_cast<int>(trimmedVal);
     }
   }
 
-  if (debugUpdate)
+  if (m_debugUpdate)
   {
-    --debugUpdate;
+    --m_debugUpdate;
     printf("calcVal[0] %d, calcVCal[1] %d\n\n", calcVal[0], calcVal[1]);
   }
 
@@ -141,7 +141,7 @@ void drive_train_differential::update(void)
   // 2. Find the highest calculated wheel value to use as a normalization base.
   // 3. Create a multiplier that scales the wheels so that the fastest motor matches the 
   //    user's intended throttle, preventing clipping while maintaining the drive vector.
-  int inputMax = std::max({std::abs(inputSpeed), std::abs(inputTurn)}); // [0..500]
+  int inputMax = std::max({std::abs(m_speed), std::abs(m_turn)}); // [0..500]
 
   int calcMax  = std::max({std::abs(calcVal[MOTOR_LEFT ]), 
                            std::abs(calcVal[MOTOR_RIGHT])});
@@ -159,20 +159,15 @@ void drive_train_differential::update(void)
     // Update speed
     uint16_t pwmValue = std::abs(calcVal[i]) * motorMultiplier;
 
-    pwm_set_gpio_level(motorArr[i].pinPWM, pwmValue);
-    gpio_put(motorArr[i].pinDirFwd, calcVal[i] > 0);
-    gpio_put(motorArr[i].pinDirRev, calcVal[i] < 0);
-  }
-
-  if (debugUpdate)
-  {
-    --debugUpdate;
+    pwm_set_gpio_level(m_motors[i].pinPWM, pwmValue);
+    gpio_put(m_motors[i].pinDirFwd, calcVal[i] > 0);
+    gpio_put(m_motors[i].pinDirRev, calcVal[i] < 0);
   }
 }
 
 void drive_train_differential::print_update(void)
 {
-  ++debugUpdate;
+  ++m_debugUpdate;
 }
 
 // Value will be used as a multiplier to weaken the stronger motor so that
@@ -183,8 +178,8 @@ void drive_train_differential::calibrate(void)
 {
   for (int i=0; i<MOTOR_COUNT; i++)
   {
-    motorArr[i].valTrimFwd = 1.0;
-    motorArr[i].valTrimRev = 1.0;
+    m_motors[i].valTrimFwd = 1.0;
+    m_motors[i].valTrimRev = 1.0;
   }
 }
 

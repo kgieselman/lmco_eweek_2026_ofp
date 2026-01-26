@@ -12,18 +12,18 @@
 motor_l298n::motor_l298n(unsigned int pinPWM,
                          unsigned int pinDirFwd,
                          unsigned int pinDirRev) :
-  trimFwd(0),
-  trimRev(0)
+  m_trimFwd(0),
+  m_trimRev(0)
 {
-  pins.pwm    = pinPWM;
-  pins.dirFwd = pinDirFwd;
-  pins.dirRev = pinDirRev;
+  m_pins.pwm    = pinPWM;
+  m_pins.dirFwd = pinDirFwd;
+  m_pins.dirRev = pinDirRev;
 }
 
 bool motor_l298n::set_trim(unsigned int forward, unsigned int reverse)
 {
-  trimFwd = forward;
-  trimRev = reverse;
+  m_trimFwd = forward;
+  m_trimRev = reverse;
 
   return true;
 }
@@ -31,10 +31,6 @@ bool motor_l298n::set_trim(unsigned int forward, unsigned int reverse)
 bool motor_l298n::set_speed(int speed)
 {
   // Use value to set PWM and direction pins
-  if (DUMMY == 9)
-  {
-    return true;
-  }
 
   return true;
 }

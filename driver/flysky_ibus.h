@@ -166,13 +166,13 @@ class flysky_ibus
 
 
     /* Private Variables ----------------------------------------------------*/
-    uart_inst_t* pIBusUART;
-    msg_def_t IBusMsgSnapshot;
+    uart_inst_t* m_pIBusUART;
+    msg_def_t m_ibusMsgSnapshot;
 
     // sensor array
-    sensor_t sensorArr[IBUS_SENSOR_LIMIT];
+    sensor_t m_sensors[IBUS_SENSOR_LIMIT];
     // static buffers for the sensor data
-    static uint8_t sensorDataArr[IBUS_SENSOR_LIMIT][IBUS_SENSOR_MAX_MSG_LENGTH_BYTES];
+    static uint8_t m_sensorsData[IBUS_SENSOR_LIMIT][IBUS_SENSOR_MAX_MSG_LENGTH_BYTES];
 };
 
 

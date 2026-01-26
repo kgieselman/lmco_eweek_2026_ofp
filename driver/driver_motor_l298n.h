@@ -50,8 +50,6 @@ class motor_l298n
 
 
   private:
-    static const int DUMMY = 9;
-
     // Structure of pins for the motor
     struct
     {
@@ -59,10 +57,10 @@ class motor_l298n
       unsigned int dirFwd;  ///< Direction Forward
       unsigned int dirRev;  ///< Direction Reverse
       unsigned int encoder; ///< IR pulse encoder pin
-    } pins;
+    } m_pins;
 
-    int trimFwd; ///< Trim to apply to forward direction
-    int trimRev; ///< Trim to apply to reverse direction
+    int m_trimFwd; ///< Trim to apply to forward direction
+    int m_trimRev; ///< Trim to apply to reverse direction
 };
 
 

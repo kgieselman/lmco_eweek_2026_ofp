@@ -88,21 +88,21 @@ class drive_train_differential
 
 
     /*Private Constants -----------------------------------------------------*/
-    static const int USER_INPUT_MIN = -500;
-    static const int USER_INPUT_MAX = 500;
-    static const int USER_INPUT_COUNT         = 2; // User supplies 2 inputs
+    static const int USER_INPUT_MIN   = -500;
+    static const int USER_INPUT_MAX   = 500;
+    static const int USER_INPUT_COUNT = 2; // User supplies 2 inputs
 
-    static constexpr int PWM_TOP_COUNT        = USER_INPUT_COUNT * USER_INPUT_MAX;
+    static constexpr int   PWM_TOP_COUNT      = USER_INPUT_COUNT * USER_INPUT_MAX;
     static constexpr float PWM_SYS_CLK_DIV    = 4.0;
 
 
     /* Private Variables ----------------------------------------------------*/
-    int debugUpdate;
+    int m_debugUpdate;
 
-    motor_t motorArr[MOTOR_COUNT];
+    motor_t m_motors[MOTOR_COUNT];
 
-    int inputSpeed;
-    int inputTurn;
+    int m_speed;
+    int m_turn;
 };
 
 

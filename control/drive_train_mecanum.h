@@ -108,20 +108,20 @@ class drive_train_mecanum
     //
     //   This allows the PWM level to be set to the value from the algorithm
     //    without the need for normalization.
-    static constexpr int PWM_TOP_COUNT = 1510;
+    static constexpr int PWM_TOP_COUNT     = 1510;
     static constexpr float PWM_SYS_CLK_DIV = 4.0;
 
     // If mecanum computes a value less that this threshold, set PWM to 0
     static const int DEADBAND_THRESHOLD = 10;
-    static const int PWM_LEVEL_MIN = 500;
+    static const int PWM_LEVEL_MIN      = 500;
 
 
     /* Private Variables ----------------------------------------------------*/
-    motor_t motorArr[MOTOR_COUNT];
+    motor_t m_motors[MOTOR_COUNT];
 
-    int inputSpeed;
-    int inputTurn;
-    int inputStrafe;
+    int m_speed;
+    int m_turn;
+    int m_strafe;
 };
 
 

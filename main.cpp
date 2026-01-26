@@ -29,7 +29,7 @@
 /* Debugging ----------------------------------------------------------------*/
 #define ENABLE_DEBUG (1)
 #if ENABLE_DEBUG
-uint32_t lastDebugTimeMS = 0;
+uint32_t g_lastDebugTimeMS = 0;
 #endif // ENABLE_DEBUG
 
 
@@ -117,9 +117,9 @@ int main(void)
 #if ENABLE_DEBUG
     // Timer logic to periodically call debugs
     uint32_t currTimeMS = to_ms_since_boot(get_absolute_time());
-    if (currTimeMS - lastDebugTimeMS > 3000)
+    if (currTimeMS - g_lastDebugTimeMS > 3000)
     {
-      lastDebugTimeMS = currTimeMS;
+      g_lastDebugTimeMS = currTimeMS;
       myDriveTrain.print_update();
     }
 #endif // ENABLE_DEBUG

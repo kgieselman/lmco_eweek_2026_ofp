@@ -16,7 +16,7 @@ drive_train_mecanum::drive_train_mecanum()
   // Clear motors
   for (int i=0; i<MOTOR_COUNT; i++)
   {
-    motorArr[i] = {0};
+    m_motors[i] = {0};
   }
 }
 
@@ -41,9 +41,9 @@ bool drive_train_mecanum::add_motor(motor_e motor,
     return false;
   }
 
-  motorArr[motor].pinPWM     = pinPWM;
-  motorArr[motor].pinDirFwd  = pinDirFwd;
-  motorArr[motor].pinDirRev  = pinDirRev;
+  m_motors[motor].pinPWM     = pinPWM;
+  m_motors[motor].pinDirFwd  = pinDirFwd;
+  m_motors[motor].pinDirRev  = pinDirRev;
 
   // Configure the pins
   gpio_set_function(pinPWM, GPIO_FUNC_PWM);
@@ -69,10 +69,10 @@ bool drive_train_mecanum::add_motor(motor_e motor,
 
 
   // Since motor was just added, remove any trims
-  motorArr[motor].valTrimFwd = 0;
-  motorArr[motor].valTrimRev = 0;
+  m_motors[motor].valTrimFwd = 0;
+  m_motors[motor].valTrimRev = 0;
 
-  motorArr[motor].initialized = true;
+  m_motors[motor].initialized = true;
 
   return true;
 }
@@ -84,7 +84,7 @@ bool drive_train_mecanum::set_speed(int speed)
     return false;
   }
 
-  inputSpeed = speed;
+  m_speed = speed;
 
   return true;
 }
@@ -96,7 +96,7 @@ bool drive_train_mecanum::set_turn(int turn)
     return false;
   }
 
-  inputTurn = turn;
+  m_turn = turn;
 
   return true;
 }
@@ -108,7 +108,7 @@ bool drive_train_mecanum::set_strafe(int strafe)
     return false;
   }
 
-  inputStrafe = strafe;
+  m_strafe = strafe;
 
   return true;
 }
@@ -120,19 +120,19 @@ void drive_train_mecanum::update(void)
 
   // Calculate raw Mecanum values (expected range [-1500..1500])
   int mecanumVal[MOTOR_COUNT  ] = {0};
-  mecanumVal[MOTOR_FRONT_LEFT ] = inputSpeed + inputStrafe + inputTurn;
-  mecanumVal[MOTOR_FRONT_RIGHT] = inputSpeed - inputStrafe - inputTurn;
-  mecanumVal[MOTOR_REAR_RIGHT ] = inputSpeed + inputStrafe - inputTurn;
-  mecanumVal[MOTOR_REAR_LEFT  ] = inputSpeed - inputStrafe + inputTurn;
+  mecanumVal[MOTOR_FRONT_LEFT ] = m_speed + m_strafe + m_turn;
+  mecanumVal[MOTOR_FRONT_RIGHT] = m_speed - m_strafe - m_turn;
+  mecanumVal[MOTOR_REAR_RIGHT ] = m_speed + m_strafe - m_turn;
+  mecanumVal[MOTOR_REAR_LEFT  ] = m_speed - m_strafe + m_turn;
 
   // Determine Scaling
   // 1. Find the strongest intended user input to determine the overall "throttle" percentage.
   // 2. Find the highest calculated wheel value to use as a normalization base.
   // 3. Create a multiplier that scales the wheels so that the fastest motor matches the 
   //    user's intended throttle, preventing clipping while maintaining the drive vector.
-  int inputMax = std::max({std::abs(inputSpeed),
-                           std::abs(inputStrafe), 
-                           std::abs(inputTurn)});
+  int inputMax = std::max({std::abs(m_speed),
+                           std::abs(m_strafe), 
+                           std::abs(m_turn)});
 
   int calcMax  = std::max({std::abs(mecanumVal[MOTOR_FRONT_LEFT ]), 
                            std::abs(mecanumVal[MOTOR_FRONT_RIGHT]),
@@ -152,9 +152,9 @@ void drive_train_mecanum::update(void)
     // Update speed
     uint16_t pwmValue = std::abs(mecanumVal[i]) * motorMultiplier;
 
-    pwm_set_gpio_level(motorArr[i].pinPWM, pwmValue);
-    gpio_put(motorArr[i].pinDirFwd, mecanumVal[i] > 0);
-    gpio_put(motorArr[i].pinDirRev, mecanumVal[i] < 0);
+    pwm_set_gpio_level(m_motors[i].pinPWM, pwmValue);
+    gpio_put(m_motors[i].pinDirFwd, mecanumVal[i] > 0);
+    gpio_put(m_motors[i].pinDirRev, mecanumVal[i] < 0);
   }
 }
 
@@ -163,13 +163,13 @@ void drive_train_mecanum::calibrate(void)
 {
   for (int i=0; i<MOTOR_COUNT; i++)
   {
-    motorArr[i].valTrimFwd = 0;
-    motorArr[i].valTrimRev = 0;
+    m_motors[i].valTrimFwd = 0;
+    m_motors[i].valTrimRev = 0;
 
     // Force all motors to move forward
-    pwm_set_gpio_level(std::abs(motorArr[i].pinPWM), 250); // Max speed is currently 1000
-    gpio_put(motorArr[i].pinDirFwd, true);
-    gpio_put(motorArr[i].pinDirRev, false);
+    pwm_set_gpio_level(std::abs(m_motors[i].pinPWM), 250); // Max speed is currently 1000
+    gpio_put(m_motors[i].pinDirFwd, true);
+    gpio_put(m_motors[i].pinDirRev, false);
   }
 }
 
