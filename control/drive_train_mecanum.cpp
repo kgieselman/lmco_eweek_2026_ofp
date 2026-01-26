@@ -3,14 +3,14 @@
  * @brief Implementation of a Mecanum drive train control
  *****************************************************************************/
 
-/** Includes ----------------------------------------------------------------*/
+/* Includes -----------------------------------------------------------------*/
 #include "drive_train_mecanum.h"
 #include "hardware/pwm.h"
 #include <algorithm>
 #include <stdio.h>
 
 
-/** Class Function Definitions ----------------------------------------------*/
+/* Class Function Definitions -----------------------------------------------*/
 drive_train_mecanum::drive_train_mecanum()
 {
   // Clear motors

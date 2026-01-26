@@ -3,7 +3,7 @@
  * @brief Implementation of a differential drive train
  *****************************************************************************/
 
-/* Libraries ----------------------------------------------------------------*/
+/* Includes -----------------------------------------------------------------*/
 #include "drive_train_differential.h"
 #include "hardware/pwm.h"
 #include <algorithm>

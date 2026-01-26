@@ -9,7 +9,7 @@
 #include "pico/stdlib.h"
 
 
-/** Class Definition --------------------------------------------------------*/
+/* Class Definition ---------------------------------------------------------*/
 class mech_collect
 {
   public:

@@ -3,11 +3,11 @@
  * @brief Implementation for mechanism to deposit ping pong balls and cabbages
  *****************************************************************************/
 
-/** Includes ----------------------------------------------------------------*/
+/* Includes -----------------------------------------------------------------*/
 #include "mech_deposit.h"
 
 
-/** Function Definitions ----------------------------------------------------*/
+/* Function Definitions -----------------------------------------------------*/
 mech_deposit::mech_deposit()
 {
     

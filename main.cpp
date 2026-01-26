@@ -9,7 +9,7 @@
 #define USE_DRIVE_TRAIN_MECANUM (0)
 
 
-/* Libraries ----------------------------------------------------------------*/
+/* Includes -----------------------------------------------------------------*/
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pinout.h"
