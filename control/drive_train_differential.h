@@ -35,12 +35,14 @@ class drive_train_differential
      * @param pinPWM    - Pin number of the PWM signal to control motor speed
      * @param pinDirFwd - Pin number for direction forward
      * @param pinDirRev - Pin number for direction reverse
+     * @param pinEnc    - [Optional] Pin number for an IR encoder
      * @return true if motor was added, false otherwise
      *************************************************************************/
     bool add_motor(motor_e motor,
                    int     pinPWM,
                    int     pinDirFwd,
-                   int     pinDirRev);
+                   int     pinDirRev,
+                   int     pinEnc = -1);
 
     /**************************************************************************
      * @brief Sets the value for speed. Sent to motors with next update()
@@ -81,6 +83,7 @@ class drive_train_differential
       int pinPWM;
       int pinDirFwd;
       int pinDirRev;
+      int pinEncoder;
 
       float valTrimFwd;
       float valTrimRev;
@@ -94,6 +97,10 @@ class drive_train_differential
 
     static constexpr int   PWM_TOP_COUNT      = USER_INPUT_COUNT * USER_INPUT_MAX;
     static constexpr float PWM_SYS_CLK_DIV    = 4.0;
+
+    static constexpr float DEFAULT_TRIM      = 1.0;
+    static const int MOTOR_SETTLE_TIME_MS    = 500;
+    static const int CAL_MOTOR_COUNT_TIME_MS = 1000;
 
 
     /* Private Variables ----------------------------------------------------*/
