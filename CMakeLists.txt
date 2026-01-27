@@ -38,7 +38,6 @@ pico_sdk_init()
 add_executable(2026_ofp 
         main.cpp
         driver/flysky_ibus.cpp
-        driver/driver_motor_l298n.cpp
         control/drive_train_mecanum.cpp
         control/drive_train_differential.cpp
         control/mech_collect.cpp
