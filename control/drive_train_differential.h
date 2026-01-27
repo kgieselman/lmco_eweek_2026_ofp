@@ -100,7 +100,7 @@ class drive_train_differential
 
     static constexpr float DEFAULT_TRIM      = 1.0;
     static const int MOTOR_SETTLE_TIME_MS    = 500;
-    static const int CAL_MOTOR_COUNT_TIME_MS = 1000;
+    static const int CAL_MOTOR_COUNT_TIME_MS = 2000;
 
 
     /* Private Variables ----------------------------------------------------*/
