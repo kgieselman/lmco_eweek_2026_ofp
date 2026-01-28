@@ -49,13 +49,6 @@ class drive_train_mecanum : public drive_train
                    int     pinDirRev);
 
     /**************************************************************************
-     * @brief Sets the turn value. Sent to motors on next update()
-     * @param turn - New value [-500..500]
-     * @return true if value is valid, false otherwise
-     *************************************************************************/
-    bool set_turn(int turn) override;
-
-    /**************************************************************************
      * @brief Sets the strafe value. Sent to motors on next update()
      * @param strafe - New value [-500..500]
      * @return true if value is valid, false otherwise

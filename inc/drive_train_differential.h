@@ -45,13 +45,6 @@ class drive_train_differential : public drive_train
                    int     pinEnc = -1);
 
     /**************************************************************************
-     * @brief Sets the value for turn. Sent to motors with next update()
-     * @param turn - [-500..500] New turn value. + is right, - is left
-     * @return true if value is valid, false otherwise
-     *************************************************************************/
-    bool set_turn(int turn) override;
-  
-    /**************************************************************************
      * @brief Serivces the motor controller with new values
      *************************************************************************/
     void update(void) override;
