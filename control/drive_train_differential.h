@@ -102,6 +102,9 @@ class drive_train_differential
     static const int MOTOR_SETTLE_TIME_MS    = 500;
     static const int CAL_MOTOR_COUNT_TIME_MS = 2000;
 
+    static const int PICO_GPIO_PIN_MIN = 0;
+    static const int PICO_GPIO_PIN_MAX = 29;
+
 
     /* Private Variables ----------------------------------------------------*/
     int m_debugUpdate;
@@ -110,6 +113,21 @@ class drive_train_differential
 
     int m_speed;
     int m_turn;
+
+    /* Private Functions ----------------------------------------------------*/
+    /**************************************************************************
+     * @brief Stops all motors
+     *************************************************************************/
+    void stop_motors(void);
+
+    /**************************************************************************
+     * @brief Helper function for the calibrate public function
+     * @param forward    - boolean representing if direction should be set to
+     *                     forward
+     * @param pwmVal     - The pwm value to apply for this calibration action
+     * @param pArrPulses - Pointer to the array to store number of pulses
+     *************************************************************************/
+    void calibrate_action(bool forward, int pwmVal, int* pArrPulses);
 };
 
 
