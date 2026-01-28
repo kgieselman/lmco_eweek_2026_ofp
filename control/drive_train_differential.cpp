@@ -169,7 +169,7 @@ void drive_train_differential::update(void)
       float trimmedVal = static_cast<float>(calcVal[i]) * m_motors[i].valTrimFwd;
       calcVal[i] = static_cast<int>(trimmedVal);
     }
-    else if (calcVal)
+    else if (calcVal[i] < 0)
     {
       float trimmedVal = static_cast<float>(calcVal[i]) * m_motors[i].valTrimRev;
       calcVal[i] = static_cast<int>(trimmedVal);
@@ -179,7 +179,7 @@ void drive_train_differential::update(void)
   if (m_debugUpdate)
   {
     --m_debugUpdate;
-    printf("calcVal[0] %d, calcVCal[1] %d\n\n", calcVal[0], calcVal[1]);
+    printf("calcVal[0] %d, calcVal[1] %d\n\n", calcVal[0], calcVal[1]);
   }
 
   // Determine Scaling

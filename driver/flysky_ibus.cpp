@@ -18,7 +18,7 @@
 
 /* Global ISR Definitions ---------------------------------------------------*/
 /// Flag to alert that a new message has been recieved from UART1
-bool g_newMsgUART1rx = false;
+volatile bool g_newMsgUART1rx = false;
 
 // Interrupt Service Routine (ISR)
 const int IBUS_UART_RX_BUF_COUNT = 2; // Use 2 buffers, avoid read/write conflict
