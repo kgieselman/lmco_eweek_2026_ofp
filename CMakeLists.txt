@@ -36,21 +36,21 @@ pico_sdk_init()
 # Add executable. Default name is the project name, version 0.1
 
 add_executable(2026_ofp 
-        main.cpp
-        driver/flysky_ibus.cpp
-        control/drive_train_mecanum.cpp
-        control/drive_train_differential.cpp
-        control/mech_collect.cpp
-        control/mech_deposit.cpp
-        control/mech_launcher.cpp
-        util/ring_buffer.cpp
+        src/main.cpp
+        src/flysky_ibus.cpp
+        src/drive_train_mecanum.cpp
+        src/drive_train_differential.cpp
+        src/mech_collect.cpp
+        src/mech_deposit.cpp
+        src/mech_launcher.cpp
+        src/ring_buffer.cpp
         )
 
 pico_set_program_name(2026_ofp "2026_ofp")
 pico_set_program_version(2026_ofp "0.1")
 
 # Generate PIO header
-pico_generate_pio_header(2026_ofp ${CMAKE_CURRENT_LIST_DIR}/blink.pio)
+pico_generate_pio_header(2026_ofp ${CMAKE_CURRENT_LIST_DIR}/src/blink.pio)
 
 # Modify the below lines to enable/disable output over UART/USB
 pico_enable_stdio_uart(2026_ofp 1)
@@ -63,9 +63,7 @@ target_link_libraries(2026_ofp
 # Add the standard include files to the build
 target_include_directories(2026_ofp PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
-        control/
-        driver/
-        util/
+        inc/
 )
 
 # Add any user requested libraries
