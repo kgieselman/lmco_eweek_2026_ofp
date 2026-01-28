@@ -11,7 +11,7 @@
 
 
 /* Class Function Definitions -----------------------------------------------*/
-drive_train_mecanum::drive_train_mecanum()
+drive_train_mecanum::drive_train_mecanum() : drive_train(), m_strafe(0)
 {
   // Clear motors
   for (int i=0; i<MOTOR_COUNT; i++)
@@ -31,11 +31,7 @@ bool drive_train_mecanum::add_motor(motor_e motor,
     return false;
   }
 
-  const int GPIO_PIN_MIN = 0;
-  const int GPIO_PIN_MAX = 29;
-  if ((pinPWM    < GPIO_PIN_MIN) || (pinPWM    > GPIO_PIN_MAX) ||
-      (pinDirFwd < GPIO_PIN_MIN) || (pinDirFwd > GPIO_PIN_MAX) ||
-      (pinDirRev < GPIO_PIN_MIN) || (pinDirRev > GPIO_PIN_MAX))
+  if (!validate_pin(pinPWM) || !validate_pin(pinDirFwd) || !validate_pin(pinDirRev))
   {
     // Invalid pin
     return false;
@@ -45,28 +41,10 @@ bool drive_train_mecanum::add_motor(motor_e motor,
   m_motors[motor].pinDirFwd  = pinDirFwd;
   m_motors[motor].pinDirRev  = pinDirRev;
 
-  // Configure the pins
-  gpio_set_function(pinPWM, GPIO_FUNC_PWM);
-  uint slice_num    = pwm_gpio_to_slice_num(pinPWM);
-  uint chan_num     = pwm_gpio_to_channel(pinPWM);
-  pwm_config config = pwm_get_default_config();
-
-  pwm_config_set_clkdiv(&config, PWM_SYS_CLK_DIV);
-  pwm_init(slice_num, &config, true);
-  pwm_set_wrap(slice_num, PWM_TOP_COUNT);
-  pwm_set_chan_level(slice_num, chan_num, 0); // Default to OFF
-  pwm_set_enabled(slice_num, true);
-
-
-  // Configure Discrete Direction Pins (Outputs)
-  gpio_init(pinDirFwd);
-  gpio_set_dir(pinDirFwd, GPIO_OUT);
-  gpio_put(pinDirFwd, 0); // Init to OFF
-
-  gpio_init(pinDirRev);
-  gpio_set_dir(pinDirRev, GPIO_OUT);
-  gpio_put(pinDirRev, 0); // Init to OFF
-
+  // Configure the pins using base class helpers
+  init_pwm_pin(pinPWM, PWM_TOP_COUNT, PWM_SYS_CLK_DIV);
+  init_direction_pin(pinDirFwd);
+  init_direction_pin(pinDirRev);
 
   // Since motor was just added, remove any trims
   m_motors[motor].valTrimFwd = 0;
@@ -77,33 +55,9 @@ bool drive_train_mecanum::add_motor(motor_e motor,
   return true;
 }
 
-bool drive_train_mecanum::set_speed(int speed)
-{
-  if ((speed < USER_INPUT_MIN) || (speed > USER_INPUT_MAX))
-  { 
-    return false;
-  }
-
-  m_speed = speed;
-
-  return true;
-}
-
-bool drive_train_mecanum::set_turn(int turn)
-{
-  if ((turn < USER_INPUT_MIN) || (turn > USER_INPUT_MAX))
-  {
-    return false;
-  }
-
-  m_turn = turn;
-
-  return true;
-}
-
 bool drive_train_mecanum::set_strafe(int strafe)
 {
-  if ((strafe < USER_INPUT_MIN) || (strafe > USER_INPUT_MAX))
+  if (!validate_user_input(strafe))
   {
     return false;
   }

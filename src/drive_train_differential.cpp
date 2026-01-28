@@ -23,7 +23,7 @@ void __ISR_encoder_right(uint gpio, uint32_t events)
  ++g_encoderRightCounter;
 }
 
-drive_train_differential::drive_train_differential() : m_debugUpdate(0)
+drive_train_differential::drive_train_differential() : drive_train(), m_debugUpdate(0)
 {
 // Clear motors
   for (int i=0; i<MOTOR_COUNT; i++)
@@ -51,9 +51,7 @@ bool drive_train_differential::add_motor(motor_e motor,
     return false;
   }
 
-  if ((pinPWM    < PICO_GPIO_PIN_MIN) || (pinPWM    > PICO_GPIO_PIN_MAX) ||
-      (pinDirFwd < PICO_GPIO_PIN_MIN) || (pinDirFwd > PICO_GPIO_PIN_MAX) ||
-      (pinDirRev < PICO_GPIO_PIN_MIN) || (pinDirRev > PICO_GPIO_PIN_MAX))
+  if (!validate_pin(pinPWM) || !validate_pin(pinDirFwd) || !validate_pin(pinDirRev))
   {
     // Invalid pin
     return false;
@@ -63,28 +61,10 @@ bool drive_train_differential::add_motor(motor_e motor,
   m_motors[motor].pinDirFwd  = pinDirFwd;
   m_motors[motor].pinDirRev  = pinDirRev;
 
-  // Configure the pins
-  gpio_set_function(pinPWM, GPIO_FUNC_PWM);
-  uint slice_num    = pwm_gpio_to_slice_num(pinPWM);
-  uint chan_num     = pwm_gpio_to_channel(pinPWM);
-  pwm_config config = pwm_get_default_config();
-
-  pwm_config_set_clkdiv(&config, PWM_SYS_CLK_DIV);
-  pwm_init(slice_num, &config, true);
-  pwm_set_wrap(slice_num, PWM_TOP_COUNT);
-  pwm_set_chan_level(slice_num, chan_num, 0); // Default to OFF
-  pwm_set_enabled(slice_num, true);
-
-
-  // Configure Discrete Direction Pins (Outputs)
-  gpio_init(pinDirFwd);
-  gpio_set_dir(pinDirFwd, GPIO_OUT);
-  gpio_put(pinDirFwd, 0); // Init to OFF
-
-  gpio_init(pinDirRev);
-  gpio_set_dir(pinDirRev, GPIO_OUT);
-  gpio_put(pinDirRev, 0); // Init to OFF
-
+  // Configure the pins using base class helpers
+  init_pwm_pin(pinPWM, PWM_TOP_COUNT, PWM_SYS_CLK_DIV);
+  init_direction_pin(pinDirFwd);
+  init_direction_pin(pinDirRev);
 
   // Since motor was just added, remove any trims
   m_motors[motor].valTrimFwd = 1.0;
@@ -93,7 +73,7 @@ bool drive_train_differential::add_motor(motor_e motor,
   m_motors[motor].initialized = true;
 
   // Configure optional parameters
-  if ((pinEnc >= PICO_GPIO_PIN_MIN) && (pinEnc <= PICO_GPIO_PIN_MAX))
+  if (validate_pin(pinEnc))
   {
     gpio_init(pinEnc);
     gpio_set_dir(pinEnc, GPIO_IN);
@@ -124,30 +104,6 @@ bool drive_train_differential::add_motor(motor_e motor,
       }
     }
   }
-
-  return true;
-}
-
-bool drive_train_differential::set_speed(int speed)
-{
-  if ((speed < USER_INPUT_MIN) || (speed > USER_INPUT_MAX))
-  {
-    return false;
-  }
-
-  m_speed = speed;
-
-  return true;
-}
-
-bool drive_train_differential::set_turn(int turn)
-{
-  if ((turn < USER_INPUT_MIN) || (turn > USER_INPUT_MAX))
-  {
-    return false;
-  }
-
-  m_turn = turn;
 
   return true;
 }
@@ -281,10 +237,7 @@ void drive_train_differential::calibrate(void)
   bool readyToCal = true;
   for (int i=0; i<MOTOR_COUNT; i++)
   {
-    // TODO: Define these constants somewhere universal to the project
-    bool pinValid = (m_motors[i].pinEncoder >= PICO_GPIO_PIN_MIN) &&
-                    (m_motors[i].pinEncoder <= PICO_GPIO_PIN_MAX);
-    readyToCal &= pinValid;
+    readyToCal &= validate_pin(m_motors[i].pinEncoder);
   }
 
   if (readyToCal)

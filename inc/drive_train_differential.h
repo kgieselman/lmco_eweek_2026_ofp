@@ -6,11 +6,11 @@
 
 
 /* Includes -----------------------------------------------------------------*/
-#include "pico/stdlib.h"
+#include "drive_train.h"
 
 
 /* Class Definition ---------------------------------------------------------*/
-class drive_train_differential
+class drive_train_differential : public drive_train
 {
   public:
     /* Public Types ---------------------------------------------------------*/
@@ -45,28 +45,21 @@ class drive_train_differential
                    int     pinEnc = -1);
 
     /**************************************************************************
-     * @brief Sets the value for speed. Sent to motors with next update()
-     * @param speed - [-500..500] New speed value. + is fwd, - is rev
-     * @return true if value is valid, false otherwise
-     *************************************************************************/
-    bool set_speed(int speed);
-
-    /**************************************************************************
      * @brief Sets the value for turn. Sent to motors with next update()
      * @param turn - [-500..500] New turn value. + is right, - is left
      * @return true if value is valid, false otherwise
      *************************************************************************/
-    bool set_turn(int turn);
+    bool set_turn(int turn) override;
   
     /**************************************************************************
      * @brief Serivces the motor controller with new values
      *************************************************************************/
-    void update(void);
+    void update(void) override;
 
     /**************************************************************************
      * @brief Blocking calibration routine
      *************************************************************************/
-    void calibrate(void);
+    void calibrate(void) override;
 
     /**************************************************************************
      * @brief Sets flag to print debug info on next update()
@@ -91,8 +84,6 @@ class drive_train_differential
 
 
     /*Private Constants -----------------------------------------------------*/
-    static const int USER_INPUT_MIN   = -500;
-    static const int USER_INPUT_MAX   = 500;
     static const int USER_INPUT_COUNT = 2; // User supplies 2 inputs
 
     static constexpr int   PWM_TOP_COUNT      = USER_INPUT_COUNT * USER_INPUT_MAX;
@@ -102,17 +93,11 @@ class drive_train_differential
     static const int MOTOR_SETTLE_TIME_MS    = 500;
     static const int CAL_MOTOR_COUNT_TIME_MS = 2000;
 
-    static const int PICO_GPIO_PIN_MIN = 0;
-    static const int PICO_GPIO_PIN_MAX = 29;
-
 
     /* Private Variables ----------------------------------------------------*/
     int m_debugUpdate;
 
     motor_t m_motors[MOTOR_COUNT];
-
-    int m_speed;
-    int m_turn;
 
     /* Private Functions ----------------------------------------------------*/
     /**************************************************************************

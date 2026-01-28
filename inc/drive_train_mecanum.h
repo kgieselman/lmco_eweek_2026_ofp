@@ -6,11 +6,11 @@
 
 
 /* Includes -----------------------------------------------------------------*/
-#include "pico/stdlib.h"
+#include "drive_train.h"
 
 
 /* Class Definition ---------------------------------------------------------*/
-class drive_train_mecanum
+class drive_train_mecanum : public drive_train
 {
   public:
     /* Public Types ---------------------------------------------------------*/
@@ -49,18 +49,11 @@ class drive_train_mecanum
                    int     pinDirRev);
 
     /**************************************************************************
-     * @brief Sets the speed value. Sent to motors on next update()
-     * @param speed - New value [-500..500]
-     * @return true if value is valid, false otherwise
-     *************************************************************************/
-    bool set_speed(int speed);
-
-    /**************************************************************************
      * @brief Sets the turn value. Sent to motors on next update()
      * @param turn - New value [-500..500]
      * @return true if value is valid, false otherwise
      *************************************************************************/
-    bool set_turn(int turn);
+    bool set_turn(int turn) override;
 
     /**************************************************************************
      * @brief Sets the strafe value. Sent to motors on next update()
@@ -72,12 +65,12 @@ class drive_train_mecanum
     /**************************************************************************
      * @brief Updates the motor controller with new values
      *************************************************************************/
-    void update(void);
+    void update(void) override;
 
     /**************************************************************************
      * @brief Blocking calibration routine
      *************************************************************************/
-    void calibrate(void);
+    void calibrate(void) override;
 
 
   private:
@@ -99,10 +92,6 @@ class drive_train_mecanum
 
 
     /*Private Constants -----------------------------------------------------*/
-    static const int USER_INPUT_MAX = 500;
-    static const int USER_INPUT_MIN = -500;
-
-
     // Top count in mecanum algorithm the max value is 1500, so use that as
     //   top count for the PWM channels.
     //
@@ -119,8 +108,6 @@ class drive_train_mecanum
     /* Private Variables ----------------------------------------------------*/
     motor_t m_motors[MOTOR_COUNT];
 
-    int m_speed;
-    int m_turn;
     int m_strafe;
 };
 
