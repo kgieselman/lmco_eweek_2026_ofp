@@ -37,13 +37,14 @@ pico_sdk_init()
 
 add_executable(2026_ofp 
         src/main.cpp
+        src/ring_buffer.cpp
         src/flysky_ibus.cpp
+        src/drive_train.cpp
         src/drive_train_mecanum.cpp
         src/drive_train_differential.cpp
         src/mech_collect.cpp
         src/mech_deposit.cpp
         src/mech_launcher.cpp
-        src/ring_buffer.cpp
         )
 
 pico_set_program_name(2026_ofp "2026_ofp")
