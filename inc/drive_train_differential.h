@@ -105,7 +105,7 @@ class drive_train_differential : public drive_train
      * @param pwmVal     - The pwm value to apply for this calibration action
      * @param pArrPulses - Pointer to the array to store number of pulses
      *************************************************************************/
-    void calibrate_action(bool forward, int pwmVal, int* pArrPulses);
+    void measure_motor_pulses(bool forward, int pwmVal, int* pArrPulses);
 };
 
 

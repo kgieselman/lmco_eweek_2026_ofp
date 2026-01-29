@@ -188,7 +188,7 @@ void drive_train_differential::stop_motors(void)
   }
 }
 
-void drive_train_differential::calibrate_action(bool forward, int pwmVal, int* pArrPulses)
+void drive_train_differential::measure_motor_pulses(bool forward, int pwmVal, int* pArrPulses)
 {
   if (pArrPulses == nullptr)
   {
