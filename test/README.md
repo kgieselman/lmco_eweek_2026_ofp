@@ -1,33 +1,46 @@
-# Drive Train Unit Tests
+# Unit Test Suite
 
-Comprehensive unit tests for the differential and mecanum drive train calculations used in the LMCO E-Week 2026 robotics competition.
+Comprehensive unit tests for the LMCO E-Week 2026 robotics competition firmware.
 
 ## Overview
 
-These tests validate the mathematical calculations that control motor speeds and directions for both drive train types without requiring hardware. This allows you to catch bugs early and verify the algorithms before deploying to the Raspberry Pi Pico.
+These tests validate the core algorithms and data structures without requiring hardware. This allows you to catch bugs early and verify implementations before deploying to the Raspberry Pi Pico.
 
 ## Test Coverage
 
-### Differential Drive Tests (`test_drive_train_differential.cpp`)
+✅ **76 Total Tests** - All Passing
+
+### Differential Drive Tests ([test_differential.cpp](test_differential.cpp))
+**14 tests** validating:
 - ✅ **Basic Movement**: Forward, backward, stopped states
 - ✅ **Turning**: In-place rotation, gentle turns, sharp turns
 - ✅ **PWM Scaling**: Anti-clipping algorithm, ratio preservation
 - ✅ **Trim Application**: Motor calibration effects
-- ✅ **Edge Cases**: Maximum inputs, asymmetric configurations
-- ✅ **Input Validation**: Boundary conditions
 
-**Total: 29 test cases**
-
-### Mecanum Drive Tests (`test_drive_train_mecanum.cpp`)
-- ✅ **Basic Movement**: Forward, backward, stopped states  
+### Mecanum Drive Tests ([test_mecanum.cpp](test_mecanum.cpp))
+**17 tests** validating:
+- ✅ **Basic Movement**: Forward, backward, stopped states
 - ✅ **Strafing**: Left, right, diagonal movements
 - ✅ **Rotation**: Clockwise, counterclockwise
-- ✅ **Combined Movement**: Multi-axis control
+- ✅ **Combined Movement**: Multi-axis control (forward + rotate, etc.)
 - ✅ **PWM Scaling**: Vector preservation, overflow prevention
-- ✅ **Symmetry**: Verify kinematic correctness
-- ✅ **Kinematics**: Individual motor calculations
+- ✅ **4-Motor Kinematics**: Individual motor calculations
 
-**Total: 39 test cases**
+### Ring Buffer Tests ([test_ring_buffer.cpp](test_ring_buffer.cpp))
+**21 tests** validating:
+- ✅ **FIFO Behavior**: First-in-first-out circular buffer operations
+- ✅ **Push/Pop**: Adding and removing elements
+- ✅ **Peek**: Reading without removal
+- ✅ **Wrap-Around**: Boundary handling at buffer edges
+- ✅ **Overflow Protection**: Handling full buffer conditions
+
+### iBUS Protocol Tests ([test_ibus.cpp](test_ibus.cpp))
+**24 tests** validating:
+- ✅ **CRC Calculation**: Checksum validation
+- ✅ **Message Parsing**: Protocol structure validation
+- ✅ **14-Channel Extraction**: RC receiver data decoding
+- ✅ **Sensor Configuration**: 2-byte and 4-byte sensor data
+- ✅ **RC Input Handling**: Stick positions and switch values
 
 ## Quick Start
 
@@ -35,7 +48,7 @@ These tests validate the mathematical calculations that control motor speeds and
 
 ```bash
 cd test/
-make all
+make          # Build all test executables
 ```
 
 ### Running Tests
@@ -45,40 +58,41 @@ Run all tests:
 make test
 ```
 
-Run differential tests only:
+Run individual test suites:
 ```bash
-make test-diff
+make test-diff      # Differential drive (14 tests)
+make test-mecanum   # Mecanum drive (17 tests)
+make test-ring      # Ring buffer (21 tests)
+make test-ibus      # iBUS protocol (24 tests)
 ```
 
-Run mecanum tests only:
+Clean build artifacts:
 ```bash
-make test-mecanum
+make clean
 ```
 
 ### Expected Output
 
+Successful test run example:
+
 ```
-╔═══════════════════════════════════════════════════════════╗
-║     Differential Drive Train Unit Tests                  ║
-╚═══════════════════════════════════════════════════════════╝
-
-═══════════════════════════════════════════════════
-Running Test Suite: DifferentialDrive_BasicMovement
-═══════════════════════════════════════════════════
-
-  Test: forward_full_speed ... PASSED
-  Test: backward_full_speed ... PASSED
+Running Tests: Differential Drive
+  Test: forward_motion ... PASSED
+  Test: backward_motion ... PASSED
+  Test: turn_in_place ... PASSED
   ...
 
 ═══════════════════════════════════════════════════
 Test Summary
 ═══════════════════════════════════════════════════
-Total Tests: 29
-Passed: 29
+Total Tests: 14
+Passed: 14
 Failed: 0
 Pass Rate: 100.0%
 ═══════════════════════════════════════════════════
 ```
+
+When running all tests (`make test`), each suite runs sequentially with a summary at the end.
 
 ## Understanding Test Failures
 
@@ -97,10 +111,14 @@ This tells you:
 
 ## Test Framework
 
-### Custom Lightweight Framework
+### Custom Lightweight Frameworks
 
-We use a custom unit test framework (`unit_test.h`) designed for embedded systems:
+We use custom unit test frameworks designed for embedded systems:
 
+- **[simple_test.h](simple_test.h)**: Lightweight framework for current tests
+- **[unit_test.h](unit_test.h)**: Alternative framework with additional features
+
+Both frameworks provide:
 - **No external dependencies** (no Google Test, Catch2, etc.)
 - **Colorized output** for easy reading
 - **Simple macros** similar to popular frameworks
@@ -162,11 +180,15 @@ int main(void)
 
 ## Integration with CI/CD
 
+### Exit Codes
+
 The test executables return:
 - **Exit code 0**: All tests passed
 - **Exit code 1**: One or more tests failed
 
-This makes them easy to integrate into continuous integration:
+This makes them perfect for CI/CD integration!
+
+### Example CI Script
 
 ```bash
 #!/bin/bash
@@ -182,27 +204,35 @@ fi
 
 ### Differential Drive Algorithm
 
-The tests validate the exact algorithm from `drive_train_differential.cpp`:
+Tests validate tank-style steering calculations:
 
 ```cpp
 calcVal[MOTOR_LEFT ] = m_speed +  m_turn;
 calcVal[MOTOR_RIGHT] = m_speed - m_turn;
 
-// Apply trim...
-// Calculate scaling...
-// Apply PWM and direction...
+// Plus trim, scaling, PWM, and direction handling...
 ```
 
 ### Mecanum Drive Kinematics
 
-The tests validate the mecanum kinematics from `drive_train_mecanum.cpp`:
+Tests validate omnidirectional 4-motor kinematics:
 
 ```cpp
 mecanumVal[MOTOR_FRONT_LEFT ] = m_speed + m_strafe + m_turn;
 mecanumVal[MOTOR_FRONT_RIGHT] = m_speed - m_strafe - m_turn;
 mecanumVal[MOTOR_REAR_RIGHT ] = m_speed + m_strafe - m_turn;
 mecanumVal[MOTOR_REAR_LEFT  ] = m_speed - m_strafe + m_turn;
+
+// Plus PWM scaling and overflow protection...
 ```
+
+### Ring Buffer
+
+Tests validate circular FIFO buffer operations including push, pop, peek, wrap-around, and overflow handling.
+
+### iBUS Protocol
+
+Tests validate RC receiver protocol including CRC validation, message parsing, 14-channel data extraction, and sensor configuration.
 
 ## Known Limitations
 
@@ -230,9 +260,17 @@ If tests fail after code changes:
 
 No Pico SDK required for running these tests!
 
+## Typical Workflow
+
+1. Make code changes to source files
+2. Run relevant tests: `make test-<module>`
+3. If tests fail, fix code and re-run
+4. Run all tests: `make test`
+5. Commit when all tests pass
+
 ## Continuous Development
 
-As you modify the drive train code:
+As you modify the code:
 
 1. **Update tests first** (TDD approach) or alongside code changes
 2. **Run tests before committing** to catch regressions
@@ -243,32 +281,36 @@ As you modify the drive train code:
 
 ```
 test/
-├── unit_test.h                          # Test framework
-├── test_drive_train_differential.cpp    # Differential drive tests
-├── test_drive_train_mecanum.cpp         # Mecanum drive tests
-├── Makefile                             # Build system
-└── README.md                            # This file
+├── simple_test.h               # Lightweight test framework
+├── unit_test.h                 # Alternative test framework
+├── test_differential.cpp       # Differential drive tests (14 tests)
+├── test_mecanum.cpp            # Mecanum drive tests (17 tests)
+├── test_ring_buffer.cpp        # Ring buffer tests (21 tests)
+├── test_ibus.cpp              # iBUS protocol tests (24 tests)
+├── Makefile                    # Build system
+├── build/                      # Test executables (auto-generated)
+└── README.md                   # This file
 ```
 
 ## Future Enhancements
 
 Potential additions:
 
-- [ ] Ring buffer tests
-- [ ] IBus message parsing tests
 - [ ] Encoder calibration algorithm tests
 - [ ] Integration tests with mock hardware
 - [ ] Performance benchmarks
 - [ ] Code coverage reporting
+- [ ] Additional sensor protocol tests
 
 ## Contributing
 
-When adding new drive train features:
+When adding new features or fixing bugs:
 
 1. Write tests first (or alongside implementation)
 2. Ensure all existing tests still pass
 3. Document any new test utilities
 4. Keep test names descriptive
+5. Follow the existing test structure and style
 
 ## Questions?
 
@@ -276,8 +318,8 @@ For issues or questions about the tests:
 - Check the code review document for related bugs
 - Review the test output carefully
 - Add debug prints to understand failures
-- Consult the drive train source code comments
+- Consult the source code comments
 
 ---
 
-**Happy Testing! 🚗💨**
+**Happy Testing!**
