@@ -42,63 +42,54 @@ bool ring_buffer::push(uint8_t value)
 
 bool ring_buffer::pop(uint8_t* pValue)
 {
-  bool rVal = false;
+  if (pValue == nullptr)
+  {
+    return false;
+  }
 
   if (isEmpty() == false)
   {
     *pValue = pBuffer[idxTail];
     incTail();
-    rVal = true;
+    return true;
   }
 
-  return rVal;
+  return false;
 }
 
 bool ring_buffer::peek(uint8_t* pValue)
 {
-  bool rVal = false;
+  if (pValue == nullptr)
+  {
+    return false;
+  }
 
   if (isEmpty() == false)
   {
     *pValue = pBuffer[idxTail];
-    rVal = true;
+    return true;
   }
 
-  return rVal;
+  return false;
 }
 
 bool ring_buffer::incHead(void)
 {
-  bool rVal = false;
-
-  if (!isFull())
-  {
-    int newHead = nextIndex(idxHead);
-    if (newHead >= length)
+    bool rVal = false;
+    if (!isFull())
     {
-      newHead = 0;
+        idxHead = nextIndex(idxHead);
+        rVal = true;
     }
-
-    idxHead = newHead;
-    rVal = true;
-  }
-
-  return rVal;
+    return rVal;
 }
 
 bool ring_buffer::incTail(void)
 {
   bool rVal = false;
-
   if (!isEmpty())
   {
-    int newTail = nextIndex(idxTail);
-    if (newTail >= length)
-    {
-      newTail = 0;
-    }
-
-    idxTail = newTail;
+    idxTail = nextIndex(idxTail);
     rVal = true;
   }
   

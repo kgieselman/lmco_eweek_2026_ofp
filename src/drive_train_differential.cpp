@@ -14,12 +14,16 @@
 volatile uint g_encoderLeftCounter = 0;
 void __ISR_encoder_left(uint gpio, uint32_t events)
 {
+  (void)gpio;    // Explicitly mark as unused
+  (void)events;
   ++g_encoderLeftCounter;
 }
 
 volatile uint g_encoderRightCounter = 0;
 void __ISR_encoder_right(uint gpio, uint32_t events)
 {
+  (void)gpio;    // Explicitly mark as unused
+  (void)events;
  ++g_encoderRightCounter;
 }
 
@@ -114,7 +118,11 @@ void drive_train_differential::update(void)
   bool motorsVerified = true;
   for (int i=0; i<MOTOR_COUNT; i++)
   {
-    motorsVerified &= m_motors[i].initialized;
+    if (!m_motors[i].initialized)
+    {
+        motorsVerified = false;
+        break;
+    }
   }
 
   if (motorsVerified)
@@ -169,7 +177,7 @@ void drive_train_differential::update(void)
   }
   else
   {
-    printf("ERROR: Motor not intialize\n");
+    printf("ERROR: Motor not initialized\n");
   }
 }
 
@@ -191,39 +199,49 @@ void drive_train_differential::measure_motor_pulses(bool forward, int pwmVal, in
     return;
   }
 
-  // Disable interrupts/clear counters/set motors to spin forward
+  // Verify encoder pins are configured for all motors before moving forward
+  bool encoderPinsVerified = true;
   for (int i=0; i<MOTOR_COUNT; i++)
   {
-    // Disable the Encoder interrupts
-    gpio_set_irq_enabled(m_motors[i].pinEncoder, GPIO_IRQ_EDGE_RISE, false);
-
-    // Set motor to spin forward at half speed
-    pwm_set_gpio_level(m_motors[i].pinPWM, pwmVal);
-    gpio_put(m_motors[i].pinDirFwd, forward);
-    gpio_put(m_motors[i].pinDirRev, !forward);
+    encoderPinsVerified &= validate_pin(m_motors[i].pinEncoder);
   }
-  sleep_ms(MOTOR_SETTLE_TIME_MS);
 
-  // Clear counter and enable interrupts
-  g_encoderLeftCounter  = 0;
-  g_encoderRightCounter = 0;
-  for (int i=0; i<MOTOR_COUNT; i++)
+  if (encoderPinsVerified)
   {
-    // Clear any phantom interrupts
-    gpio_acknowledge_irq(m_motors[i].pinEncoder, GPIO_IRQ_EDGE_RISE);
-    gpio_set_irq_enabled(m_motors[i].pinEncoder, GPIO_IRQ_EDGE_RISE, true);
+    // Disable interrupts/clear counters/set motors to spin forward
+    for (int i=0; i<MOTOR_COUNT; i++)
+    {
+      // Disable the Encoder interrupts
+      gpio_set_irq_enabled(m_motors[i].pinEncoder, GPIO_IRQ_EDGE_RISE, false);
+
+      // Set motor to spin forward at half speed
+      pwm_set_gpio_level(m_motors[i].pinPWM, pwmVal);
+      gpio_put(m_motors[i].pinDirFwd, forward);
+      gpio_put(m_motors[i].pinDirRev, !forward);
+    }
+    sleep_ms(MOTOR_SETTLE_TIME_MS);
+
+    // Clear counter and enable interrupts
+    g_encoderLeftCounter  = 0;
+    g_encoderRightCounter = 0;
+    for (int i=0; i<MOTOR_COUNT; i++)
+    {
+      // Clear any phantom interrupts
+      gpio_acknowledge_irq(m_motors[i].pinEncoder, GPIO_IRQ_EDGE_RISE);
+      gpio_set_irq_enabled(m_motors[i].pinEncoder, GPIO_IRQ_EDGE_RISE, true);
+    }
+
+    sleep_ms(CAL_MOTOR_COUNT_TIME_MS);
+
+    // Loop in opposite direction for equality
+    for (int i=(MOTOR_COUNT - 1); i>=0; i--)
+    {
+      gpio_set_irq_enabled(m_motors[i].pinEncoder, GPIO_IRQ_EDGE_RISE, false);
+    }
+
+    pArrPulses[MOTOR_LEFT] = g_encoderLeftCounter;
+    pArrPulses[MOTOR_RIGHT] = g_encoderRightCounter;
   }
-
-  sleep_ms(CAL_MOTOR_COUNT_TIME_MS);
-
-  // Loop in opposite direction for equality
-  for (int i=(MOTOR_COUNT - 1); i>=0; i--)
-  {
-    gpio_set_irq_enabled(m_motors[i].pinEncoder, GPIO_IRQ_EDGE_RISE, false);
-  }
-
-  pArrPulses[MOTOR_LEFT] = g_encoderLeftCounter;
-  pArrPulses[MOTOR_RIGHT] = g_encoderRightCounter;
 }
 
 void drive_train_differential::calibrate(void)

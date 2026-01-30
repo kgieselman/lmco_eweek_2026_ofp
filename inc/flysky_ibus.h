@@ -20,8 +20,8 @@ class flysky_ibus
     /* Public Types ---------------------------------------------------------*/
     // Enumeration of supported channels on the IBus 
     typedef enum
-    { 
-      CHAN_RSTICK_HORIZ = 1,
+    {
+      CHAN_RSTICK_HORIZ,
       CHAN_RSTICK_VERT,
       CHAN_LSTICK_VERT,
       CHAN_LSTICK_HORIZ,
@@ -145,6 +145,7 @@ class flysky_ibus
     static const int           IBUS_DATA_BITS  = 8;
     static const int           IBUS_STOP_BITS  = 1;
     static const uart_parity_t IBUS_PARITY     = UART_PARITY_NONE;
+    static const int           IBUS_CHAN_MAX   = 14;
 
     // Sensor Constants
     static const unsigned int IBUS_SENSOR_MIN_ID = 0;
@@ -156,6 +157,14 @@ class flysky_ibus
     static const unsigned int IBUS_SENSOR_MAX_MSG_LENGTH_BYTES = IBUS_HEADER_LENGTH_BYTES + 
                                                                  IBUS_SENS_DATA_LENGTH_MAX_BYTES +
                                                                  IBUS_CRC_LENGTH_BYTES;
+
+    static const int IBUS_MIN_MSG_LENGTH = IBUS_HEADER_LENGTH_BYTES + IBUS_CRC_LENGTH_BYTES;
+    static const int IBUS_MAX_MSG_LENGTH = IBUS_HEADER_LENGTH_BYTES +
+                                           IBUS_CHAN_MAX            +
+                                           IBUS_CRC_LENGTH_BYTES;
+
+    static const int IBUS_PROTOCOL_LENGTH_IDX = 0;
+    static const int IBUS_PROTOCOL_CMD_IDX    = 1;
 
     //TODO: What are the various commands?
     enum ibus_cmd_code_e

@@ -16,6 +16,10 @@
 #define DEBUG_IBUS_STDIO (0)
 
 
+/* Static Class Variables ---------------------------------------------------*/
+uint8_t flysky_ibus::m_sensorsData[IBUS_SENSOR_LIMIT][IBUS_SENSOR_MAX_MSG_LENGTH_BYTES];
+
+
 /* Global ISR Definitions ---------------------------------------------------*/
 /// Flag to alert that a new message has been recieved from UART1
 volatile bool g_newMsgUART1rx = false;
@@ -38,7 +42,7 @@ void __ISR_uart1_rx(void)
     uart_get_hw(pIbusUart)->icr = UART_UARTICR_RTIC_BITS;
 
     int i = 0;
-    while (uart_is_readable(pIbusUart))
+    while (uart_is_readable(pIbusUart) && (i < UART_RX_FIFO_MAX_LEVEL))
     {
       g_uart1RxBufs[g_uart1BufWriteIdx][i++] = uart_getc(pIbusUart);
     }
@@ -138,21 +142,33 @@ bool flysky_ibus::new_message(void)
   // Check if new message has come in
   if (g_newMsgUART1rx)
   {
-    // Determine if this is a message we service
-    if (g_uart1RxBufs[g_uart1BufReadIdx][0] == 0x20) // Verify first byte (msg size) is expected
-    {
-      if (g_uart1RxBufs[g_uart1BufReadIdx][1] == 0x40) // Verify second byte (command) is expected
-      {
-        volatile uint8_t* pMsg = reinterpret_cast<volatile uint8_t*>(&g_uart1RxBufs[g_uart1BufReadIdx][0]); 
-        // Save a snapshot of the data for use in read channels
-        memcpy(&m_ibusMsgSnapshot, (void*)pMsg, UART_RX_FIFO_MAX_LEVEL);
-
-        rVal = true;
-      }
-    }
-    
     // Always clear flag, even if message is dropped. Wait for next one.
     g_newMsgUART1rx = false;
+
+    // Determine if message has a valid length
+    if ((g_uart1RxBufs[g_uart1BufReadIdx][IBUS_PROTOCOL_LENGTH_IDX] >= IBUS_MIN_MSG_LENGTH) &&
+        (g_uart1RxBufs[g_uart1BufReadIdx][IBUS_PROTOCOL_LENGTH_IDX] <= IBUS_MAX_MSG_LENGTH))
+    {
+      //TODO: CRC check
+
+      switch (g_uart1RxBufs[g_uart1BufReadIdx][IBUS_PROTOCOL_CMD_IDX])
+      {
+        case IBUS_CMD_CODE_CHAN_DATA:
+        {
+          volatile uint8_t* pMsg = reinterpret_cast<volatile uint8_t*>(&g_uart1RxBufs[g_uart1BufReadIdx][0]); 
+          // Save a snapshot of the data for use in read channels
+          memcpy(&m_ibusMsgSnapshot, (void*)pMsg, UART_RX_FIFO_MAX_LEVEL);
+
+          rVal = true;
+          break;
+        }
+        default:
+        {
+          // Message command not supported currently
+          break;
+        }
+      }
+    }
   }
 
   return rVal;

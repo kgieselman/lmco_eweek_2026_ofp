@@ -3,6 +3,10 @@
  * @brief Main file for 2026 Lockheed Martin E-Week competition
  * 
  * See readme for more competition information
+ * 
+ * @todo Add trap for initialization failure
+ * @todo Implement a watchdog #include <hardware/watchdog.h>
+ * @todo Add class to break out motors. Could include initialized and pin validation
  *****************************************************************************/
 
 /* Defines ------------------------------------------------------------------*/
@@ -24,13 +28,6 @@
 #else
 #include "drive_train_differential.h"
 #endif
-
-
-/* Debugging ----------------------------------------------------------------*/
-#define ENABLE_DEBUG (1)
-#if ENABLE_DEBUG
-uint32_t g_lastDebugTimeMS = 0;
-#endif // ENABLE_DEBUG
 
 
 /* Function Definitions -----------------------------------------------------*/
@@ -91,6 +88,7 @@ int main(void)
     // Check if a new message has come it
     if (myIBus.new_message())
     {
+      // TODO: Check for message timeout, if no new message has come, set user params to 0
 #if USE_DRIVE_TRAIN_MECANUM
       int speed  = normalize_ibus_channel_value(myIBus.read_channel(flysky_ibus::CHAN_RSTICK_VERT));
       int turn  = normalize_ibus_channel_value(myIBus.read_channel(flysky_ibus::CHAN_RSTICK_HORIZ));
@@ -113,16 +111,6 @@ int main(void)
       myDeposit.update();
       myLauncher.update();
     }
-
-#if ENABLE_DEBUG
-    // Timer logic to periodically call debugs
-    uint32_t currTimeMS = to_ms_since_boot(get_absolute_time());
-    if (currTimeMS - g_lastDebugTimeMS > 3000)
-    {
-      g_lastDebugTimeMS = currTimeMS;
-      
-    }
-#endif // ENABLE_DEBUG
   }
 
   return 0;
