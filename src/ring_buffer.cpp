@@ -1,121 +1,110 @@
-/******************************************************************************
+/*******************************************************************************
  * @file ring_buffer.cpp
- * @file Implementation for ring buffer
- * 
- * @note buffer size is one less that passed in to differentiate between
- *   full and empty without using flags.
- *****************************************************************************/
+ * @brief Implementation of circular buffer
+ ******************************************************************************/
 
-/* Libraries ----------------------------------------------------------------*/
+/* Includes ------------------------------------------------------------------*/
 #include "ring_buffer.h"
 
 
-/* Class Function Definition ------------------------------------------------*/
-ring_buffer::ring_buffer(uint8_t* pBuf, int size_bytes) :
-  idxHead(0),
-  idxTail(0),
-  length(size_bytes),
-  pBuffer(pBuf)
+/* Method Definitions --------------------------------------------------------*/
+RingBuffer::RingBuffer(uint8_t* pBuffer, int sizeBytes)
+  : m_pBuffer(pBuffer)
+  , m_length(sizeBytes)
+  , m_idxHead(0)
+  , m_idxTail(0)
 {
 }
 
-void ring_buffer::reset(void)
+void RingBuffer::reset(void)
 {
-  // Clear all variables and wipe buffer
-  idxHead = 0;
-  idxTail = 0;
+  m_idxHead = 0;
+  m_idxTail = 0;
 }
 
-bool ring_buffer::push(uint8_t value)
+bool RingBuffer::push(uint8_t value)
 {
-  bool rVal = false;
-
-  if (isFull() == false)
+  if (isFull())
   {
-    pBuffer[idxHead] = value;
-    incHead();
-    rVal = true;
+    return false;
   }
 
-  return rVal;
+  m_pBuffer[m_idxHead] = value;
+  m_idxHead = nextIndex(m_idxHead);
+
+  return true;
 }
 
-bool ring_buffer::pop(uint8_t* pValue)
+bool RingBuffer::pop(uint8_t* pValue)
 {
   if (pValue == nullptr)
   {
     return false;
   }
 
-  if (isEmpty() == false)
+  if (isEmpty())
   {
-    *pValue = pBuffer[idxTail];
-    incTail();
-    return true;
+    return false;
   }
 
-  return false;
+  *pValue = m_pBuffer[m_idxTail];
+  m_idxTail = nextIndex(m_idxTail);
+
+  return true;
 }
 
-bool ring_buffer::peek(uint8_t* pValue)
+bool RingBuffer::peek(uint8_t* pValue) const
 {
   if (pValue == nullptr)
   {
     return false;
   }
 
-  if (isEmpty() == false)
+  if (isEmpty())
   {
-    *pValue = pBuffer[idxTail];
-    return true;
+    return false;
   }
 
-  return false;
+  *pValue = m_pBuffer[m_idxTail];
+
+  return true;
 }
 
-bool ring_buffer::incHead(void)
+bool RingBuffer::isEmpty(void) const
 {
-    bool rVal = false;
-    if (!isFull())
-    {
-        idxHead = nextIndex(idxHead);
-        rVal = true;
-    }
-    return rVal;
+  return (m_idxHead == m_idxTail);
 }
 
-bool ring_buffer::incTail(void)
+bool RingBuffer::isFull(void) const
 {
-  bool rVal = false;
-  if (!isEmpty())
+  return (m_idxTail == nextIndex(m_idxHead));
+}
+
+int RingBuffer::count(void) const
+{
+  if (m_idxHead >= m_idxTail)
   {
-    idxTail = nextIndex(idxTail);
-    rVal = true;
-  }
-  
-  return rVal;
-}
-
-int ring_buffer::nextIndex(int idx)
-{
-  int nextIdx = idx + 1;
-  if (nextIdx >= length)
-  {
-    nextIdx = 0;
+    return m_idxHead - m_idxTail;
   }
 
-  return nextIdx;
+  return m_length - m_idxTail + m_idxHead;
 }
 
-bool ring_buffer::isFull(void)
+int RingBuffer::capacity(void) const
 {
-  return (idxTail == nextIndex(idxHead));
+  return m_length - 1;
 }
 
-bool ring_buffer::isEmpty(void)
+int RingBuffer::nextIndex(int index) const
 {
-  return idxHead == idxTail;
+  int next = index + 1;
+  if (next >= m_length)
+  {
+    next = 0;
+  }
+
+  return next;
 }
 
 
-/* EOF ----------------------------------------------------------------------*/
+/* EOF -----------------------------------------------------------------------*/

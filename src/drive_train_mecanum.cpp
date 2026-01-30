@@ -1,66 +1,102 @@
-/******************************************************************************
+/*******************************************************************************
  * @file drive_train_mecanum.cpp
- * @brief Implementation of a Mecanum drive train control
- *****************************************************************************/
+ * @brief Implementation of mecanum drive train controller
+ ******************************************************************************/
 
-/* Includes -----------------------------------------------------------------*/
+/* Includes ------------------------------------------------------------------*/
 #include "drive_train_mecanum.h"
+#include "config.h"
+#include "error_handler.h"
+#include "pico/stdlib.h"
 #include "hardware/pwm.h"
 #include <algorithm>
+#include <cstdlib>
+
+#if ENABLE_DEBUG
 #include <stdio.h>
+#endif
 
 
-/* Class Function Definitions -----------------------------------------------*/
-drive_train_mecanum::drive_train_mecanum() : drive_train(), m_strafe(0)
+/* Method Definitions --------------------------------------------------------*/
+DriveTrainMecanum::DriveTrainMecanum()
+  : DriveTrain()
+  , m_strafe(0)
 {
-  // Clear motors
-  for (int i=0; i<MOTOR_COUNT; i++)
+  /* Initialize all motors to default state */
+  for (int i = 0; i < MOTOR_COUNT; i++)
   {
-    m_motors[i] = {0};
-    m_motors[i].valTrimFwd = DEFAULT_TRIM;
-    m_motors[i].valTrimRev = DEFAULT_TRIM;
+    m_motors[i].initialized = false;
+    m_motors[i].pinPwm = -1;
+    m_motors[i].pinDirFwd = -1;
+    m_motors[i].pinDirRev = -1;
+    m_motors[i].pinEncoder = -1;
+    m_motors[i].trimFwd = DEFAULT_TRIM;
+    m_motors[i].trimRev = DEFAULT_TRIM;
   }
 }
 
-bool drive_train_mecanum::add_motor(motor_e motor,
-                                    int     pinPWM,
-                                    int     pinDirFwd,
-                                    int     pinDirRev)
+DriveTrainMecanum::~DriveTrainMecanum()
 {
+  stop();
+}
+
+bool DriveTrainMecanum::addMotor(MotorId motor,
+                                 int     pinPwm,
+                                 int     pinDirFwd,
+                                 int     pinDirRev)
+{
+  /* Validate motor ID */
   if ((motor < MOTOR_FRONT_LEFT) || (motor >= MOTOR_COUNT))
   {
-    // Invalid motor
+    ERROR_REPORT(ERROR_DT_INVALID_MOTOR);
     return false;
   }
 
-  if (!validate_pin(pinPWM) || !validate_pin(pinDirFwd) || !validate_pin(pinDirRev))
+  /* Validate pins */
+  if (!validatePin(pinPwm) || !validatePin(pinDirFwd) || !validatePin(pinDirRev))
   {
-    // Invalid pin
+    ERROR_REPORT(ERROR_DT_INVALID_PIN);
     return false;
   }
 
-  m_motors[motor].pinPWM     = pinPWM;
+  /* Store pin assignments */
+  m_motors[motor].pinPwm     = pinPwm;
   m_motors[motor].pinDirFwd  = pinDirFwd;
   m_motors[motor].pinDirRev  = pinDirRev;
+  m_motors[motor].pinEncoder = -1;  /* Mecanum doesn't use encoders currently */
 
-  // Configure the pins using base class helpers
-  init_pwm_pin(pinPWM, PWM_TOP_COUNT, PWM_SYS_CLK_DIV);
-  init_direction_pin(pinDirFwd);
-  init_direction_pin(pinDirRev);
+  /* Initialize PWM pin */
+  if (!initPwmPin(pinPwm, PWM_TOP_COUNT, PWM_CLK_DIV))
+  {
+    ERROR_REPORT(ERROR_DT_PWM_FAILED);
+    return false;
+  }
 
-  // Since motor was just added, remove any trims
-  m_motors[motor].valTrimFwd = DEFAULT_TRIM;
-  m_motors[motor].valTrimRev = DEFAULT_TRIM;
+  /* Initialize direction pins */
+  if (!initDirectionPin(pinDirFwd) || !initDirectionPin(pinDirRev))
+  {
+    return false;
+  }
+
+  /* Reset trim values */
+  m_motors[motor].trimFwd = DEFAULT_TRIM;
+  m_motors[motor].trimRev = DEFAULT_TRIM;
 
   m_motors[motor].initialized = true;
+
+#if ENABLE_DEBUG
+  printf("[Mecanum] Motor %d configured: PWM=%d, FWD=%d, REV=%d\n",
+         motor, pinPwm, pinDirFwd, pinDirRev);
+#endif
 
   return true;
 }
 
-bool drive_train_mecanum::set_strafe(int strafe)
+bool DriveTrainMecanum::setStrafe(int strafe)
 {
-  if (!validate_user_input(strafe))
+  if (!validateUserInput(strafe))
   {
+    ERROR_REPORT(ERROR_OUT_OF_RANGE);
     return false;
   }
 
@@ -69,76 +105,105 @@ bool drive_train_mecanum::set_strafe(int strafe)
   return true;
 }
 
-void drive_train_mecanum::update(void)
+void DriveTrainMecanum::update(void)
 {
-  // Verify that motors have been initialized before proceeding
-  bool motorsVerified = true;
-  for (int i=0; i<MOTOR_COUNT; i++)
+  /* Verify all motors are initialized */
+  if (!isInitialized())
+  {
+    ERROR_REPORT(ERROR_DT_NOT_INIT);
+    return;
+  }
+
+  /* Calculate raw mecanum motor values
+   * The sign conventions are:
+   *   speed:  + = forward, - = backward
+   *   strafe: + = right,   - = left
+   *   turn:   + = clockwise, - = counter-clockwise
+   */
+  int motorValues[MOTOR_COUNT];
+  motorValues[MOTOR_FRONT_LEFT]  = m_speed + m_strafe + m_turn;
+  motorValues[MOTOR_FRONT_RIGHT] = m_speed - m_strafe - m_turn;
+  motorValues[MOTOR_REAR_RIGHT]  = m_speed + m_strafe - m_turn;
+  motorValues[MOTOR_REAR_LEFT]   = m_speed - m_strafe + m_turn;
+
+  /* Apply trim values */
+  for (int i = 0; i < MOTOR_COUNT; i++)
+  {
+    float trim = (motorValues[i] > 0) ? m_motors[i].trimFwd : m_motors[i].trimRev;
+    motorValues[i] = static_cast<int>(motorValues[i] * trim);
+  }
+
+  /* Determine scaling to prevent clipping
+   * 1. Find the strongest intended user input (overall "throttle")
+   * 2. Find the highest calculated wheel value (normalization base)
+   * 3. Scale so fastest motor matches intended throttle
+   */
+  int inputMax = std::max({std::abs(m_speed),
+                           std::abs(m_strafe),
+                           std::abs(m_turn)});
+
+  int calcMax = std::max({std::abs(motorValues[MOTOR_FRONT_LEFT]),
+                          std::abs(motorValues[MOTOR_FRONT_RIGHT]),
+                          std::abs(motorValues[MOTOR_REAR_RIGHT]),
+                          std::abs(motorValues[MOTOR_REAR_LEFT])});
+
+  float multiplier = 0.0f;
+  if (calcMax > 0)
+  {
+    float inputPercent = static_cast<float>(inputMax) / USER_INPUT_MAX;
+    multiplier = (inputPercent * PWM_TOP_COUNT) / static_cast<float>(calcMax);
+  }
+
+  /* Apply to motors */
+  for (int i = 0; i < MOTOR_COUNT; i++)
+  {
+    setMotorOutput(m_motors[i], motorValues[i], multiplier);
+  }
+}
+
+void DriveTrainMecanum::stop(void)
+{
+  m_speed = 0;
+  m_turn = 0;
+  m_strafe = 0;
+
+  for (int i = 0; i < MOTOR_COUNT; i++)
+  {
+    if (m_motors[i].initialized)
+    {
+      pwm_set_gpio_level(m_motors[i].pinPwm, 0);
+      gpio_put(m_motors[i].pinDirFwd, 0);
+      gpio_put(m_motors[i].pinDirRev, 0);
+    }
+  }
+}
+
+void DriveTrainMecanum::calibrate(void)
+{
+  /* Mecanum calibration not implemented yet
+   * Set all motors to default trim */
+  for (int i = 0; i < MOTOR_COUNT; i++)
+  {
+    m_motors[i].trimFwd = DEFAULT_TRIM;
+    m_motors[i].trimRev = DEFAULT_TRIM;
+  }
+
+#if ENABLE_DEBUG
+  printf("[Mecanum] Calibration: Using default trim values\n");
+#endif
+}
+
+bool DriveTrainMecanum::isInitialized(void) const
+{
+  for (int i = 0; i < MOTOR_COUNT; i++)
   {
     if (!m_motors[i].initialized)
     {
-        motorsVerified = false;
-        break;
+      return false;
     }
   }
 
-  if (motorsVerified)
-  {
-    // Calculate raw Mecanum values (expected range [-1500..1500])
-    int mecanumVal[MOTOR_COUNT  ] = {0};
-    mecanumVal[MOTOR_FRONT_LEFT ] = m_speed + m_strafe + m_turn;
-    mecanumVal[MOTOR_FRONT_RIGHT] = m_speed - m_strafe - m_turn;
-    mecanumVal[MOTOR_REAR_RIGHT ] = m_speed + m_strafe - m_turn;
-    mecanumVal[MOTOR_REAR_LEFT  ] = m_speed - m_strafe + m_turn;
-
-    // Determine Scaling
-    // 1. Find the strongest intended user input to determine the overall "throttle" percentage.
-    // 2. Find the highest calculated wheel value to use as a normalization base.
-    // 3. Create a multiplier that scales the wheels so that the fastest motor matches the 
-    //    user's intended throttle, preventing clipping while maintaining the drive vector.
-    int inputMax = std::max({std::abs(m_speed),
-                           std::abs(m_strafe), 
-                           std::abs(m_turn)});
-
-    int calcMax  = std::max({std::abs(mecanumVal[MOTOR_FRONT_LEFT ]), 
-                           std::abs(mecanumVal[MOTOR_FRONT_RIGHT]),
-                           std::abs(mecanumVal[MOTOR_REAR_RIGHT ]),
-                           std::abs(mecanumVal[MOTOR_REAR_LEFT  ])});
-
-    float inputMaxPercent = static_cast<float>(inputMax) / USER_INPUT_MAX;
-
-    float motorMultiplier = 0.0;
-    if (calcMax > 0) // Avoid divide by 0
-    {
-      motorMultiplier = (inputMaxPercent * PWM_TOP_COUNT) / static_cast<float>(calcMax);
-    }
-
-    for (int i=0; i<MOTOR_COUNT; i++)
-    {
-      // Update speed
-      uint16_t pwmValue = std::abs(mecanumVal[i]) * motorMultiplier;
-
-      pwm_set_gpio_level(m_motors[i].pinPWM, pwmValue);
-      gpio_put(m_motors[i].pinDirFwd, mecanumVal[i] > 0);
-      gpio_put(m_motors[i].pinDirRev, mecanumVal[i] < 0);
-    }
-  }
+  return true;
 }
 
-// TODO: Stretch goal - also requires update to the update() function
-void drive_train_mecanum::calibrate(void)
-{
-  for (int i=0; i<MOTOR_COUNT; i++)
-  {
-    m_motors[i].valTrimFwd = DEFAULT_TRIM;
-    m_motors[i].valTrimRev = DEFAULT_TRIM;
-
-    // Force all motors to move forward
-    pwm_set_gpio_level(m_motors[i].pinPWM, 250); // Max speed is currently 1000
-    gpio_put(m_motors[i].pinDirFwd, true);
-    gpio_put(m_motors[i].pinDirRev, false);
-  }
-}
-
-
-/* EOF ----------------------------------------------------------------------*/
+/* EOF -----------------------------------------------------------------------*/

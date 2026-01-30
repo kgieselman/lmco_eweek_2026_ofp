@@ -1,3 +1,31 @@
-build
-!.vscode/*
+# Build directories
+build/
+test/build/
+
+# IDE/Editor files
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Compiled files
+*.o
+*.obj
+*.elf
+*.bin
+*.hex
+*.uf2
+*.map
+*.dis
+
+# Generated files
+compile_commands.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.log

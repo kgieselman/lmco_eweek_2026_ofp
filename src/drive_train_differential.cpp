@@ -1,320 +1,370 @@
-/******************************************************************************
+/*******************************************************************************
  * @file drive_train_differential.cpp
- * @brief Implementation of a differential drive train
- *****************************************************************************/
+ * @brief Implementation of differential drive train controller
+ ******************************************************************************/
 
-/* Includes -----------------------------------------------------------------*/
+/* Includes ------------------------------------------------------------------*/
 #include "drive_train_differential.h"
+#include "config.h"
+#include "error_handler.h"
+#include "pico/stdlib.h"
 #include "hardware/pwm.h"
 #include <algorithm>
+#include <cstdlib>
+
+#if ENABLE_DEBUG
 #include <stdio.h>
+#endif
 
 
-/* Function Definitions -----------------------------------------------------*/
-volatile uint g_encoderLeftCounter = 0;
-void __ISR_encoder_left(uint gpio, uint32_t events)
-{
-  (void)gpio;    // Explicitly mark as unused
-  (void)events;
-  ++g_encoderLeftCounter;
+/* Interrupt Service Routines ------------------------------------------------*/
+#if ENABLE_ENCODER_CALIBRATION
+namespace {
+  volatile uint32_t g_encoderLeftCount = 0;
+  volatile uint32_t g_encoderRightCount = 0;
 }
 
-volatile uint g_encoderRightCounter = 0;
-void __ISR_encoder_right(uint gpio, uint32_t events)
+/*******************************************************************************
+ * @brief Left encoder interrupt handler
+ ******************************************************************************/
+void __isr_encoder_left(uint gpio, uint32_t events)
 {
-  (void)gpio;    // Explicitly mark as unused
+  (void)gpio;
   (void)events;
- ++g_encoderRightCounter;
+  g_encoderLeftCount++;
 }
 
-drive_train_differential::drive_train_differential() : drive_train()
+/*******************************************************************************
+ * @brief Right encoder interrupt handler
+ ******************************************************************************/
+void __isr_encoder_right(uint gpio, uint32_t events)
 {
-// Clear motors
-  for (int i=0; i<MOTOR_COUNT; i++)
+  (void)gpio;
+  (void)events;
+  g_encoderRightCount++;
+}
+#endif /* ENABLE_ENCODER_CALIBRATION */
+
+
+/* Method Definitions --------------------------------------------------------*/
+DriveTrainDifferential::DriveTrainDifferential()
+  : DriveTrain()
+{
+  /* Initialize all motors to default state */
+  for (int i = 0; i < MOTOR_COUNT; i++)
   {
-    m_motors[i] = {0};
-    m_motors[i].valTrimFwd = 1.0;
-    m_motors[i].valTrimRev = 1.0;
+    m_motors[i].initialized = false;
+    m_motors[i].pinPwm = -1;
+    m_motors[i].pinDirFwd = -1;
+    m_motors[i].pinDirRev = -1;
+    m_motors[i].pinEncoder = -1;
+    m_motors[i].trimFwd = DEFAULT_TRIM;
+    m_motors[i].trimRev = DEFAULT_TRIM;
   }
 }
 
-drive_train_differential::~drive_train_differential()
+DriveTrainDifferential::~DriveTrainDifferential()
 {
-
+  stop();
 }
 
-bool drive_train_differential::add_motor(motor_e motor,
-                                         int     pinPWM,
-                                         int     pinDirFwd,
-                                         int     pinDirRev,
-                                         int     pinEnc)
+bool DriveTrainDifferential::addMotor(MotorId motor,
+                                       int pinPwm,
+                                       int pinDirFwd,
+                                       int pinDirRev,
+                                       int pinEncoder)
 {
-  if ((motor < MOTOR_LEFT) || (motor >= MOTOR_COUNT))
+  /* Validate motor ID */
+  if (motor < MOTOR_LEFT || motor >= MOTOR_COUNT)
   {
-    // Invalid motor
+    ERROR_REPORT(ERROR_DT_INVALID_MOTOR);
     return false;
   }
 
-  if (!validate_pin(pinPWM) || !validate_pin(pinDirFwd) || !validate_pin(pinDirRev))
+  /* Validate pins */
+  if (!validatePin(pinPwm) || !validatePin(pinDirFwd) || !validatePin(pinDirRev))
   {
-    // Invalid pin
+    ERROR_REPORT(ERROR_DT_INVALID_PIN);
     return false;
   }
 
-  m_motors[motor].pinPWM     = pinPWM;
-  m_motors[motor].pinDirFwd  = pinDirFwd;
-  m_motors[motor].pinDirRev  = pinDirRev;
+  /* Store pin assignments */
+  m_motors[motor].pinPwm = pinPwm;
+  m_motors[motor].pinDirFwd = pinDirFwd;
+  m_motors[motor].pinDirRev = pinDirRev;
+  m_motors[motor].pinEncoder = pinEncoder;
 
-  // Configure the pins using base class helpers
-  init_pwm_pin(pinPWM, PWM_TOP_COUNT, PWM_SYS_CLK_DIV);
-  init_direction_pin(pinDirFwd);
-  init_direction_pin(pinDirRev);
+  /* Initialize PWM pin */
+  if (!initPwmPin(pinPwm, PWM_TOP_COUNT, PWM_CLK_DIV))
+  {
+    ERROR_REPORT(ERROR_DT_PWM_FAILED);
+    return false;
+  }
 
-  // Since motor was just added, remove any trims
-  m_motors[motor].valTrimFwd = 1.0;
-  m_motors[motor].valTrimRev = 1.0;
+  /* Initialize direction pins */
+  if (!initDirectionPin(pinDirFwd) || !initDirectionPin(pinDirRev))
+  {
+    return false;
+  }
+
+  /* Reset trim values */
+  m_motors[motor].trimFwd = DEFAULT_TRIM;
+  m_motors[motor].trimRev = DEFAULT_TRIM;
+
+  /* Configure encoder if provided */
+#if ENABLE_ENCODER_CALIBRATION
+  if (validatePin(pinEncoder))
+  {
+    gpio_init(pinEncoder);
+    gpio_set_dir(pinEncoder, GPIO_IN);
+    gpio_pull_up(pinEncoder);
+
+    /* Set up encoder interrupt based on motor */
+    gpio_irq_callback_t callback = nullptr;
+    if (motor == MOTOR_LEFT)
+    {
+      callback = __isr_encoder_left;
+    }
+    else if (motor == MOTOR_RIGHT)
+    {
+      callback = __isr_encoder_right;
+    }
+
+    if (callback != nullptr)
+    {
+      gpio_set_irq_enabled_with_callback(pinEncoder,
+                                         GPIO_IRQ_EDGE_RISE,
+                                         false,  /* Initially disabled */
+                                         callback);
+    }
+  }
+#else
+  (void)pinEncoder;  /* Suppress unused warning */
+#endif
 
   m_motors[motor].initialized = true;
 
-  // Configure optional parameters
-  if (validate_pin(pinEnc))
-  {
-    gpio_init(pinEnc);
-    gpio_set_dir(pinEnc, GPIO_IN);
-    gpio_pull_up(pinEnc); // Ensure the pin is high by default // TODO: Verify this is needed
+#if ENABLE_DEBUG
+  printf("[DriveTrain] Motor %d configured: PWM=%d, FWD=%d, REV=%d\n",
+         motor, pinPwm, pinDirFwd, pinDirRev);
+#endif
 
-    switch (motor)
+  return true;
+}
+
+void DriveTrainDifferential::update(void)
+{
+  /* Verify all motors are initialized */
+  if (!isInitialized())
+  {
+    ERROR_REPORT(ERROR_DT_NOT_INIT);
+    return;
+  }
+
+  /* Calculate raw motor values */
+  int motorValues[MOTOR_COUNT];
+  motorValues[MOTOR_LEFT]  = m_speed + m_turn;
+  motorValues[MOTOR_RIGHT] = m_speed - m_turn;
+
+  /* Apply trim values */
+  for (int i = 0; i < MOTOR_COUNT; i++)
+  {
+    float trim = (motorValues[i] > 0) ? m_motors[i].trimFwd : m_motors[i].trimRev;
+    motorValues[i] = static_cast<int>(motorValues[i] * trim);
+  }
+
+  /* Determine scaling to prevent clipping */
+  int inputMax = std::max(std::abs(m_speed), std::abs(m_turn));
+  int calcMax = std::max(std::abs(motorValues[MOTOR_LEFT]),
+                         std::abs(motorValues[MOTOR_RIGHT]));
+
+  float multiplier = 0.0f;
+  if (calcMax > 0)
+  {
+    float inputPercent = static_cast<float>(inputMax) / USER_INPUT_MAX;
+    multiplier = (inputPercent * PWM_TOP_COUNT) / static_cast<float>(calcMax);
+  }
+
+  /* Apply to motors */
+  for (int i = 0; i < MOTOR_COUNT; i++)
+  {
+    setMotorOutput(m_motors[i], motorValues[i], multiplier);
+  }
+}
+
+void DriveTrainDifferential::stop(void)
+{
+  m_speed = 0;
+  m_turn = 0;
+
+  for (int i = 0; i < MOTOR_COUNT; i++)
+  {
+    if (m_motors[i].initialized)
     {
-      case MOTOR_LEFT:
-      {
-        gpio_set_irq_enabled_with_callback(pinEnc,
-                                           GPIO_IRQ_EDGE_RISE,
-                                           false,
-                                           &__ISR_encoder_left);
-        break;
-      }
-      case MOTOR_RIGHT:
-      {
-        gpio_set_irq_enabled_with_callback(pinEnc,
-                                           GPIO_IRQ_EDGE_RISE,
-                                           false,
-                                           &__ISR_encoder_right);
-        break;
-      }
-      default:
-      {
-        // ERROR: Invalid motor
-        break;
-      }
+      pwm_set_gpio_level(m_motors[i].pinPwm, 0);
+      gpio_put(m_motors[i].pinDirFwd, 0);
+      gpio_put(m_motors[i].pinDirRev, 0);
+    }
+  }
+}
+
+void DriveTrainDifferential::calibrate(void)
+{
+#if ENABLE_ENCODER_CALIBRATION
+  /* Verify encoders are configured */
+  bool encodersReady = true;
+  for (int i = 0; i < MOTOR_COUNT; i++)
+  {
+    if (!validatePin(m_motors[i].pinEncoder))
+    {
+      encodersReady = false;
+      break;
+    }
+  }
+
+  if (!encodersReady)
+  {
+    /* No encoders - use default trim */
+    for (int i = 0; i < MOTOR_COUNT; i++)
+    {
+      m_motors[i].trimFwd = DEFAULT_TRIM;
+      m_motors[i].trimRev = DEFAULT_TRIM;
+    }
+    return;
+  }
+
+  /* Stop motors and wait for settle */
+  stop();
+  sleep_ms(MOTOR_SETTLE_TIME_MS);
+
+  /* Measure forward direction */
+  int fwdPulses[MOTOR_COUNT] = {0};
+  measureMotorPulses(true, PWM_TOP_COUNT / 2, fwdPulses);
+
+  stop();
+  sleep_ms(MOTOR_SETTLE_TIME_MS);
+
+  /* Measure reverse direction */
+  int revPulses[MOTOR_COUNT] = {0};
+  measureMotorPulses(false, PWM_TOP_COUNT / 2, revPulses);
+
+  stop();
+
+  /* Calculate trim values based on slower motor */
+  int minFwd = std::min(fwdPulses[MOTOR_LEFT], fwdPulses[MOTOR_RIGHT]);
+  int minRev = std::min(revPulses[MOTOR_LEFT], revPulses[MOTOR_RIGHT]);
+
+  /* Apply forward trim */
+  if (minFwd > 0)
+  {
+    m_motors[MOTOR_LEFT].trimFwd = 
+      static_cast<float>(minFwd) / static_cast<float>(fwdPulses[MOTOR_LEFT]);
+    m_motors[MOTOR_RIGHT].trimFwd = 
+      static_cast<float>(minFwd) / static_cast<float>(fwdPulses[MOTOR_RIGHT]);
+  }
+  else
+  {
+    m_motors[MOTOR_LEFT].trimFwd  = DEFAULT_TRIM;
+    m_motors[MOTOR_RIGHT].trimFwd = DEFAULT_TRIM;
+  }
+
+  /* Apply reverse trim */
+  if (minRev > 0)
+  {
+    m_motors[MOTOR_LEFT].trimRev = 
+      static_cast<float>(minRev) / static_cast<float>(revPulses[MOTOR_LEFT]);
+    m_motors[MOTOR_RIGHT].trimRev = 
+      static_cast<float>(minRev) / static_cast<float>(revPulses[MOTOR_RIGHT]);
+  }
+  else
+  {
+    m_motors[MOTOR_LEFT].trimRev  = DEFAULT_TRIM;
+    m_motors[MOTOR_RIGHT].trimRev = DEFAULT_TRIM;
+  }
+
+#if ENABLE_DEBUG
+  printf("[Calibration] Fwd pulses: L=%d R=%d\n", fwdPulses[MOTOR_LEFT], fwdPulses[MOTOR_RIGHT]);
+  printf("[Calibration] Rev pulses: L=%d R=%d\n", revPulses[MOTOR_LEFT], revPulses[MOTOR_RIGHT]);
+  printf("[Calibration] Trim L: fwd=%.3f rev=%.3f\n", 
+         m_motors[MOTOR_LEFT].trimFwd, m_motors[MOTOR_LEFT].trimRev);
+  printf("[Calibration] Trim R: fwd=%.3f rev=%.3f\n", 
+         m_motors[MOTOR_RIGHT].trimFwd, m_motors[MOTOR_RIGHT].trimRev);
+#endif
+
+#else
+  /* Encoders not enabled - use default trim */
+  for (int i = 0; i < MOTOR_COUNT; i++)
+  {
+    m_motors[i].trimFwd = DEFAULT_TRIM;
+    m_motors[i].trimRev = DEFAULT_TRIM;
+  }
+#endif /* ENABLE_ENCODER_CALIBRATION */
+}
+
+bool DriveTrainDifferential::isInitialized(void) const
+{
+  for (int i = 0; i < MOTOR_COUNT; i++)
+  {
+    if (!m_motors[i].initialized)
+    {
+      return false;
     }
   }
 
   return true;
 }
 
-void drive_train_differential::update(void)
+void DriveTrainDifferential::measureMotorPulses(bool forward, int pwmValue, int* pPulses)
 {
-  // Verify that motors have been initialized before proceeding
-  bool motorsVerified = true;
-  for (int i=0; i<MOTOR_COUNT; i++)
+#if ENABLE_ENCODER_CALIBRATION
+  if (pPulses == nullptr)
   {
-    if (!m_motors[i].initialized)
-    {
-        motorsVerified = false;
-        break;
-    }
-  }
-
-  if (motorsVerified)
-  {
-    // Calculate raw Mecanum values (expected range [-1500..1500])
-    int calcVal[MOTOR_COUNT  ] = {0};
-    calcVal[MOTOR_LEFT ] = m_speed +  m_turn;
-    calcVal[MOTOR_RIGHT] = m_speed - m_turn;
-
-    // Apply Trim as needed (default value is 1.0)
-    for (int i=0; i<MOTOR_COUNT; i++)
-    {
-      if (calcVal[i] > 0)
-      {
-        float trimmedVal = static_cast<float>(calcVal[i]) * m_motors[i].valTrimFwd;
-        calcVal[i] = static_cast<int>(trimmedVal);
-      }
-      else if (calcVal[i] < 0)
-      {
-        float trimmedVal = static_cast<float>(calcVal[i]) * m_motors[i].valTrimRev;
-        calcVal[i] = static_cast<int>(trimmedVal);
-      }
-    }
-
-    // Determine Scaling
-    // 1. Find the strongest intended user input to determine the overall "throttle" percentage.
-    // 2. Find the highest calculated wheel value to use as a normalization base.
-    // 3. Create a multiplier that scales the wheels so that the fastest motor matches the 
-    //    user's intended throttle, preventing clipping while maintaining the drive vector.
-    int inputMax = std::max({std::abs(m_speed), std::abs(m_turn)}); // [0..500]
-
-    int calcMax  = std::max({std::abs(calcVal[MOTOR_LEFT ]), 
-                             std::abs(calcVal[MOTOR_RIGHT])});
-
-    float inputMaxPercent = static_cast<float>(inputMax) / USER_INPUT_MAX;
-
-    float motorMultiplier = 0.0;
-    if (calcMax > 0) // Avoid divide by 0
-    {
-      motorMultiplier = (inputMaxPercent * PWM_TOP_COUNT) / static_cast<float>(calcMax);
-    }
-
-    for (int i=0; i<MOTOR_COUNT; i++)
-    {
-      // Update speed
-      uint16_t pwmValue = std::abs(calcVal[i]) * motorMultiplier;
-
-      pwm_set_gpio_level(m_motors[i].pinPWM, pwmValue);
-      gpio_put(m_motors[i].pinDirFwd, calcVal[i] > 0);
-      gpio_put(m_motors[i].pinDirRev, calcVal[i] < 0);
-    }
-  }
-  else
-  {
-    printf("ERROR: Motor not initialized\n");
-  }
-}
-
-void drive_train_differential::stop_motors(void)
-{
-  for (int i=0; i<MOTOR_COUNT; i++)
-  {
-    gpio_put(m_motors[i].pinDirFwd, 0);
-    gpio_put(m_motors[i].pinDirRev, 0);
-    pwm_set_gpio_level(m_motors[i].pinPWM, 0);
-  }
-}
-
-void drive_train_differential::measure_motor_pulses(bool forward, int pwmVal, int* pArrPulses)
-{
-  if (pArrPulses == nullptr)
-  {
-    printf("ERROR: NULL Pointer\n");
+    ERROR_REPORT(ERROR_NULL_POINTER);
     return;
   }
 
-  // Verify encoder pins are configured for all motors before moving forward
-  bool encoderPinsVerified = true;
-  for (int i=0; i<MOTOR_COUNT; i++)
+  /* Disable interrupts and set motor direction */
+  for (int i = 0; i < MOTOR_COUNT; i++)
   {
-    encoderPinsVerified &= validate_pin(m_motors[i].pinEncoder);
+    gpio_set_irq_enabled(m_motors[i].pinEncoder, GPIO_IRQ_EDGE_RISE, false);
+    pwm_set_gpio_level(m_motors[i].pinPwm, pwmValue);
+    gpio_put(m_motors[i].pinDirFwd, forward);
+    gpio_put(m_motors[i].pinDirRev, !forward);
   }
 
-  if (encoderPinsVerified)
+  /* Let motors reach steady state */
+  sleep_ms(MOTOR_SETTLE_TIME_MS);
+
+  /* Clear counters and enable interrupts */
+  g_encoderLeftCount = 0;
+  g_encoderRightCount = 0;
+
+  for (int i = 0; i < MOTOR_COUNT; i++)
   {
-    // Disable interrupts/clear counters/set motors to spin forward
-    for (int i=0; i<MOTOR_COUNT; i++)
-    {
-      // Disable the Encoder interrupts
-      gpio_set_irq_enabled(m_motors[i].pinEncoder, GPIO_IRQ_EDGE_RISE, false);
-
-      // Set motor to spin forward at half speed
-      pwm_set_gpio_level(m_motors[i].pinPWM, pwmVal);
-      gpio_put(m_motors[i].pinDirFwd, forward);
-      gpio_put(m_motors[i].pinDirRev, !forward);
-    }
-    sleep_ms(MOTOR_SETTLE_TIME_MS);
-
-    // Clear counter and enable interrupts
-    g_encoderLeftCounter  = 0;
-    g_encoderRightCounter = 0;
-    for (int i=0; i<MOTOR_COUNT; i++)
-    {
-      // Clear any phantom interrupts
-      gpio_acknowledge_irq(m_motors[i].pinEncoder, GPIO_IRQ_EDGE_RISE);
-      gpio_set_irq_enabled(m_motors[i].pinEncoder, GPIO_IRQ_EDGE_RISE, true);
-    }
-
-    sleep_ms(CAL_MOTOR_COUNT_TIME_MS);
-
-    // Loop in opposite direction for equality
-    for (int i=(MOTOR_COUNT - 1); i>=0; i--)
-    {
-      gpio_set_irq_enabled(m_motors[i].pinEncoder, GPIO_IRQ_EDGE_RISE, false);
-    }
-
-    pArrPulses[MOTOR_LEFT] = g_encoderLeftCounter;
-    pArrPulses[MOTOR_RIGHT] = g_encoderRightCounter;
+    gpio_acknowledge_irq(m_motors[i].pinEncoder, GPIO_IRQ_EDGE_RISE);
+    gpio_set_irq_enabled(m_motors[i].pinEncoder, GPIO_IRQ_EDGE_RISE, true);
   }
+
+  /* Measure for calibration period */
+  sleep_ms(MOTOR_CALIBRATION_TIME_MS);
+
+  /* Disable interrupts and capture counts */
+  for (int i = MOTOR_COUNT - 1; i >= 0; i--)
+  {
+    gpio_set_irq_enabled(m_motors[i].pinEncoder, GPIO_IRQ_EDGE_RISE, false);
+  }
+
+  pPulses[MOTOR_LEFT] = g_encoderLeftCount;
+  pPulses[MOTOR_RIGHT] = g_encoderRightCount;
+#else
+  (void)forward;
+  (void)pwmValue;
+  if (pPulses != nullptr)
+  {
+    pPulses[MOTOR_LEFT]  = 0;
+    pPulses[MOTOR_RIGHT] = 0;
+  }
+#endif /* ENABLE_ENCODER_CALIBRATION */
 }
 
-void drive_train_differential::calibrate(void)
-{
-  // Verify that encoder has been setup
-  bool readyToCal = true;
-  for (int i=0; i<MOTOR_COUNT; i++)
-  {
-    readyToCal &= validate_pin(m_motors[i].pinEncoder);
-  }
-
-  if (readyToCal)
-  {
-    // Create arrays to hold pulse counts
-    int fwdPulses[MOTOR_COUNT] = {0};
-    int revPulses[MOTOR_COUNT] = {0};
-
-    stop_motors();
-    sleep_ms(MOTOR_SETTLE_TIME_MS);
-
-    measure_motor_pulses(true, PWM_TOP_COUNT/2, fwdPulses);
-
-    stop_motors();
-    sleep_ms(MOTOR_SETTLE_TIME_MS);
-
-    measure_motor_pulses(false, PWM_TOP_COUNT/2, revPulses);
-
-    stop_motors();
-
-    // Determine the weaker motor and store that value
-    int minFwdPulses = std::min({fwdPulses[MOTOR_LEFT], fwdPulses[MOTOR_RIGHT]});
-    int minRevPulses = std::min({revPulses[MOTOR_LEFT], revPulses[MOTOR_RIGHT]});
-
-    // Check if both motors were spinning
-    if (minFwdPulses > 0)
-    {
-      m_motors[MOTOR_LEFT].valTrimFwd  = static_cast<float>(minFwdPulses) /
-                                         static_cast<float>(fwdPulses[MOTOR_LEFT]);
-      m_motors[MOTOR_RIGHT].valTrimFwd = static_cast<float>(minFwdPulses) /
-                                         static_cast<float>(fwdPulses[MOTOR_RIGHT]);
-    }
-    else
-    {
-      // At least one motor was stopped, apply default trim
-      m_motors[MOTOR_LEFT].valTrimFwd  = DEFAULT_TRIM;
-      m_motors[MOTOR_RIGHT].valTrimFwd = DEFAULT_TRIM;
-    }
-
-    // Check if both motors were spinning
-    if (minRevPulses > 0)
-    {
-      m_motors[MOTOR_LEFT].valTrimRev  = static_cast<float>(minRevPulses) /
-                                         static_cast<float>(revPulses[MOTOR_LEFT]);
-      m_motors[MOTOR_RIGHT].valTrimRev = static_cast<float>(minRevPulses) /
-                                         static_cast<float>(revPulses[MOTOR_RIGHT]);
-    }
-    else
-    {
-      // At least one motor was stopped, apply default trim
-      m_motors[MOTOR_LEFT].valTrimRev  = DEFAULT_TRIM;
-      m_motors[MOTOR_RIGHT].valTrimRev = DEFAULT_TRIM;
-    }
-  }
-  else
-  {
-    // No encoder pin configured, apply default trim
-    for (int i=0; i<MOTOR_COUNT; i++)
-    {
-      m_motors[i].valTrimFwd = DEFAULT_TRIM;
-      m_motors[i].valTrimRev = DEFAULT_TRIM;
-    }
-  }
-}
-
-
-/* EOF ----------------------------------------------------------------------*/
+/* EOF -----------------------------------------------------------------------*/

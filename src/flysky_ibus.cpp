@@ -1,298 +1,260 @@
-/******************************************************************************
+/*******************************************************************************
  * @file flysky_ibus.cpp
- * @brief Implementation of the flysky IBus interface for interacting with
- * the RC receiver.
- * 
- * @note Only compatible with uart1, leaving uart0 to be used for stdio debug
- *****************************************************************************/
+ * @brief Implementation of FlySky iBUS protocol interface
+ ******************************************************************************/
 
-/* Includes -----------------------------------------------------------------*/
+/* Includes ------------------------------------------------------------------*/
 #include "flysky_ibus.h"
+#include "config.h"
+#include "error_handler.h"
 #include "hardware/irq.h"
 #include <string.h>
 #include <stdio.h>
 
-/* Debug --------------------------------------------------------------------*/
-#define DEBUG_IBUS_STDIO (0)
 
+/* Global Variables ----------------------------------------------------------*/
 
-/* Static Class Variables ---------------------------------------------------*/
-uint8_t flysky_ibus::m_sensorsData[IBUS_SENSOR_LIMIT][IBUS_SENSOR_MAX_MSG_LENGTH_BYTES];
-
-
-/* Global ISR Definitions ---------------------------------------------------*/
-/// Flag to alert that a new message has been recieved from UART1
-volatile bool g_newMsgUART1rx = false;
-
-// Interrupt Service Routine (ISR)
-const int IBUS_UART_RX_BUF_COUNT = 2; // Use 2 buffers, avoid read/write conflict
-const int UART_RX_FIFO_MAX_LEVEL = 32;
-volatile uint8_t g_uart1RxBufs[IBUS_UART_RX_BUF_COUNT][UART_RX_FIFO_MAX_LEVEL];
-volatile int g_uart1BufWriteIdx = 0; // [0..IBUS_UART_RX_BUF_COUNT]
-volatile int g_uart1BufReadIdx  = 0; // [0..IBUS_UART_RX_BUF_COUNT]
-
-void __ISR_uart1_rx(void)
+/*******************************************************************************
+ * @brief Double-buffered receive storage
+ *
+ * Using two buffers allows the ISR to write to one buffer while the
+ * main code reads from the other, avoiding race conditions.
+ ******************************************************************************/
+namespace
 {
-  uart_inst_t* pIbusUart = uart1;
-  uint32_t status = uart_get_hw(pIbusUart)->mis;
+  constexpr int RX_BUFFER_COUNT = 2;
+  constexpr int RX_BUFFER_SIZE  = 32;
 
-  if (status & UART_UARTMIS_RTMIS_BITS) // Message timeout
-  {
-    // Acknowlege receiver timeout interrupt
-    uart_get_hw(pIbusUart)->icr = UART_UARTICR_RTIC_BITS;
+  volatile uint8_t g_rxBuffers[RX_BUFFER_COUNT][RX_BUFFER_SIZE];
+  volatile int g_rxWriteIdx = 0;
+  volatile int g_rxReadIdx  = 0;
+  volatile bool g_newMessageFlag = false;
+}
 
+/* Interrupt Service Routines ------------------------------------------------*/
+
+/*******************************************************************************
+ * @brief UART1 receive interrupt handler
+ *
+ * Triggered on receive timeout (end of message). Reads all available
+ * bytes into the current write buffer, then swaps buffers.
+ ******************************************************************************/
+void __isr_uart1_rx(void)
+{
+  uart_inst_t* pUart = uart1;
+  uint32_t status = uart_get_hw(pUart)->mis;
+
+  /* Check for receive timeout (indicates end of message) */
+  if (status & UART_UARTMIS_RTMIS_BITS) {
+    /* Acknowledge the interrupt */
+    uart_get_hw(pUart)->icr = UART_UARTICR_RTIC_BITS;
+
+    /* Read all available bytes into current write buffer */
     int i = 0;
-    while (uart_is_readable(pIbusUart) && (i < UART_RX_FIFO_MAX_LEVEL))
-    {
-      g_uart1RxBufs[g_uart1BufWriteIdx][i++] = uart_getc(pIbusUart);
+    while (uart_is_readable(pUart) && (i < RX_BUFFER_SIZE)) {
+      g_rxBuffers[g_rxWriteIdx][i++] = uart_getc(pUart);
     }
 
-    // Alert that new message has come in
-    g_newMsgUART1rx = 1;
+    /* Update read buffer index to point to new data */
+    g_rxReadIdx = g_rxWriteIdx;
 
-    // Update read buffer index to point to the new data
-    g_uart1BufReadIdx = g_uart1BufWriteIdx;
+    /* Swap to next write buffer */
+    g_rxWriteIdx = (g_rxWriteIdx + 1) % RX_BUFFER_COUNT;
 
-    // Update write buffer index to point to the stale data
-    int newWriteIdx = g_uart1BufWriteIdx + 1;
-    if (newWriteIdx >= IBUS_UART_RX_BUF_COUNT)
-    {
-      newWriteIdx = 0;
-    }
-    g_uart1BufWriteIdx = newWriteIdx;
+    /* Signal new message available */
+    g_newMessageFlag = true;
   }
 }
 
 
-/* Class Function Definitions -----------------------------------------------*/
-flysky_ibus::flysky_ibus(uart_inst_t* pUart, int pin_tx, int pin_rx)
+/* Method Defintions ---------------------------------------------------------*/
+FlySkyIBus::FlySkyIBus(uart_inst_t* pUart, int pinTx, int pinRx)
+  : m_pUart(pUart)
+  , m_lastMessageTimeMs(0)
+  , m_initialized(false)
 {
-  m_pIBusUART = pUart;
-
-  // UART Configuration
-  uart_init(m_pIBusUART, IBUS_BAUD_RATE);
-  gpio_set_function(pin_tx, GPIO_FUNC_UART);
-  gpio_set_function(pin_rx, GPIO_FUNC_UART);
-  uart_set_hw_flow(m_pIBusUART, IBUS_CTS_EN, IBUS_RTS_EN);
-  uart_set_format(m_pIBusUART,
-                  IBUS_DATA_BITS,
-                  IBUS_STOP_BITS,
-                  IBUS_PARITY);
-
-  // Enable the FIFO (32 bytes)
-  uart_set_fifo_enabled(m_pIBusUART, true);
-
-  // Interrupt Configuration
-  if (m_pIBusUART == uart1)
+  /* Validate UART instance (only uart1 supported) */
+  if (pUart != uart1)
   {
-    irq_set_exclusive_handler(UART1_IRQ, __ISR_uart1_rx);
-    irq_set_enabled(UART1_IRQ, true);
-  }
-  else
-  {
-    // UART0 not supported since it is dedicated to STDIO
+    ERROR_REPORT(ERROR_IBUS_INVALID_UART);
+    return;
   }
 
-  uart_set_irq_enables(m_pIBusUART, true, false);
+  /* Initialize message snapshot to center values */
+  memset(&m_messageSnapshot, 0, sizeof(m_messageSnapshot));
+  for (int i = 0; i < IBUS_MAX_CHANNELS; i++)
+  {
+    m_messageSnapshot.channels[i] = CHANNEL_VALUE_CENTER;
+  }
+
+  /* Configure UART */
+  uart_init(m_pUart, IBUS_BAUD_RATE);
+  gpio_set_function(pinTx, GPIO_FUNC_UART);
+  gpio_set_function(pinRx, GPIO_FUNC_UART);
+  uart_set_hw_flow(m_pUart, false, false);
+  uart_set_format(m_pUart, IBUS_DATA_BITS, IBUS_STOP_BITS, UART_PARITY_NONE);
+
+  /* Enable FIFO for efficient message handling */
+  uart_set_fifo_enabled(m_pUart, true);
+
+  /* Configure interrupt handler */
+  irq_set_exclusive_handler(UART1_IRQ, __isr_uart1_rx);
+  irq_set_enabled(UART1_IRQ, true);
+
+  /* Enable receive interrupt */
+  uart_set_irq_enables(m_pUart, true, false);
+
+  m_initialized = true;
+
+#if ENABLE_DEBUG
+  printf("[iBUS] Initialized on UART1\n");
+#endif
 }
 
-// TODO: Sensor reports are a stretch goal
-int flysky_ibus::create_sensor(sensor_type_e type)
+FlySkyIBus::~FlySkyIBus()
 {
-  int sensId = -1; // Invalid Id
-
-  // Loop over the sensor array and update next available senosr
-  for (int i=0; i<IBUS_SENSOR_LIMIT; i++)
+  if (m_initialized && m_pUart != nullptr)
   {
-    if (m_sensors[i].initialized == false)
-    {
-      int dataLengthBytes = 2;
-      if ((type == SENSOR_TYPE_LAT)  ||
-          (type == SENSOR_TYPE_LONG) ||
-          (type == SENSOR_TYPE_ALT)  ||
-          (type == SENSOR_TYPE_ALT_MAX))
-      {
-        dataLengthBytes = 4;
-      }
+    /* Disable interrupts */
+    uart_set_irq_enables(m_pUart, false, false);
+    irq_set_enabled(UART1_IRQ, false);
 
-      // This sensor is available for use, claim it
-      sensId = i;
+    /* Deinitialize UART */
+    uart_deinit(m_pUart);
+  }
+}
 
-      m_sensors[i].initialized        = true;
-      m_sensors[i].dataBytes          = dataLengthBytes;
-      m_sensors[i].messageLengthBytes = IBUS_HEADER_LENGTH_BYTES + 
-                                        dataLengthBytes +
-                                        IBUS_CRC_LENGTH_BYTES;
-      
-      // Found sensor, break out of search loop
-      break;
-    }
+bool FlySkyIBus::hasNewMessage(void)
+{
+  if (!m_initialized)
+  {
+    return false;
   }
 
-  return sensId;
-}
-
-#if DEBUG_IBUS_STDIO
-uint32_t prevDebugTimeMs = 0;
-#endif // DEBUG_IBUS_STDIO
-bool flysky_ibus::new_message(void)
-{
-  bool rVal = false;
-
-  // Check if new message has come in
-  if (g_newMsgUART1rx)
+  if (!g_newMessageFlag)
   {
-    // Always clear flag, even if message is dropped. Wait for next one.
-    g_newMsgUART1rx = false;
-
-    // Determine if message has a valid length
-    if ((g_uart1RxBufs[g_uart1BufReadIdx][IBUS_PROTOCOL_LENGTH_IDX] >= IBUS_MIN_MSG_LENGTH) &&
-        (g_uart1RxBufs[g_uart1BufReadIdx][IBUS_PROTOCOL_LENGTH_IDX] <= IBUS_MAX_MSG_LENGTH))
-    {
-      //TODO: CRC check
-
-      switch (g_uart1RxBufs[g_uart1BufReadIdx][IBUS_PROTOCOL_CMD_IDX])
-      {
-        case IBUS_CMD_CODE_CHAN_DATA:
-        {
-          volatile uint8_t* pMsg = reinterpret_cast<volatile uint8_t*>(&g_uart1RxBufs[g_uart1BufReadIdx][0]); 
-          // Save a snapshot of the data for use in read channels
-          memcpy(&m_ibusMsgSnapshot, (void*)pMsg, UART_RX_FIFO_MAX_LEVEL);
-
-          rVal = true;
-          break;
-        }
-        default:
-        {
-          // Message command not supported currently
-          break;
-        }
-      }
-    }
+    return false;
   }
 
-  return rVal;
-}
+  /* Clear the flag atomically */
+  g_newMessageFlag = false;
 
-int flysky_ibus::read_channel(channel_e chan)
-{
-  int rVal = 0;
-  switch (chan)
+  /* Get pointer to received data */
+  volatile uint8_t* pMsg = g_rxBuffers[g_rxReadIdx];
+
+  /* Validate message length */
+  uint8_t msgLength = pMsg[IBUS_PROTOCOL_LEN_IDX];
+  if (msgLength < IBUS_MIN_MSG_LENGTH || msgLength > IBUS_MAX_MSG_LENGTH)
   {
-    case CHAN_RSTICK_HORIZ:
-    {
-      rVal = m_ibusMsgSnapshot.rstickHoriz;
-      break;
-    }
-    case CHAN_RSTICK_VERT:
-    {
-      rVal = m_ibusMsgSnapshot.rstickVert;
-      break;
-    }
-    case CHAN_LSTICK_VERT:
-    {
-      rVal = m_ibusMsgSnapshot.lstickVert;
-      break;
-    }
-    case CHAN_LSTICK_HORIZ:
-    {
-      rVal = m_ibusMsgSnapshot.lstickHoriz;
-      break;
-    }
-    case CHAN_VRA:
-    {
-      rVal = m_ibusMsgSnapshot.vra;
-      break;
-    }
-    case CHAN_VRB:
-    {
-      rVal = m_ibusMsgSnapshot.vrb;
-      break;
-    }
-    case CHAN_SWA:
-    {
-      rVal = m_ibusMsgSnapshot.swa;
-      break;
-    }
-    case CHAN_SWB:
-    {
-      rVal = m_ibusMsgSnapshot.swb;
-      break;
-    }
-    case CHAN_SWC:
-    {
-      rVal = m_ibusMsgSnapshot.swc;
-      break;
-    }
-    case CHAN_SWD:
-    {
-      rVal = m_ibusMsgSnapshot.swd;
-      break;
-    }
-    default:
-    {
-      break;
-    }
+#if DEBUG_IBUS_VERBOSE
+    printf("[iBUS] Invalid length: %d\n", msgLength);
+#endif
+    return false;
   }
 
-  return rVal;
-}
-
-// TODO: Sensor reports are a stretch goal
-bool flysky_ibus::update_sensor(int sensorId, int value)
-{
-  bool rVal = false;
-
-  // Verify ID is valid
-  if ((sensorId >= IBUS_SENSOR_MIN_ID) && (sensorId < IBUS_SENSOR_LIMIT))
+  /* Validate command code */
+  if (pMsg[IBUS_PROTOCOL_CMD_IDX] != IBUS_CMD_CHAN_DATA)
   {
-    // Verify sensor has been created
-    if (m_sensors[sensorId].initialized)
-    {
-      int byteIdx = 0;
-      m_sensorsData[sensorId][byteIdx++] = m_sensors[sensorId].messageLengthBytes;
-      m_sensorsData[sensorId][byteIdx++] = 0; // TODO: Command 0xa0 + sensor id???
-      m_sensorsData[sensorId][byteIdx++] = 0; //TODO: sensor value
-      m_sensorsData[sensorId][byteIdx++] = 0; // TODO: sensor value
-      if (m_sensors[sensorId].dataBytes >= 4)
-      {
-        m_sensorsData[sensorId][byteIdx++] = 0; // TODO: sensor value
-        m_sensorsData[sensorId][byteIdx++] = 0; // TODO: sensor value
-      }
-
-      // CRC is 0xFFFF - sum of data in preceding bytes
-      uint16_t crc = IBUS_INITIAL_CRC;
-      for (int i=0; i<byteIdx; i++)
-      {
-        crc -= m_sensorsData[sensorId][i];
-      }
-
-      m_sensorsData[sensorId][byteIdx++] = (crc & 0xff);
-      m_sensorsData[sensorId][byteIdx++] = (crc & 0xff00) >> 8;
-
-      // Send data to the UART Tx? Does timing matter for half-duplex?
-
-      rVal = true;
-    }
+#if DEBUG_IBUS_VERBOSE
+    printf("[iBUS] Unknown command: 0x%02X\n", pMsg[IBUS_PROTOCOL_CMD_IDX]);
+#endif
+    return false;
   }
 
-  return rVal;
+  /* Validate CRC */
+  if (!validateCrc((const uint8_t*)pMsg, msgLength))
+  {
+#if DEBUG_IBUS_VERBOSE
+    printf("[iBUS] CRC mismatch\n");
+#endif
+    return false;
+  }
+
+  /* Copy valid message data to snapshot */
+  memcpy(&m_messageSnapshot, (const void*)pMsg, sizeof(m_messageSnapshot));
+
+  /* Update timestamp */
+  m_lastMessageTimeMs = to_ms_since_boot(get_absolute_time());
+
+  return true;
 }
 
-void flysky_ibus::debug_print(void)
+int FlySkyIBus::readChannel(Channel channel) const
 {
-  printf("Rstick(%d, %d) Lstick(%d, %d) VR(%d, %d) SW(%d, %d, %d, %d)\n",
-    read_channel(CHAN_RSTICK_HORIZ),
-    read_channel(CHAN_RSTICK_VERT),
-    read_channel(CHAN_LSTICK_HORIZ),
-    read_channel(CHAN_LSTICK_VERT),
-    read_channel(CHAN_VRA),
-    read_channel(CHAN_VRB),
-    read_channel(CHAN_SWA),
-    read_channel(CHAN_SWB),
-    read_channel(CHAN_SWC),
-    read_channel(CHAN_SWD));
+  if (channel < 0 || channel >= CHAN_COUNT)
+  {
+    return CHANNEL_VALUE_CENTER;
+  }
+
+  return m_messageSnapshot.channels[channel];
+}
+
+int FlySkyIBus::readChannelNormalized(Channel channel) const
+{
+  return readChannel(channel) - CHANNEL_VALUE_CENTER;
+}
+
+bool FlySkyIBus::isSignalValid(void) const
+{
+  if (!m_initialized || m_lastMessageTimeMs == 0)
+  {
+    return false;
+  }
+
+  uint32_t now = to_ms_since_boot(get_absolute_time());
+  uint32_t elapsed = now - m_lastMessageTimeMs;
+
+  return (elapsed < RC_SIGNAL_TIMEOUT_MS);
+}
+
+uint32_t FlySkyIBus::getTimeSinceLastMessage(void) const
+{
+  if (m_lastMessageTimeMs == 0)
+  {
+    return UINT32_MAX;
+  }
+
+  uint32_t now = to_ms_since_boot(get_absolute_time());
+  return now - m_lastMessageTimeMs;
+}
+
+void FlySkyIBus::debugPrint(void) const
+{
+#if ENABLE_DEBUG
+  printf("RStick(%4d,%4d) LStick(%4d,%4d) VR(%4d,%4d) SW(%4d,%4d,%4d,%4d)\n",
+         readChannel(CHAN_RSTICK_HORIZ),
+         readChannel(CHAN_RSTICK_VERT),
+         readChannel(CHAN_LSTICK_HORIZ),
+         readChannel(CHAN_LSTICK_VERT),
+         readChannel(CHAN_VRA),
+         readChannel(CHAN_VRB),
+         readChannel(CHAN_SWA),
+         readChannel(CHAN_SWB),
+         readChannel(CHAN_SWC),
+         readChannel(CHAN_SWD));
+#endif
+}
+
+uint16_t FlySkyIBus::calculateCrc(const uint8_t* pData, int length)
+{
+  uint16_t crc = IBUS_INITIAL_CRC;
+  for (int i = 0; i < length; i++)
+  {
+    crc -= pData[i];
+  }
+  return crc;
+}
+
+bool FlySkyIBus::validateCrc(const uint8_t* pData, int length)
+{
+  /* CRC is calculated over all bytes except the last 2 (which are the CRC) */
+  uint16_t calculated = calculateCrc(pData, length - 2);
+
+  /* Extract received CRC (little-endian) */
+  uint16_t received = pData[length - 2] | (pData[length - 1] << 8);
+
+  return (calculated == received);
 }
 
 
-/* EOF ----------------------------------------------------------------------*/
+/* EOF -----------------------------------------------------------------------*/
