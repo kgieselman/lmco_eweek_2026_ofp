@@ -52,10 +52,15 @@ class drive_train
     typedef struct 
     {
       int initialized;
+
       int pinPWM;
       int pinDirFwd;
       int pinDirRev;
-    } motor_base_t;
+      int pinEncoder;
+
+      float valTrimFwd;
+      float valTrimRev;
+    } motor_t;
 
 
     /* Protected Constants --------------------------------------------------*/
@@ -64,6 +69,10 @@ class drive_train
     
     static const int PICO_GPIO_PIN_MIN = 0;
     static const int PICO_GPIO_PIN_MAX = 29;
+
+    static constexpr float DEFAULT_TRIM      = 1.0;
+    static const int MOTOR_SETTLE_TIME_MS    = 500;
+    static const int CAL_MOTOR_COUNT_TIME_MS = 2000;
 
 
     /* Protected Variables --------------------------------------------------*/

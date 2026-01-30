@@ -67,35 +67,10 @@ class drive_train_mecanum : public drive_train
 
 
   private:
-    /* Private Types --------------------------------------------------------*/
-    typedef struct 
-    {
-      int initialized;
-
-      int pinPWM;
-      int pinDirFwd;
-      int pinDirRev;
-
-      int valPWM;
-      int valDirFwd;
-      int valDirRev;
-      int valTrimFwd;
-      int valTrimRev;
-    } motor_t;
-
-
     /*Private Constants -----------------------------------------------------*/
-    // Top count in mecanum algorithm the max value is 1500, so use that as
-    //   top count for the PWM channels.
-    //
-    //   This allows the PWM level to be set to the value from the algorithm
-    //    without the need for normalization.
-    static constexpr int PWM_TOP_COUNT     = 1510;
-    static constexpr float PWM_SYS_CLK_DIV = 4.0;
-
-    // If mecanum computes a value less that this threshold, set PWM to 0
-    static const int DEADBAND_THRESHOLD = 10;
-    static const int PWM_LEVEL_MIN      = 500;
+    static const int       USER_INPUT_COUNT = 3; // User supplies 3 inputs
+    static constexpr int   PWM_TOP_COUNT    = USER_INPUT_COUNT * USER_INPUT_MAX;
+    static constexpr float PWM_SYS_CLK_DIV  = 4.0;
 
 
     /* Private Variables ----------------------------------------------------*/

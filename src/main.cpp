@@ -120,7 +120,7 @@ int main(void)
     if (currTimeMS - g_lastDebugTimeMS > 3000)
     {
       g_lastDebugTimeMS = currTimeMS;
-      myDriveTrain.print_update();
+      
     }
 #endif // ENABLE_DEBUG
   }

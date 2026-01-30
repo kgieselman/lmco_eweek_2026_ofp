@@ -61,36 +61,16 @@ class drive_train_differential : public drive_train
 
  
   private:
-    /* Private Types --------------------------------------------------------*/
-    typedef struct 
-    {
-      int initialized;
-
-      int pinPWM;
-      int pinDirFwd;
-      int pinDirRev;
-      int pinEncoder;
-
-      float valTrimFwd;
-      float valTrimRev;
-    } motor_t;
-
-
     /*Private Constants -----------------------------------------------------*/
     static const int USER_INPUT_COUNT = 2; // User supplies 2 inputs
 
-    static constexpr int   PWM_TOP_COUNT      = USER_INPUT_COUNT * USER_INPUT_MAX;
-    static constexpr float PWM_SYS_CLK_DIV    = 4.0;
-
-    static constexpr float DEFAULT_TRIM      = 1.0;
-    static const int MOTOR_SETTLE_TIME_MS    = 500;
-    static const int CAL_MOTOR_COUNT_TIME_MS = 2000;
+    static constexpr int   PWM_TOP_COUNT   = USER_INPUT_COUNT * USER_INPUT_MAX;
+    static constexpr float PWM_SYS_CLK_DIV = 4.0;
 
 
     /* Private Variables ----------------------------------------------------*/
-    int m_debugUpdate;
-
     motor_t m_motors[MOTOR_COUNT];
+
 
     /* Private Functions ----------------------------------------------------*/
     /**************************************************************************

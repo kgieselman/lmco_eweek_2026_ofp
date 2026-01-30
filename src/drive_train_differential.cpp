@@ -23,7 +23,7 @@ void __ISR_encoder_right(uint gpio, uint32_t events)
  ++g_encoderRightCounter;
 }
 
-drive_train_differential::drive_train_differential() : drive_train(), m_debugUpdate(0)
+drive_train_differential::drive_train_differential() : drive_train()
 {
 // Clear motors
   for (int i=0; i<MOTOR_COUNT; i++)
@@ -173,11 +173,6 @@ void drive_train_differential::update(void)
   }
 }
 
-void drive_train_differential::print_update(void)
-{
-  ++m_debugUpdate;
-}
-
 void drive_train_differential::stop_motors(void)
 {
   for (int i=0; i<MOTOR_COUNT; i++)
@@ -249,12 +244,12 @@ void drive_train_differential::calibrate(void)
     stop_motors();
     sleep_ms(MOTOR_SETTLE_TIME_MS);
 
-    calibrate_action(true, PWM_TOP_COUNT/2, fwdPulses);
+    measure_motor_pulses(true, PWM_TOP_COUNT/2, fwdPulses);
 
     stop_motors();
     sleep_ms(MOTOR_SETTLE_TIME_MS);
 
-    calibrate_action(false, PWM_TOP_COUNT/2, revPulses);
+    measure_motor_pulses(false, PWM_TOP_COUNT/2, revPulses);
 
     stop_motors();
 
