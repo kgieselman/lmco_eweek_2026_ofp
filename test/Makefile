@@ -1,7 +1,7 @@
 ###############################################################################
-# Makefile for Drive Train Unit Tests
+# Makefile for Unit Tests
 # 
-# Builds and runs unit tests for the differential and mecanum drive trains
+# Builds and runs unit tests
 ###############################################################################
 
 # Compiler settings
