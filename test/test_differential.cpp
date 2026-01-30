@@ -3,14 +3,17 @@
  * @brief Unit tests for differential drive train calculations
  *****************************************************************************/
 
+/* Includes -----------------------------------------------------------------*/
 #include "unit_test.h"
 #include <algorithm>
 
-/* Constants */
+
+/* Constants ----------------------------------------------------------------*/
 const int USER_INPUT_MAX = 500;
 const int PWM_TOP_COUNT = 1000;
 
-/* Result structure */
+
+/* Types --------------------------------------------------------------------*/
 struct DriveResult {
     int leftPWM;
     int rightPWM;
@@ -20,7 +23,18 @@ struct DriveResult {
     bool rightRev;
 };
 
-/* Simulate differential drive calculation */
+
+/* Function Definitions -----------------------------------------------------*/
+/******************************************************************************
+ * @brief Simulate differential drive calculation
+ * @param speed - input speed
+ * @param trun  - input turn
+ * @param trimLF - trim for left wheel, forward direction
+ * @param trimLR - trim for left wheel, reverse direction
+ * @param trimRF - trim for right wheel, forward direction
+ * @param trimRR - trim for right wheel, reverse direction
+ * @return Drive train computation result structure
+ *****************************************************************************/
 DriveResult calc_diff(int speed, int turn, float trimLF=1.0, float trimLR=1.0, 
                       float trimRF=1.0, float trimRR=1.0)
 {
@@ -58,7 +72,8 @@ DriveResult calc_diff(int speed, int turn, float trimLF=1.0, float trimLR=1.0,
     return r;
 }
 
-/* ===== TESTS ===== */
+
+/* Tests --------------------------------------------------------------------*/
 
 TEST_FUNC(forward_full_speed)
 {
@@ -169,13 +184,12 @@ TEST_FUNC(zero_trim_stops_motor)
     ASSERT_EQUAL(1000, r.rightPWM);
 }
 
-/* ===== MAIN ===== */
-
+/* Main Function Definition -------------------------------------------------*/
 int main(void)
 {
     printf("\n╔══════════════════════════════════════════════════╗\n");
-    printf("║   Differential Drive Train Unit Tests           ║\n");
-    printf("╚══════════════════════════════════════════════════╝\n");
+    printf(  "║   Differential Drive Train Unit Tests            ║\n");
+    printf(  "╚══════════════════════════════════════════════════╝\n");
     
     SUITE_START("Basic Movement");
     RUN_TEST(forward_full_speed);
@@ -204,4 +218,4 @@ int main(void)
     return (g_tests_failed > 0) ? 1 : 0;
 }
 
-/* EOF */
+/* EOF ----------------------------------------------------------------------*/

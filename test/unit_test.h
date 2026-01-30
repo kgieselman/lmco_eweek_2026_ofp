@@ -4,21 +4,25 @@
  *****************************************************************************/
 #pragma once
 
+
+/* Includes -----------------------------------------------------------------*/
 #include <stdio.h>
 #include <math.h>
 
-/* Test Statistics */
+
+/* Global Variables ---------------------------------------------------------*/
 static int g_tests_run = 0;
 static int g_tests_passed = 0;
 static int g_tests_failed = 0;
 
-/* Colors */
+// Terminal color codes
 #define C_RESET   "\033[0m"
 #define C_GREEN   "\033[32m"
 #define C_RED     "\033[31m"
 #define C_CYAN    "\033[36m"
 
-/* Assertion Macros */
+
+/* Assertion Macros ---------------------------------------------------------*/
 #define ASSERT_TRUE(condition) \
     if (!(condition)) { \
         printf(C_RED "✗ FAIL" C_RESET " - Line %d: %s\n", __LINE__, #condition); \
@@ -50,10 +54,12 @@ static int g_tests_failed = 0;
         return; \
     }
 
-/* Test definition macro */
+
+/* Test definition macro ----------------------------------------------------*/
 #define TEST_FUNC(name) void test_##name(void)
 
-/* Test runner macro */
+
+/* Test runner macro --------------------------------------------------------*/
 #define RUN_TEST(name) \
     do { \
         printf("  %-50s ", #name); \
@@ -64,13 +70,15 @@ static int g_tests_failed = 0;
         g_tests_passed++; \
     } while(0)
 
-/* Test suite header */
+
+/* Test suite header --------------------------------------------------------*/
 #define SUITE_START(name) \
     printf("\n" C_CYAN "══════════════════════════════════════════════\n"); \
     printf("  %s\n", name); \
     printf("══════════════════════════════════════════════" C_RESET "\n");
 
-/* Summary */
+
+/* Summary ------------------------------------------------------------------*/
 #define PRINT_SUMMARY() \
     printf("\n" C_CYAN "══════════════════════════════════════════════\n"); \
     printf("  SUMMARY\n"); \
@@ -85,4 +93,5 @@ static int g_tests_failed = 0;
     float rate = g_tests_run > 0 ? (100.0f * g_tests_passed / g_tests_run) : 0.0f; \
     printf("Rate:   %.1f%%\n\n", rate);
 
-/* EOF */
+
+/* EOF ----------------------------------------------------------------------*/

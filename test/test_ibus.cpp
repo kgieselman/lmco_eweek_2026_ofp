@@ -3,11 +3,13 @@
  * @brief Unit tests for FlySky iBUS protocol implementation
  *****************************************************************************/
 
+/* Includes -----------------------------------------------------------------*/
 #include "unit_test.h"
 #include <stdint.h>
 #include <string.h>
 
-/* Constants */
+
+/* Constants ----------------------------------------------------------------*/
 const int IBUS_MIN_MSG_LENGTH = 4;  // Header(2) + CRC(2)
 const int IBUS_MAX_MSG_LENGTH = 32; // Header(2) + 14 channels(28) + CRC(2)
 const int IBUS_HEADER_LENGTH_BYTES = 2;
@@ -19,7 +21,8 @@ const int IBUS_SENSOR_MAX_MSG_LENGTH_BYTES = 8;
 const uint8_t IBUS_CMD_CODE_CHAN_DATA = 0x40;
 const uint8_t IBUS_CMD_CODE_SENS_DATA = 0xa0;
 
-/* Message structure for testing */
+
+/* Types --------------------------------------------------------------------*/
 struct IBusMessage {
     uint8_t length;
     uint8_t command;
@@ -27,7 +30,6 @@ struct IBusMessage {
     uint16_t crc;
 } __attribute__((packed));
 
-/* Sensor types */
 enum sensor_type_e
 {
     SENSOR_TYPE_NONE       = 0x00,
@@ -41,78 +43,113 @@ enum sensor_type_e
     SENSOR_TYPE_ALT_MAX    = 0x84,  // 4-byte sensor
 };
 
-/* ===== HELPER FUNCTIONS ===== */
 
-// Calculate iBUS CRC
-uint16_t calculate_ibus_crc(const uint8_t* data, int length)
+/* Helper Function Definitions ----------------------------------------------*/
+/******************************************************************************
+ * @brief Calculates the CRC for a given IBUS message
+ * @param pData - pointer to message data array
+ * @param length - length of the message data array
+ * @return The computed CRC value
+ *****************************************************************************/
+uint16_t calculate_ibus_crc(const uint8_t* pData, int length)
 {
     uint16_t crc = IBUS_INITIAL_CRC;
-    for (int i = 0; i < length; i++) {
-        crc -= data[i];
+    for (int i = 0; i < length; i++)
+    {
+        crc -= pData[i];
     }
+
     return crc;
 }
 
 // Create a valid channel data message
-void create_channel_message(uint8_t* buffer, const uint16_t* channels)
+/******************************************************************************
+ * @brief Creates a valid channel data message
+ * @param pBuffer   - pointer to memory allocated for the message
+ *                    (size: 32 bytes)
+ * @param pChannels - pointer to channel data
+ *                    (size: 14 indexes, 28 bytes)
+ *****************************************************************************/
+void create_channel_message(uint8_t* pBuffer, const uint16_t* pChannels)
 {
-    buffer[0] = 0x20;  // Length: 32 bytes
-    buffer[1] = IBUS_CMD_CODE_CHAN_DATA;
+    pBuffer[0] = 0x20;  // Length: 32 bytes
+    pBuffer[1] = IBUS_CMD_CODE_CHAN_DATA;
     
     // Copy channel data (14 channels, 2 bytes each)
-    for (int i = 0; i < 14; i++) {
-        buffer[2 + i*2] = channels[i] & 0xFF;
-        buffer[2 + i*2 + 1] = (channels[i] >> 8) & 0xFF;
+    for (int i = 0; i < 14; i++)
+    {
+        pBuffer[2 + i*2] = pChannels[i] & 0xFF;
+        pBuffer[2 + i*2 + 1] = (pChannels[i] >> 8) & 0xFF;
     }
     
     // Calculate and add CRC
-    uint16_t crc = calculate_ibus_crc(buffer, 30);
-    buffer[30] = crc & 0xFF;
-    buffer[31] = (crc >> 8) & 0xFF;
+    uint16_t crc = calculate_ibus_crc(pBuffer, 30);
+    pBuffer[30] = crc & 0xFF;
+    pBuffer[31] = (crc >> 8) & 0xFF;
 }
 
 // Validate message structure
-bool validate_message_structure(const uint8_t* msg)
+/******************************************************************************
+ * @brief Validates message structure
+ * @param pMsg - pointer to the message
+ * @return true if message is valid, false otherwise
+ *****************************************************************************/
+bool validate_message_structure(const uint8_t* pMsg)
 {
-    uint8_t length = msg[0];
+    uint8_t length = pMsg[0];
     
     // Check length is valid
-    if (length < IBUS_MIN_MSG_LENGTH || length > IBUS_MAX_MSG_LENGTH) {
+    if (length < IBUS_MIN_MSG_LENGTH || length > IBUS_MAX_MSG_LENGTH)
+    {
         return false;
     }
     
     // Check CRC
-    uint16_t calculated_crc = calculate_ibus_crc(msg, length - 2);
-    uint16_t message_crc = msg[length - 2] | (msg[length - 1] << 8);
+    uint16_t calculated_crc = calculate_ibus_crc(pMsg, length - 2);
+    uint16_t message_crc = pMsg[length - 2] | (pMsg[length - 1] << 8);
     
     return calculated_crc == message_crc;
 }
 
-// Extract channel value from message
+/******************************************************************************
+ * @brief Extracts channel value for a message
+ * @param pMsg - pointer to the message
+ * @param channel_idx - channel index
+ * @return channel value
+ *****************************************************************************/
 uint16_t extract_channel(const uint8_t* msg, int channel_idx)
 {
     int offset = 2 + (channel_idx * 2);
     return msg[offset] | (msg[offset + 1] << 8);
 }
 
-// Determine sensor data length
+/******************************************************************************
+ * @brief Determines the sensor data length
+ * @param type - sensor type
+ * @return number of bytes the sensor uses
+ *****************************************************************************/
 int get_sensor_data_length(sensor_type_e type)
 {
     if (type == SENSOR_TYPE_LAT || type == SENSOR_TYPE_LONG || 
-        type == SENSOR_TYPE_ALT || type == SENSOR_TYPE_ALT_MAX) {
+        type == SENSOR_TYPE_ALT || type == SENSOR_TYPE_ALT_MAX)
+    {
         return 4;
     }
     return 2;
 }
 
-// Calculate sensor message length
+/******************************************************************************
+ * @brief Calculates sensor message length
+ * @param type - sensor type
+ * @return number of bytes in a message for a given sensor type
+ *****************************************************************************/
 int get_sensor_message_length(sensor_type_e type)
 {
     return IBUS_HEADER_LENGTH_BYTES + get_sensor_data_length(type) + IBUS_CRC_LENGTH_BYTES;
 }
 
-/* ===== TESTS ===== */
 
+/* Tests --------------------------------------------------------------------*/
 TEST_FUNC(crc_calculation_empty)
 {
     uint8_t data[] = {0x04, 0x40};
@@ -391,13 +428,13 @@ TEST_FUNC(crc_sensitive_to_all_bytes)
     ASSERT_EQUAL(extract_channel(buffer1, 1), extract_channel(buffer2, 1));
 }
 
-/* ===== MAIN ===== */
 
+/* Main Function Definition -------------------------------------------------*/
 int main(void)
 {
     printf("\n╔══════════════════════════════════════════════════╗\n");
-    printf("║   FlySky iBUS Protocol Unit Tests               ║\n");
-    printf("╚══════════════════════════════════════════════════╝\n");
+    printf(  "║   FlySky iBUS Protocol Unit Tests                ║\n");
+    printf(  "╚══════════════════════════════════════════════════╝\n");
     
     SUITE_START("CRC Calculation");
     RUN_TEST(crc_calculation_empty);
@@ -440,4 +477,4 @@ int main(void)
     return (g_tests_failed > 0) ? 1 : 0;
 }
 
-/* EOF */
+/* EOF ----------------------------------------------------------------------*/
