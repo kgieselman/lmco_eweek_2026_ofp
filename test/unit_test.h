@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file simple_test.h
+ * @file unit_test.h
  * @brief Simple unit testing framework for embedded systems
  *****************************************************************************/
 #pragma once

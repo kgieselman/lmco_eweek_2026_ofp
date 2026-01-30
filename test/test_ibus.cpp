@@ -3,7 +3,7 @@
  * @brief Unit tests for FlySky iBUS protocol implementation
  *****************************************************************************/
 
-#include "simple_test.h"
+#include "unit_test.h"
 #include <stdint.h>
 #include <string.h>
 

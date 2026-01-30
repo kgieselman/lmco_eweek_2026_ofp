@@ -3,7 +3,7 @@
  * @brief Unit tests for mecanum drive train calculations
  *****************************************************************************/
 
-#include "simple_test.h"
+#include "unit_test.h"
 #include <algorithm>
 
 /* Constants */

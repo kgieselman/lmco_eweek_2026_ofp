@@ -26,22 +26,22 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 # Build differential drive test
-test_differential: $(BUILD_DIR) test_differential.cpp simple_test.h
+test_differential: $(BUILD_DIR) test_differential.cpp unit_test.h
 	$(CXX) $(CXXFLAGS) test_differential.cpp -o $(BUILD_DIR)/test_differential $(LDFLAGS)
 	@echo "Built: $(BUILD_DIR)/test_differential"
 
 # Build mecanum drive test
-test_mecanum: $(BUILD_DIR) test_mecanum.cpp simple_test.h
+test_mecanum: $(BUILD_DIR) test_mecanum.cpp unit_test.h
 	$(CXX) $(CXXFLAGS) test_mecanum.cpp -o $(BUILD_DIR)/test_mecanum $(LDFLAGS)
 	@echo "Built: $(BUILD_DIR)/test_mecanum"
 
 # Build ring buffer test
-test_ring_buffer: $(BUILD_DIR) test_ring_buffer.cpp simple_test.h
+test_ring_buffer: $(BUILD_DIR) test_ring_buffer.cpp unit_test.h
 	$(CXX) $(CXXFLAGS) test_ring_buffer.cpp -o $(BUILD_DIR)/test_ring_buffer $(LDFLAGS)
 	@echo "Built: $(BUILD_DIR)/test_ring_buffer"
 
 # Build iBUS test
-test_ibus: $(BUILD_DIR) test_ibus.cpp simple_test.h
+test_ibus: $(BUILD_DIR) test_ibus.cpp unit_test.h
 	$(CXX) $(CXXFLAGS) test_ibus.cpp -o $(BUILD_DIR)/test_ibus $(LDFLAGS)
 	@echo "Built: $(BUILD_DIR)/test_ibus"
 

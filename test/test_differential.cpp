@@ -3,7 +3,7 @@
  * @brief Unit tests for differential drive train calculations
  *****************************************************************************/
 
-#include "simple_test.h"
+#include "unit_test.h"
 #include <algorithm>
 
 /* Constants */

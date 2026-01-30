@@ -111,14 +111,13 @@ This tells you:
 
 ## Test Framework
 
-### Custom Lightweight Frameworks
+### Custom Lightweight Framework
 
 We use custom unit test frameworks designed for embedded systems:
 
-- **[simple_test.h](simple_test.h)**: Lightweight framework for current tests
-- **[unit_test.h](unit_test.h)**: Alternative framework with additional features
+- **[unit_test.h](unit_test.h)**: Lightweight framework for current tests
 
-Both frameworks provide:
+Framework provides:
 - **No external dependencies** (no Google Test, Catch2, etc.)
 - **Colorized output** for easy reading
 - **Simple macros** similar to popular frameworks
@@ -281,12 +280,11 @@ As you modify the code:
 
 ```
 test/
-├── simple_test.h               # Lightweight test framework
-├── unit_test.h                 # Alternative test framework
+├── unit_test.h                 # Lightweight test framework
 ├── test_differential.cpp       # Differential drive tests (14 tests)
 ├── test_mecanum.cpp            # Mecanum drive tests (17 tests)
 ├── test_ring_buffer.cpp        # Ring buffer tests (21 tests)
-├── test_ibus.cpp              # iBUS protocol tests (24 tests)
+├── test_ibus.cpp               # iBUS protocol tests (24 tests)
 ├── Makefile                    # Build system
 ├── build/                      # Test executables (auto-generated)
 └── README.md                   # This file
