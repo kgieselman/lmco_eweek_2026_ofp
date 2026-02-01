@@ -20,10 +20,6 @@
 /* Method Definitions --------------------------------------------------------*/
 MechDeposit::MechDeposit()
   : m_initialized(false)
-  , m_state(STATE_IDLE)
-  , m_gateOpen(false)
-  , m_targetCount(0)
-  , m_depositedCount(0)
   , m_lastUpdateMs(0)
   , m_stateStartMs(0)
 {
@@ -31,7 +27,7 @@ MechDeposit::MechDeposit()
 
 MechDeposit::~MechDeposit()
 {
-  stop();
+  //stop();
 }
 
 bool MechDeposit::init(void)

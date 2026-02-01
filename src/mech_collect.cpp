@@ -20,16 +20,13 @@
 /* Method Definitions --------------------------------------------------------*/
 MechCollect::MechCollect()
   : m_initialized(false)
-  , m_active(false)
-  , m_state(STATE_IDLE)
-  , m_itemCount(0)
   , m_lastUpdateMs(0)
 {
 }
 
 MechCollect::~MechCollect()
 {
-  stop();
+  //stop();
 }
 
 bool MechCollect::init(void)

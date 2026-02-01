@@ -181,7 +181,7 @@ bool FlySkyIBus::hasNewMessage(void)
 
 int FlySkyIBus::readChannel(Channel channel) const
 {
-  if (channel < 0 || channel >= CHAN_COUNT)
+  if (/*channel < 0 || */channel >= CHAN_COUNT)
   {
     return CHANNEL_VALUE_CENTER;
   }

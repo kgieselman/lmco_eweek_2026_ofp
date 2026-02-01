@@ -20,10 +20,6 @@
 /* Method Definitions --------------------------------------------------------*/
 MechLauncher::MechLauncher()
   : m_initialized(false)
-  , m_state(STATE_IDLE)
-  , m_power(50)
-  , m_angle(45)
-  , m_launchCount(0)
   , m_lastUpdateMs(0)
   , m_stateStartMs(0)
 {
@@ -31,7 +27,7 @@ MechLauncher::MechLauncher()
 
 MechLauncher::~MechLauncher()
 {
-  stop();
+  //stop();
 }
 
 bool MechLauncher::init(void)
