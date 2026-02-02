@@ -8,12 +8,24 @@
  * @par Motor Mixing:
  * - Left motor  = speed + turn
  * - Right motor = speed - turn
+ *
+ * @par Motor Driver Selection:
+ * The motor driver type is selected via USE_MOTOR_DRIVER_DRV8833 in config.h:
+ * - 0 = L298N (1 PWM + 2 direction pins per motor)
+ * - 1 = DRV8833 (2 PWM pins per motor)
  ******************************************************************************/
 #pragma once
 
 
 /* Includes ------------------------------------------------------------------*/
 #include "drive_train.h"
+#include "config.h"
+
+#if USE_MOTOR_DRIVER_DRV8833
+#include "motor_driver_drv8833.h"
+#else
+#include "motor_driver_l298n.h"
+#endif
 
 
 /* Class Definition ----------------------------------------------------------*/
@@ -27,11 +39,22 @@
  * turning is achieved by driving them in opposite directions or at
  * different speeds.
  *
- * @par Example Usage:
+ * @par Example Usage (L298N):
  * @code
  * DriveTrainDifferential drive;
- * drive.addMotor(DriveTrainDifferential::MOTOR_LEFT, 9, 7, 6);
- * drive.addMotor(DriveTrainDifferential::MOTOR_RIGHT, 8, 10, 11);
+ * drive.addMotorL298N(DriveTrainDifferential::MOTOR_LEFT, 9, 7, 6);
+ * drive.addMotorL298N(DriveTrainDifferential::MOTOR_RIGHT, 8, 10, 11);
+ *
+ * drive.setSpeed(250);   // 50% forward
+ * drive.setTurn(100);    // Slight right turn
+ * drive.update();
+ * @endcode
+ *
+ * @par Example Usage (DRV8833):
+ * @code
+ * DriveTrainDifferential drive;
+ * drive.addMotorDRV8833(DriveTrainDifferential::MOTOR_LEFT, 7, 6);
+ * drive.addMotorDRV8833(DriveTrainDifferential::MOTOR_RIGHT, 10, 11);
  *
  * drive.setSpeed(250);   // 50% forward
  * drive.setTurn(100);    // Slight right turn
@@ -65,8 +88,26 @@ public:
    ****************************************************************************/
   ~DriveTrainDifferential() override;
 
+#if USE_MOTOR_DRIVER_DRV8833
   /*****************************************************************************
-   * @brief Add and configure a motor
+   * @brief Add and configure a motor (DRV8833)
+   *
+   * @param motor Which motor to configure (MOTOR_LEFT or MOTOR_RIGHT)
+   * @param pinIn1 PWM pin for forward direction (IN1)
+   * @param pinIn2 PWM pin for reverse direction (IN2)
+   * @param pinEncoder Optional encoder input pin (-1 if not used)
+   * @return true if configuration successful
+   *
+   * @note If a motor spins backwards, swap pinIn1 and pinIn2
+   *       rather than rewiring the motor.
+   ****************************************************************************/
+  bool addMotor(MotorId motor,
+                int pinIn1,
+                int pinIn2,
+                int pinEncoder = -1);
+#else
+  /*****************************************************************************
+   * @brief Add and configure a motor (L298N)
    *
    * @param motor Which motor to configure (MOTOR_LEFT or MOTOR_RIGHT)
    * @param pinPwm PWM output pin for speed control
@@ -83,6 +124,7 @@ public:
                 int pinDirFwd,
                 int pinDirRev,
                 int pinEncoder = -1);
+#endif
 
   /*****************************************************************************
    * @brief Update motor outputs
@@ -114,19 +156,37 @@ public:
 
 
 private:
+  /* Private Types -----------------------------------------------------------*/
+
+  /*****************************************************************************
+   * @brief Motor state tracking
+   ****************************************************************************/
+  struct MotorState {
+    bool initialized;  /**< Motor is configured and ready */
+    int pinEncoder;    /**< Encoder input pin (-1 if not used) */
+    float trimFwd;     /**< Forward direction trim (0.0 - 1.0) */
+    float trimRev;     /**< Reverse direction trim (0.0 - 1.0) */
+  };
+
+
   /* Private Constants -------------------------------------------------------*/
 
   /** @brief Number of user inputs affecting motor calculation */
   static constexpr int USER_INPUT_COUNT = 2;
 
-  /** @brief PWM counter top value (determines resolution) */
-  static constexpr int PWM_TOP_COUNT = USER_INPUT_COUNT * USER_INPUT_MAX;
+  /** @brief Default trim value (no trim) */
+  static constexpr float DEFAULT_TRIM = 1.0f;
 
-  /** @brief PWM clock divider */
-  static constexpr float PWM_CLK_DIV = 4.0f;
 
   /* Private Variables -------------------------------------------------------*/
-  Motor m_motors[MOTOR_COUNT];  /**< Motor configurations */
+
+#if USE_MOTOR_DRIVER_DRV8833
+  MotorDriverDRV8833 m_motorDriver;  /**< DRV8833 motor driver instance */
+#else
+  MotorDriverL298N m_motorDriver;    /**< L298N motor driver instance */
+#endif
+
+  MotorState m_motorState[MOTOR_COUNT];  /**< Motor state tracking */
 
 
   /* Private Function Declarations -------------------------------------------*/
@@ -135,10 +195,10 @@ private:
    * @brief Measure encoder pulses for calibration
    *
    * @param forward true for forward direction, false for reverse
-   * @param pwmValue PWM value to apply during measurement
+   * @param motorValue Motor value to apply during measurement
    * @param pPulses Array to store pulse counts [MOTOR_COUNT]
    ****************************************************************************/
-  void measureMotorPulses(bool forward, int pwmValue, int* pPulses);
+  void measureMotorPulses(bool forward, int motorValue, int* pPulses);
 };
 
 

@@ -19,12 +19,24 @@
  *      RL  RR
  *     //  \\     Back
  * @endverbatim
+ *
+ * @par Motor Driver Selection:
+ * The motor driver type is selected via USE_MOTOR_DRIVER_DRV8833 in config.h:
+ * - 0 = L298N (1 PWM + 2 direction pins per motor)
+ * - 1 = DRV8833 (2 PWM pins per motor)
  ******************************************************************************/
 #pragma once
 
 
 /* Includes ------------------------------------------------------------------*/
 #include "drive_train.h"
+#include "config.h"
+
+#if USE_MOTOR_DRIVER_DRV8833
+#include "motor_driver_drv8833.h"
+#else
+#include "motor_driver_l298n.h"
+#endif
 
 
 /* Class Definition ----------------------------------------------------------*/
@@ -36,13 +48,27 @@
  * direction without rotating. This is useful for precise positioning
  * and navigating tight spaces.
  *
- * @par Example Usage:
+ * @par Example Usage (L298N):
  * @code
  * DriveTrainMecanum drive;
  * drive.addMotor(DriveTrainMecanum::MOTOR_FRONT_LEFT, 20, 18, 19);
  * drive.addMotor(DriveTrainMecanum::MOTOR_FRONT_RIGHT, 8, 10, 11);
  * drive.addMotor(DriveTrainMecanum::MOTOR_REAR_RIGHT, 9, 7, 6);
  * drive.addMotor(DriveTrainMecanum::MOTOR_REAR_LEFT, 21, 27, 26);
+ *
+ * drive.setSpeed(200);   // Forward
+ * drive.setStrafe(100);  // Right
+ * drive.setTurn(50);     // Slight clockwise
+ * drive.update();
+ * @endcode
+ *
+ * @par Example Usage (DRV8833):
+ * @code
+ * DriveTrainMecanum drive;
+ * drive.addMotor(DriveTrainMecanum::MOTOR_FRONT_LEFT, 18, 19);
+ * drive.addMotor(DriveTrainMecanum::MOTOR_FRONT_RIGHT, 10, 11);
+ * drive.addMotor(DriveTrainMecanum::MOTOR_REAR_RIGHT, 7, 6);
+ * drive.addMotor(DriveTrainMecanum::MOTOR_REAR_LEFT, 27, 26);
  *
  * drive.setSpeed(200);   // Forward
  * drive.setStrafe(100);  // Right
@@ -81,8 +107,24 @@ public:
    ****************************************************************************/
   ~DriveTrainMecanum() override;
 
+#if USE_MOTOR_DRIVER_DRV8833
   /*****************************************************************************
-   * @brief Add and configure a motor
+   * @brief Add and configure a motor (DRV8833)
+   *
+   * @param motor Which motor to configure
+   * @param pinIn1 PWM pin for forward direction (IN1)
+   * @param pinIn2 PWM pin for reverse direction (IN2)
+   * @return true if configuration successful
+   *
+   * @note If a motor spins backwards, swap pinIn1 and pinIn2
+   *       rather than rewiring the motor.
+   ****************************************************************************/
+  bool addMotor(MotorId motor,
+                int pinIn1,
+                int pinIn2);
+#else
+  /*****************************************************************************
+   * @brief Add and configure a motor (L298N)
    *
    * @param motor Which motor to configure
    * @param pinPwm PWM output pin for speed control
@@ -97,6 +139,7 @@ public:
                 int pinPwm,
                 int pinDirFwd,
                 int pinDirRev);
+#endif
 
   /*****************************************************************************
    * @brief Set desired strafe rate
@@ -142,23 +185,58 @@ public:
    ****************************************************************************/
   bool isInitialized(void) const override;
 
+
 private:
+  /* Private Types -----------------------------------------------------------*/
+
+  /*****************************************************************************
+   * @brief Motor state tracking
+   ****************************************************************************/
+  struct MotorState {
+    bool initialized;  /**< Motor is configured and ready */
+    float trimFwd;     /**< Forward direction trim (0.0 - 1.0) */
+    float trimRev;     /**< Reverse direction trim (0.0 - 1.0) */
+  };
+
+
   /* Private Constants -------------------------------------------------------*/
 
   /** @brief Number of user inputs affecting motor calculation */
   static constexpr int USER_INPUT_COUNT = 3;
 
-  /** @brief PWM counter top value (determines resolution) */
-  static constexpr int PWM_TOP_COUNT = USER_INPUT_COUNT * USER_INPUT_MAX;
-
-  /** @brief PWM clock divider */
-  static constexpr float PWM_CLK_DIV = 4.0f;
+  /** @brief Default trim value (no trim) */
+  static constexpr float DEFAULT_TRIM = 1.0f;
 
 
   /* Private Variables -------------------------------------------------------*/
 
-  Motor m_motors[MOTOR_COUNT];  /**< Motor configurations */
-  int m_strafe;                 /**< Strafe setpoint */
+#if USE_MOTOR_DRIVER_DRV8833
+  MotorDriverDRV8833 m_motorDriverFront;  /**< DRV8833 for front motors */
+  MotorDriverDRV8833 m_motorDriverRear;   /**< DRV8833 for rear motors */
+#else
+  MotorDriverL298N m_motorDriverFront;    /**< L298N for front motors */
+  MotorDriverL298N m_motorDriverRear;     /**< L298N for rear motors */
+#endif
+
+  MotorState m_motorState[MOTOR_COUNT];  /**< Motor state tracking */
+  int m_strafe;                          /**< Strafe setpoint */
+
+
+  /* Private Function Declarations -------------------------------------------*/
+
+  /*****************************************************************************
+   * @brief Get the motor driver for a given motor ID
+   *
+   * @param motor Motor identifier
+   * @return Reference to the appropriate motor driver
+   ****************************************************************************/
+#if USE_MOTOR_DRIVER_DRV8833
+  MotorDriverDRV8833& getDriverForMotor(MotorId motor);
+  MotorDriverDRV8833::MotorChannel getChannelForMotor(MotorId motor);
+#else
+  MotorDriverL298N& getDriverForMotor(MotorId motor);
+  MotorDriverL298N::MotorChannel getChannelForMotor(MotorId motor);
+#endif
 };
 
 

@@ -54,6 +54,8 @@ set(SOURCES
   src/mech_collect.cpp
   src/mech_deposit.cpp
   src/mech_launcher.cpp
+  src/motor_driver_drv8833.cpp
+  src/motor_driver_l298n.cpp
 )
 
 # Create executable

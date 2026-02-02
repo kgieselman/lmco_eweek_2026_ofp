@@ -22,6 +22,14 @@
 #define USE_DRIVE_TRAIN_MECANUM (0)
 
 /*******************************************************************************
+ * @brief Select the motor driver type
+ *
+ * Set to 1 to use DRV8833 motor driver (2 PWM pins per motor).
+ * Set to 0 to use L298N motor driver (1 PWM + 2 direction pins per motor).
+ ******************************************************************************/
+#define USE_MOTOR_DRIVER_DRV8833 (0)
+
+/*******************************************************************************
  * @brief Enable debug output over UART/USB
  *
  * When enabled, diagnostic messages are printed to stdio.
