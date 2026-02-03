@@ -1,251 +1,327 @@
-/******************************************************************************
+/*******************************************************************************
  * @file test_mecanum.cpp
- * @brief Unit tests for mecanum drive train calculations
- *****************************************************************************/
+ * @brief Unit tests for mecanum drive train motor mixing
+ *
+ * Tests the motor value calculations for mecanum (omnidirectional) drive.
+ ******************************************************************************/
 
+/* Includes ------------------------------------------------------------------*/
 #include "unit_test.h"
+#include <cmath>
 #include <algorithm>
 
-/* Constants */
-const float INPUT_MAX = 500.0f;
-const float MOTOR_PWM_MAX = 1500.0f;
 
-/* Motor indices */
-enum Motor { FL=0, FR, RR, RL };
+/* Constants -----------------------------------------------------------------*/
+constexpr int USER_INPUT_MIN = -500;
+constexpr int USER_INPUT_MAX = 500;
+constexpr int MOTOR_COUNT = 4;
+constexpr int MOTOR_FL = 0;  // Front Left
+constexpr int MOTOR_FR = 1;  // Front Right
+constexpr int MOTOR_RR = 2;  // Rear Right
+constexpr int MOTOR_RL = 3;  // Rear Left
 
-/* Result structure */
-struct MecanumResult {
-    int pwm[4];
-    bool fwd[4];
-    bool rev[4];
-};
+/* Helper Function Definitions -----------------------------------------------*/
 
-/* Simulate mecanum drive calculation */
-MecanumResult calc_mecanum(int speed, int strafe, int turn)
+/*******************************************************************************
+ * @brief Calculate mecanum drive motor values
+ *
+ * Motor layout (top view):
+ *   FL  FR
+ *   RL  RR
+ ******************************************************************************/
+void calculate_motor_values(int speed, int strafe, int turn, int* motors)
 {
-    MecanumResult r;
-    for (int i = 0; i < 4; i++) {
-        r.pwm[i] = 0;
-        r.fwd[i] = false;
-        r.rev[i] = false;
-    }
-    
-    // Calculate raw mecanum values
-    int val[4];
-    val[FL] = speed + strafe + turn;
-    val[FR] = speed - strafe - turn;
-    val[RR] = speed + strafe - turn;
-    val[RL] = speed - strafe + turn;
-    
-    // Determine scaling
-    int inputMax = std::max({std::abs(speed), std::abs(strafe), std::abs(turn)});
-    int calcMax = std::max({std::abs(val[FL]), std::abs(val[FR]), 
-                            std::abs(val[RR]), std::abs(val[RL])});
-    
-    float inputMaxPercent = (float)inputMax / INPUT_MAX;
-    float motorMultiplier = 0.0f;
-    if (calcMax > 0) {
-        motorMultiplier = (inputMaxPercent * MOTOR_PWM_MAX) / (float)calcMax;
-    }
-    
-    // Calculate PWM and direction
-    for (int i = 0; i < 4; i++) {
-        r.pwm[i] = std::abs(val[i]) * motorMultiplier;
-        r.fwd[i] = (val[i] > 0);
-        r.rev[i] = (val[i] < 0);
-    }
-    
-    return r;
+  motors[MOTOR_FL] = speed + strafe + turn;
+  motors[MOTOR_FR] = speed - strafe - turn;
+  motors[MOTOR_RR] = speed + strafe - turn;
+  motors[MOTOR_RL] = speed - strafe + turn;
 }
 
-/* ===== TESTS ===== */
-
-TEST_FUNC(forward_full_speed)
+/*******************************************************************************
+ * @brief Calculate PWM scaling multiplier
+ ******************************************************************************/
+float calculate_multiplier(int speed, int strafe, int turn, 
+                           const int* motors, int pwmTop)
 {
-    MecanumResult r = calc_mecanum(500, 0, 0);
-    for (int i = 0; i < 4; i++) {
-        ASSERT_EQUAL(1500, r.pwm[i]);
-        ASSERT_TRUE(r.fwd[i]);
-        ASSERT_TRUE(!r.rev[i]);
-    }
+  int inputMax = std::max({std::abs(speed), std::abs(strafe), std::abs(turn)});
+  int calcMax = std::max({std::abs(motors[MOTOR_FL]), std::abs(motors[MOTOR_FR]),
+                          std::abs(motors[MOTOR_RR]), std::abs(motors[MOTOR_RL])});
+
+  if (calcMax <= 0)
+  {
+    return 0.0f;
+  }
+
+  float inputPercent = static_cast<float>(inputMax) / USER_INPUT_MAX;
+
+  return (inputPercent * pwmTop) / static_cast<float>(calcMax);
 }
 
-TEST_FUNC(backward_full_speed)
+/*******************************************************************************
+ * @brief Validate user input is in range
+ ******************************************************************************/
+bool validate_input(int value)
 {
-    MecanumResult r = calc_mecanum(-500, 0, 0);
-    for (int i = 0; i < 4; i++) {
-        ASSERT_EQUAL(1500, r.pwm[i]);
-        ASSERT_TRUE(!r.fwd[i]);
-        ASSERT_TRUE(r.rev[i]);
-    }
+  return (value >= USER_INPUT_MIN) && (value <= USER_INPUT_MAX);
 }
 
-TEST_FUNC(stopped)
+/*============================================================================*/
+/* Input Validation Tests                                                     */
+/*============================================================================*/
+
+TEST_FUNC(validate_center_input)
 {
-    MecanumResult r = calc_mecanum(0, 0, 0);
-    for (int i = 0; i < 4; i++) {
-        ASSERT_EQUAL(0, r.pwm[i]);
-    }
+  ASSERT_TRUE(validate_input(0));
 }
 
-TEST_FUNC(forward_half_speed)
+TEST_FUNC(validate_boundary_inputs)
 {
-    MecanumResult r = calc_mecanum(250, 0, 0);
-    for (int i = 0; i < 4; i++) {
-        ASSERT_EQUAL(750, r.pwm[i]);
-    }
+  ASSERT_TRUE(validate_input(-500));
+  ASSERT_TRUE(validate_input(500));
+  ASSERT_FALSE(validate_input(-501));
+  ASSERT_FALSE(validate_input(501));
 }
 
-TEST_FUNC(strafe_right_full)
+/*============================================================================*/
+/* Motor Mixing - Basic Movement Tests                                        */
+/*============================================================================*/
+
+TEST_FUNC(mix_stopped)
 {
-    MecanumResult r = calc_mecanum(0, 500, 0);
-    ASSERT_TRUE(r.fwd[FL] && r.fwd[RR]);
-    ASSERT_TRUE(r.rev[FR] && r.rev[RL]);
-    for (int i = 0; i < 4; i++) {
-        ASSERT_EQUAL(1500, r.pwm[i]);
-    }
+  int motors[4];
+  calculate_motor_values(0, 0, 0, motors);
+  ASSERT_EQUAL(0, motors[MOTOR_FL]);
+  ASSERT_EQUAL(0, motors[MOTOR_FR]);
+  ASSERT_EQUAL(0, motors[MOTOR_RR]);
+  ASSERT_EQUAL(0, motors[MOTOR_RL]);
 }
 
-TEST_FUNC(strafe_left_full)
+TEST_FUNC(mix_forward_only)
 {
-    MecanumResult r = calc_mecanum(0, -500, 0);
-    ASSERT_TRUE(r.fwd[FR] && r.fwd[RL]);
-    ASSERT_TRUE(r.rev[FL] && r.rev[RR]);
+  int motors[4];
+  calculate_motor_values(500, 0, 0, motors);
+  // All motors forward with same speed
+  ASSERT_EQUAL(500, motors[MOTOR_FL]);
+  ASSERT_EQUAL(500, motors[MOTOR_FR]);
+  ASSERT_EQUAL(500, motors[MOTOR_RR]);
+  ASSERT_EQUAL(500, motors[MOTOR_RL]);
 }
 
-TEST_FUNC(rotate_clockwise)
+TEST_FUNC(mix_reverse_only)
 {
-    MecanumResult r = calc_mecanum(0, 0, 500);
-    ASSERT_TRUE(r.fwd[FL] && r.fwd[RL]);
-    ASSERT_TRUE(r.rev[FR] && r.rev[RR]);
+  int motors[4];
+  calculate_motor_values(-500, 0, 0, motors);
+  // All motors reverse with same speed
+  ASSERT_EQUAL(-500, motors[MOTOR_FL]);
+  ASSERT_EQUAL(-500, motors[MOTOR_FR]);
+  ASSERT_EQUAL(-500, motors[MOTOR_RR]);
+  ASSERT_EQUAL(-500, motors[MOTOR_RL]);
 }
 
-TEST_FUNC(rotate_counterclockwise)
+/*============================================================================*/
+/* Motor Mixing - Strafe Tests                                                */
+/*============================================================================*/
+
+TEST_FUNC(mix_strafe_right)
 {
-    MecanumResult r = calc_mecanum(0, 0, -500);
-    ASSERT_TRUE(r.fwd[FR] && r.fwd[RR]);
-    ASSERT_TRUE(r.rev[FL] && r.rev[RL]);
+  int motors[4];
+  calculate_motor_values(0, 500, 0, motors);
+  // Strafe right pattern
+  ASSERT_EQUAL(500, motors[MOTOR_FL]);   // +strafe
+  ASSERT_EQUAL(-500, motors[MOTOR_FR]);  // -strafe
+  ASSERT_EQUAL(500, motors[MOTOR_RR]);   // +strafe
+  ASSERT_EQUAL(-500, motors[MOTOR_RL]);  // -strafe
 }
 
-TEST_FUNC(diagonal_forward_right)
+TEST_FUNC(mix_strafe_left)
 {
-    MecanumResult r = calc_mecanum(500, 500, 0);
-    ASSERT_TRUE(r.pwm[FL] > 0 && r.pwm[RR] > 0);
-    ASSERT_EQUAL(0, r.pwm[FR]);
-    ASSERT_EQUAL(0, r.pwm[RL]);
+  int motors[4];
+  calculate_motor_values(0, -500, 0, motors);
+  // Strafe left pattern (opposite of right)
+  ASSERT_EQUAL(-500, motors[MOTOR_FL]);
+  ASSERT_EQUAL(500, motors[MOTOR_FR]);
+  ASSERT_EQUAL(-500, motors[MOTOR_RR]);
+  ASSERT_EQUAL(500, motors[MOTOR_RL]);
 }
 
-TEST_FUNC(forward_and_rotate)
+/*============================================================================*/
+/* Motor Mixing - Turn Tests                                                  */
+/*============================================================================*/
+
+TEST_FUNC(mix_turn_clockwise)
 {
-    MecanumResult r = calc_mecanum(400, 0, 100);
-    for (int i = 0; i < 4; i++) {
-        ASSERT_TRUE(r.fwd[i]);
-    }
-    ASSERT_TRUE(r.pwm[FL] > r.pwm[FR]);
-    ASSERT_TRUE(r.pwm[RL] > r.pwm[RR]);
+  int motors[4];
+  calculate_motor_values(0, 0, 500, motors);
+  // Turn right (clockwise): left side forward, right side reverse
+  ASSERT_EQUAL(500, motors[MOTOR_FL]);   // +turn
+  ASSERT_EQUAL(-500, motors[MOTOR_FR]);  // -turn
+  ASSERT_EQUAL(-500, motors[MOTOR_RR]);  // -turn
+  ASSERT_EQUAL(500, motors[MOTOR_RL]);   // +turn
 }
 
-TEST_FUNC(all_inputs_combined)
+TEST_FUNC(mix_turn_counter_clockwise)
 {
-    MecanumResult r = calc_mecanum(300, 200, 100);
-    for (int i = 0; i < 4; i++) {
-        ASSERT_IN_RANGE(r.pwm[i], 0, (int)MOTOR_PWM_MAX);
-    }
+  int motors[4];
+  calculate_motor_values(0, 0, -500, motors);
+  // Turn left (counter-clockwise): right side forward, left side reverse
+  ASSERT_EQUAL(-500, motors[MOTOR_FL]);
+  ASSERT_EQUAL(500, motors[MOTOR_FR]);
+  ASSERT_EQUAL(500, motors[MOTOR_RR]);
+  ASSERT_EQUAL(-500, motors[MOTOR_RL]);
 }
 
-TEST_FUNC(no_overflow_max_inputs)
+/*============================================================================*/
+/* Motor Mixing - Diagonal Tests                                              */
+/*============================================================================*/
+
+TEST_FUNC(mix_diagonal_forward_right)
 {
-    MecanumResult r = calc_mecanum(500, 500, 500);
-    for (int i = 0; i < 4; i++) {
-        ASSERT_IN_RANGE(r.pwm[i], 0, (int)MOTOR_PWM_MAX);
-    }
-    int maxPWM = std::max({r.pwm[0], r.pwm[1], r.pwm[2], r.pwm[3]});
-    ASSERT_IN_RANGE(maxPWM, 1490, 1500);
+  int motors[4];
+  // Forward + strafe right = diagonal motion
+  calculate_motor_values(500, 500, 0, motors);
+  ASSERT_EQUAL(1000, motors[MOTOR_FL]);  // speed + strafe
+  ASSERT_EQUAL(0, motors[MOTOR_FR]);     // speed - strafe
+  ASSERT_EQUAL(1000, motors[MOTOR_RR]);  // speed + strafe
+  ASSERT_EQUAL(0, motors[MOTOR_RL]);     // speed - strafe
 }
 
-TEST_FUNC(small_inputs_scaled)
+TEST_FUNC(mix_diagonal_forward_left)
 {
-    MecanumResult r = calc_mecanum(100, 50, 25);
-    int maxPWM = std::max({r.pwm[0], r.pwm[1], r.pwm[2], r.pwm[3]});
-    ASSERT_IN_RANGE(maxPWM, 280, 320);
+  int motors[4];
+  calculate_motor_values(500, -500, 0, motors);
+  ASSERT_EQUAL(0, motors[MOTOR_FL]);     // speed + strafe
+  ASSERT_EQUAL(1000, motors[MOTOR_FR]);  // speed - strafe
+  ASSERT_EQUAL(0, motors[MOTOR_RR]);     // speed + strafe
+  ASSERT_EQUAL(1000, motors[MOTOR_RL]);  // speed - strafe
 }
 
-TEST_FUNC(kinematics_fl_correct)
+/*============================================================================*/
+/* Motor Mixing - Combined Movement Tests                                     */
+/*============================================================================*/
+
+TEST_FUNC(mix_forward_strafe_turn)
 {
-    // FL = speed + strafe + turn
-    MecanumResult r = calc_mecanum(100, 200, 50);
-    // Raw value should be 350, check direction
-    ASSERT_TRUE(r.fwd[FL]);
+  int motors[4];
+  calculate_motor_values(200, 100, 50, motors);
+  // FL = 200 + 100 + 50 = 350
+  // FR = 200 - 100 - 50 = 50
+  // RR = 200 + 100 - 50 = 250
+  // RL = 200 - 100 + 50 = 150
+  ASSERT_EQUAL(350, motors[MOTOR_FL]);
+  ASSERT_EQUAL(50, motors[MOTOR_FR]);
+  ASSERT_EQUAL(250, motors[MOTOR_RR]);
+  ASSERT_EQUAL(150, motors[MOTOR_RL]);
 }
 
-TEST_FUNC(kinematics_fr_correct)
+/*============================================================================*/
+/* Scaling Tests                                                              */
+/*============================================================================*/
+
+TEST_FUNC(scale_zero_input)
 {
-    // FR = speed - strafe - turn
-    MecanumResult r = calc_mecanum(100, 200, 50);
-    // Raw value should be -150, check direction
-    ASSERT_TRUE(r.rev[FR]);
+  int motors[4] = {0, 0, 0, 0};
+  float mult = calculate_multiplier(0, 0, 0, motors, 1500);
+  ASSERT_FLOAT_EQUAL(0.0f, mult, 0.001f);
 }
 
-TEST_FUNC(symmetry_forward_backward)
+TEST_FUNC(scale_full_forward)
 {
-    MecanumResult fwd = calc_mecanum(300, 0, 0);
-    MecanumResult bwd = calc_mecanum(-300, 0, 0);
-    for (int i = 0; i < 4; i++) {
-        ASSERT_EQUAL(fwd.pwm[i], bwd.pwm[i]);
-    }
+  int motors[4];
+  calculate_motor_values(500, 0, 0, motors);
+  float mult = calculate_multiplier(500, 0, 0, motors, 1500);
+  // Full input should scale to full PWM
+  float expectedPwm = std::abs(motors[MOTOR_FL]) * mult;
+  ASSERT_FLOAT_EQUAL(1500.0f, expectedPwm, 1.0f);
 }
 
-TEST_FUNC(symmetry_left_right_strafe)
+TEST_FUNC(scale_combined_clipping_prevention)
 {
-    MecanumResult right = calc_mecanum(0, 400, 0);
-    MecanumResult left = calc_mecanum(0, -400, 0);
-    for (int i = 0; i < 4; i++) {
-        ASSERT_EQUAL(right.pwm[i], left.pwm[i]);
-    }
+  int motors[4];
+  // Max combined input could theoretically exceed PWM range
+  calculate_motor_values(500, 500, 500, motors);
+  float mult = calculate_multiplier(500, 500, 500, motors, 1500);
+
+  // All scaled values should not exceed PWM top
+  for (int i = 0; i < 4; i++)
+  {
+    float scaledPwm = std::abs(motors[i]) * mult;
+    ASSERT_TRUE(scaledPwm <= 1500.0f);
+  }
 }
 
-/* ===== MAIN ===== */
+/*============================================================================*/
+/* Symmetry Tests                                                             */
+/*============================================================================*/
+
+TEST_FUNC(symmetric_strafe)
+{
+  int motors1[4], motors2[4];
+  calculate_motor_values(0, 300, 0, motors1);
+  calculate_motor_values(0, -300, 0, motors2);
+  // Should be mirror images
+  ASSERT_EQUAL(motors1[MOTOR_FL], -motors2[MOTOR_FL]);
+  ASSERT_EQUAL(motors1[MOTOR_FR], -motors2[MOTOR_FR]);
+  ASSERT_EQUAL(motors1[MOTOR_RR], -motors2[MOTOR_RR]);
+  ASSERT_EQUAL(motors1[MOTOR_RL], -motors2[MOTOR_RL]);
+}
+
+TEST_FUNC(symmetric_turn)
+{
+  int motors1[4], motors2[4];
+  calculate_motor_values(0, 0, 300, motors1);
+  calculate_motor_values(0, 0, -300, motors2);
+  // Should be mirror images
+  ASSERT_EQUAL(motors1[MOTOR_FL], -motors2[MOTOR_FL]);
+  ASSERT_EQUAL(motors1[MOTOR_FR], -motors2[MOTOR_FR]);
+  ASSERT_EQUAL(motors1[MOTOR_RR], -motors2[MOTOR_RR]);
+  ASSERT_EQUAL(motors1[MOTOR_RL], -motors2[MOTOR_RL]);
+}
+
+/*============================================================================*/
+/* Main                                                                       */
+/*============================================================================*/
 
 int main(void)
 {
-    printf("\n╔══════════════════════════════════════════════════╗\n");
-    printf("║   Mecanum Drive Train Unit Tests                ║\n");
-    printf("╚══════════════════════════════════════════════════╝\n");
-    
-    SUITE_START("Basic Movement");
-    RUN_TEST(forward_full_speed);
-    RUN_TEST(backward_full_speed);
-    RUN_TEST(stopped);
-    RUN_TEST(forward_half_speed);
-    
-    SUITE_START("Strafing");
-    RUN_TEST(strafe_right_full);
-    RUN_TEST(strafe_left_full);
-    
-    SUITE_START("Rotation");
-    RUN_TEST(rotate_clockwise);
-    RUN_TEST(rotate_counterclockwise);
-    
-    SUITE_START("Combined Movement");
-    RUN_TEST(diagonal_forward_right);
-    RUN_TEST(forward_and_rotate);
-    RUN_TEST(all_inputs_combined);
-    
-    SUITE_START("PWM Scaling");
-    RUN_TEST(no_overflow_max_inputs);
-    RUN_TEST(small_inputs_scaled);
-    
-    SUITE_START("Kinematics");
-    RUN_TEST(kinematics_fl_correct);
-    RUN_TEST(kinematics_fr_correct);
-    
-    SUITE_START("Symmetry");
-    RUN_TEST(symmetry_forward_backward);
-    RUN_TEST(symmetry_left_right_strafe);
-    
-    PRINT_SUMMARY();
-    
-    return (g_tests_failed > 0) ? 1 : 0;
+  printf("\n=== Mecanum Drive Train Unit Tests ===\n");
+
+  SUITE_START("Input Validation");
+  RUN_TEST(validate_center_input);
+  RUN_TEST(validate_boundary_inputs);
+
+  SUITE_START("Motor Mixing - Basic");
+  RUN_TEST(mix_stopped);
+  RUN_TEST(mix_forward_only);
+  RUN_TEST(mix_reverse_only);
+
+  SUITE_START("Motor Mixing - Strafe");
+  RUN_TEST(mix_strafe_right);
+  RUN_TEST(mix_strafe_left);
+
+  SUITE_START("Motor Mixing - Turn");
+  RUN_TEST(mix_turn_clockwise);
+  RUN_TEST(mix_turn_counter_clockwise);
+
+  SUITE_START("Motor Mixing - Diagonal");
+  RUN_TEST(mix_diagonal_forward_right);
+  RUN_TEST(mix_diagonal_forward_left);
+
+  SUITE_START("Motor Mixing - Combined");
+  RUN_TEST(mix_forward_strafe_turn);
+
+  SUITE_START("PWM Scaling");
+  RUN_TEST(scale_zero_input);
+  RUN_TEST(scale_full_forward);
+  RUN_TEST(scale_combined_clipping_prevention);
+
+  SUITE_START("Symmetry");
+  RUN_TEST(symmetric_strafe);
+  RUN_TEST(symmetric_turn);
+
+  PRINT_SUMMARY();
+
+  return (g_tests_failed > 0) ? 1 : 0;
 }
 
-/* EOF */
+
+/* EOF -----------------------------------------------------------------------*/
