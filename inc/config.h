@@ -29,6 +29,48 @@
  ******************************************************************************/
 #define USE_MOTOR_DRIVER_DRV8833 (1)
 
+
+/* Motor Driver Type Aliases -------------------------------------------------*/
+/*******************************************************************************
+ * @brief Unified motor driver type aliases
+ *
+ * These aliases allow drive train code to use a single type name regardless
+ * of which motor driver is selected. This eliminates preprocessor conditionals
+ * throughout the codebase.
+ *
+ * @note Include the appropriate motor driver header before using these types.
+ ******************************************************************************/
+#if USE_MOTOR_DRIVER_DRV8833
+  #include "motor_driver_drv8833.h"
+  using MotorDriver  = MotorDriverDRV8833;
+  using MotorChannel = MotorDriverDRV8833::MotorChannel;
+  using StopMode     = MotorDriverDRV8833::StopMode;
+
+  /** @brief Motor channel A constant */
+  constexpr MotorChannel MOTOR_CHANNEL_A = MotorDriverDRV8833::MOTOR_A;
+  /** @brief Motor channel B constant */
+  constexpr MotorChannel MOTOR_CHANNEL_B = MotorDriverDRV8833::MOTOR_B;
+  /** @brief Coast stop mode constant */
+  constexpr StopMode STOP_MODE_COAST = MotorDriverDRV8833::STOP_COAST;
+  /** @brief Brake stop mode constant */
+  constexpr StopMode STOP_MODE_BRAKE = MotorDriverDRV8833::STOP_BRAKE;
+#else
+  #include "motor_driver_l298n.h"
+  using MotorDriver  = MotorDriverL298N;
+  using MotorChannel = MotorDriverL298N::MotorChannel;
+  using StopMode     = MotorDriverL298N::StopMode;
+
+  /** @brief Motor channel A constant */
+  constexpr MotorChannel MOTOR_CHANNEL_A = MotorDriverL298N::MOTOR_A;
+  /** @brief Motor channel B constant */
+  constexpr MotorChannel MOTOR_CHANNEL_B = MotorDriverL298N::MOTOR_B;
+  /** @brief Coast stop mode constant */
+  constexpr StopMode STOP_MODE_COAST = MotorDriverL298N::STOP_COAST;
+  /** @brief Brake stop mode constant */
+  constexpr StopMode STOP_MODE_BRAKE = MotorDriverL298N::STOP_BRAKE;
+#endif
+
+
 /*******************************************************************************
  * @brief Enable debug output over UART/USB
  *
