@@ -144,8 +144,6 @@ constexpr int PIN_DIFF_MOTOR_RIGHT_IN2     = PIN_DIFF_MOTOR_RIGHT_DIR_REV;
  * @{
  ******************************************************************************/
 constexpr int PIN_COLLECT_MOTOR_PWM = PIN_INVALID;  /**< Collector motor PWM */
-constexpr int PIN_COLLECT_MOTOR_DIR = PIN_INVALID;  /**< Collector motor direction */
-constexpr int PIN_COLLECT_SENSOR    = PIN_INVALID;  /**< Ball presence sensor */
 /** @} */
 
 
@@ -157,7 +155,6 @@ constexpr int PIN_COLLECT_SENSOR    = PIN_INVALID;  /**< Ball presence sensor */
  * @{
  ******************************************************************************/
 constexpr int PIN_DEPOSIT_SERVO     = PIN_INVALID;  /**< Deposit gate servo */
-constexpr int PIN_DEPOSIT_SENSOR    = PIN_INVALID;  /**< Ball count sensor */
 /** @} */
 
 
@@ -169,8 +166,6 @@ constexpr int PIN_DEPOSIT_SENSOR    = PIN_INVALID;  /**< Ball count sensor */
  * @{
  ******************************************************************************/
 constexpr int PIN_LAUNCHER_MOTOR_PWM     = PIN_INVALID;  /**< Launcher motor PWM */
-constexpr int PIN_LAUNCHER_MOTOR_DIR_FWD = PIN_INVALID;  /**< Launcher direction fwd */
-constexpr int PIN_LAUNCHER_MOTOR_DIR_REV = PIN_INVALID;  /**< Launcher direction rev */
 constexpr int PIN_LAUNCHER_FEED_SERVO    = PIN_INVALID;  /**< Ball feed servo */
 constexpr int PIN_LAUNCHER_TILT_SERVO    = PIN_INVALID;  /**< Angle adjustment servo */
 /** @} */

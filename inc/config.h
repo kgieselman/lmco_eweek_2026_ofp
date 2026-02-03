@@ -137,13 +137,6 @@
 #define MAIN_LOOP_PERIOD_MS (1)
 
 /*******************************************************************************
- * @brief Default PWM frequency divider
- *
- * Adjusts PWM frequency. Higher values = lower frequency.
- ******************************************************************************/
-#define PWM_CLOCK_DIVIDER (4.0f)
-
-/*******************************************************************************
  * @brief Motor settling time during calibration (ms)
  ******************************************************************************/
 #define MOTOR_SETTLE_TIME_MS (500)
