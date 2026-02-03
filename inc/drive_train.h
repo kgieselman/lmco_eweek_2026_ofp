@@ -39,12 +39,7 @@ public:
 
   /** @brief Maximum user input value */
   static constexpr int USER_INPUT_MAX = 500;
-
-  /** @brief Minimum valid GPIO pin number */
-  //static constexpr int GPIO_PIN_MIN = 0;
-
-  /** @brief Maximum valid GPIO pin number */
-  //static constexpr int GPIO_PIN_MAX = 29;
+  
 
   /* Public Function Declarations --------------------------------------------*/
 
