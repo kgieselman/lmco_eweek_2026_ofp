@@ -250,9 +250,6 @@ private:
   /** @brief PWM counter top value (determines resolution) */
   static constexpr int PWM_TOP_COUNT = 1000;
 
-  /** @brief System clock frequency (default Pico clock) */
-  static constexpr int SYS_CLK_HZ = 125000000;
-
 
   /* Private Variables -------------------------------------------------------*/
 

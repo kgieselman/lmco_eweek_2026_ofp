@@ -19,7 +19,7 @@
  * @todo Update logic to support ENABLE_MECANUM and ENABLE_DIFFERENTIAL.
  *       Should panic/break if both are enabled.
  ******************************************************************************/
-#define USE_DRIVE_TRAIN_MECANUM (0)
+#define USE_DRIVE_TRAIN_MECANUM (1)
 
 /*******************************************************************************
  * @brief Select the motor driver type
@@ -27,7 +27,7 @@
  * Set to 1 to use DRV8833 motor driver (2 PWM pins per motor).
  * Set to 0 to use L298N motor driver (1 PWM + 2 direction pins per motor).
  ******************************************************************************/
-#define USE_MOTOR_DRIVER_DRV8833 (0)
+#define USE_MOTOR_DRIVER_DRV8833 (1)
 
 /*******************************************************************************
  * @brief Enable debug output over UART/USB
@@ -44,6 +44,21 @@
  * Only effective when ENABLE_DEBUG is also enabled.
  ******************************************************************************/
 #define DEBUG_IBUS_VERBOSE (0)
+
+/*******************************************************************************
+ * @brief Milliseconds between prints when sinal is lost
+ ******************************************************************************/
+#define SIGNAL_LOSS_PRINT_TIMEOUT_MS (1000)
+
+/*******************************************************************************
+ * @brief Milliseconds to delay and allow USB to enumerate and work for stdio
+ ******************************************************************************/
+#define STDIO_USB_DELAY_MS (2000)
+
+/*******************************************************************************
+ * @brief Milliseconds before toggling LED that signals error ocurred
+ ******************************************************************************/
+#define ERROR_LED_DUTY_TIME_MS (250)
 
 /*******************************************************************************
  * @brief Enable the hardware watchdog timer
@@ -79,8 +94,10 @@
  *
  * Ensures consistent timing even if processing completes early.
  * Set to 0 to disable rate limiting.
+ * 
+ * @todo Consider microseconds to avoid rounding due to 1 MS period
  ******************************************************************************/
-#define MAIN_LOOP_PERIOD_MS (10)
+#define MAIN_LOOP_PERIOD_MS (1)
 
 /*******************************************************************************
  * @brief Default PWM frequency divider
