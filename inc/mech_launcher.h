@@ -27,22 +27,6 @@
  * @brief Launcher mechanism controller
  *
  * Manages the system for launching ping pong balls at targets.
- *
- * @par Example Usage:
- * @code
- * MechLauncher launcher;
- * launcher.init();
- *
- * launcher.setPower(75);     // 75% power
- * launcher.spinUp();         // Start flywheel
- *
- * // Wait for spinup
- * while (!launcher.isReady()) {
- *   launcher.update();
- * }
- *
- * launcher.launch();         // Fire!
- * @endcode
  ******************************************************************************/
 class MechLauncher
 {

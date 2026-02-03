@@ -248,12 +248,8 @@ private:
   /** @brief PWM counter top value (determines resolution) */
   static constexpr int PWM_TOP_COUNT = 1000;
 
-  /** @brief System clock frequency (default Pico clock) */
-  //static constexpr int SYS_CLK_HZ = 125000000;
-
 
   /* Private Variables -------------------------------------------------------*/
-
   MotorConfig m_motors[MOTOR_COUNT]; /**< Motor channel configurations */
   int m_pwmFreqHz;                   /**< Configured PWM frequency */
   float m_pwmClkDiv;                 /**< Calculated PWM clock divider */
