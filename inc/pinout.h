@@ -105,20 +105,34 @@ constexpr int PIN_MECANUM_MOTOR_RL_DIR_REV = 26;  /**< Direction reverse (PWM if
  * @name Differential Left Motor
  * @{
  ******************************************************************************/
-constexpr int PIN_DIFF_MOTOR_LEFT_ENABLE  = 9;   /**< PWM Slice 4 Channel B */
+constexpr int PIN_DIFF_MOTOR_LEFT_PWM     = 9;   /**< L298N: PWM Slice 4 Channel B */
 constexpr int PIN_DIFF_MOTOR_LEFT_DIR_FWD = 7;   /**< Direction forward (PWM if DRV8833)*/
 constexpr int PIN_DIFF_MOTOR_LEFT_DIR_REV = 6;   /**< Direction reverse (PWM if DRV8833)*/
 constexpr int PIN_DIFF_MOTOR_LEFT_ENC     = PIN_INVALID; /**< Encoder (optional) */
+
+/* Legacy alias for backward compatibility */
+constexpr int PIN_DIFF_MOTOR_LEFT_ENABLE  = PIN_DIFF_MOTOR_LEFT_PWM;
+
+/* DRV8833-style pin aliases */
+constexpr int PIN_DIFF_MOTOR_LEFT_IN1     = PIN_DIFF_MOTOR_LEFT_DIR_FWD;
+constexpr int PIN_DIFF_MOTOR_LEFT_IN2     = PIN_DIFF_MOTOR_LEFT_DIR_REV;
 /** @} */
 
 /*******************************************************************************
  * @name Differential Right Motor
  * @{
  ******************************************************************************/
-constexpr int PIN_DIFF_MOTOR_RIGHT_ENABLE  = 8;  /**< PWM Slice 4 Channel A */
+constexpr int PIN_DIFF_MOTOR_RIGHT_PWM     = 8;  /**< L298N: PWM Slice 4 Channel A */
 constexpr int PIN_DIFF_MOTOR_RIGHT_DIR_FWD = 10; /**< Direction forward  (PWM if DRV8833)*/
 constexpr int PIN_DIFF_MOTOR_RIGHT_DIR_REV = 11; /**< Direction reverse  (PWM if DRV8833)*/
 constexpr int PIN_DIFF_MOTOR_RIGHT_ENC     = PIN_INVALID; /**< Encoder (optional) */
+
+/* Legacy alias for backward compatibility */
+constexpr int PIN_DIFF_MOTOR_RIGHT_ENABLE  = PIN_DIFF_MOTOR_RIGHT_PWM;
+
+/* DRV8833-style pin aliases */
+constexpr int PIN_DIFF_MOTOR_RIGHT_IN1     = PIN_DIFF_MOTOR_RIGHT_DIR_FWD;
+constexpr int PIN_DIFF_MOTOR_RIGHT_IN2     = PIN_DIFF_MOTOR_RIGHT_DIR_REV;
 /** @} */
 
 

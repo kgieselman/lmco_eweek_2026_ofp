@@ -42,9 +42,7 @@ DriveTrainMecanum::~DriveTrainMecanum()
   stop();
 }
 
-#if USE_MOTOR_DRIVER_DRV8833
-
-MotorDriverDRV8833& DriveTrainMecanum::getDriverForMotor(MotorId motor)
+MotorDriver& DriveTrainMecanum::getDriverForMotor(MotorId motor)
 {
   if (motor == MOTOR_FRONT_LEFT || motor == MOTOR_FRONT_RIGHT)
   {
@@ -53,15 +51,17 @@ MotorDriverDRV8833& DriveTrainMecanum::getDriverForMotor(MotorId motor)
   return m_motorDriverRear;
 }
 
-MotorDriverDRV8833::MotorChannel DriveTrainMecanum::getChannelForMotor(MotorId motor)
+MotorChannel DriveTrainMecanum::getChannelForMotor(MotorId motor) const
 {
   /* Front: FL=A, FR=B; Rear: RR=A, RL=B */
   if (motor == MOTOR_FRONT_LEFT || motor == MOTOR_REAR_RIGHT)
   {
-    return MotorDriverDRV8833::MOTOR_A;
+    return MOTOR_CHANNEL_A;
   }
-  return MotorDriverDRV8833::MOTOR_B;
+  return MOTOR_CHANNEL_B;
 }
+
+#if USE_MOTOR_DRIVER_DRV8833
 
 bool DriveTrainMecanum::addMotor(MotorId motor,
                                   int pinIn1,
@@ -75,8 +75,8 @@ bool DriveTrainMecanum::addMotor(MotorId motor,
   }
 
   /* Get the appropriate driver and channel */
-  MotorDriverDRV8833& driver = getDriverForMotor(motor);
-  MotorDriverDRV8833::MotorChannel channel = getChannelForMotor(motor);
+  MotorDriver& driver = getDriverForMotor(motor);
+  MotorChannel channel = getChannelForMotor(motor);
 
   /* Configure motor through driver */
   if (!driver.configureMotor(channel, pinIn1, pinIn2))
@@ -100,25 +100,6 @@ bool DriveTrainMecanum::addMotor(MotorId motor,
 
 #else /* L298N */
 
-MotorDriverL298N& DriveTrainMecanum::getDriverForMotor(MotorId motor)
-{
-  if (motor == MOTOR_FRONT_LEFT || motor == MOTOR_FRONT_RIGHT)
-  {
-    return m_motorDriverFront;
-  }
-  return m_motorDriverRear;
-}
-
-MotorDriverL298N::MotorChannel DriveTrainMecanum::getChannelForMotor(MotorId motor)
-{
-  /* Front: FL=A, FR=B; Rear: RR=A, RL=B */
-  if (motor == MOTOR_FRONT_LEFT || motor == MOTOR_REAR_RIGHT)
-  {
-    return MotorDriverL298N::MOTOR_A;
-  }
-  return MotorDriverL298N::MOTOR_B;
-}
-
 bool DriveTrainMecanum::addMotor(MotorId motor,
                                   int pinPwm,
                                   int pinDirFwd,
@@ -132,8 +113,8 @@ bool DriveTrainMecanum::addMotor(MotorId motor,
   }
 
   /* Get the appropriate driver and channel */
-  MotorDriverL298N& driver = getDriverForMotor(motor);
-  MotorDriverL298N::MotorChannel channel = getChannelForMotor(motor);
+  MotorDriver& driver = getDriverForMotor(motor);
+  MotorChannel channel = getChannelForMotor(motor);
 
   /* Configure motor through driver */
   if (!driver.configureMotor(channel, pinPwm, pinDirFwd, pinDirRev))
@@ -217,15 +198,9 @@ void DriveTrainMecanum::update(void)
     float trim = (motorValues[i] > 0) ? m_motorState[i].trimFwd : m_motorState[i].trimRev;
     MotorId motor = static_cast<MotorId>(i);
     
-#if USE_MOTOR_DRIVER_DRV8833
-    MotorDriverDRV8833& driver = getDriverForMotor(motor);
-    MotorDriverDRV8833::MotorChannel channel = getChannelForMotor(motor);
+    MotorDriver& driver = getDriverForMotor(motor);
+    MotorChannel channel = getChannelForMotor(motor);
     driver.setMotorWithTrim(channel, motorValues[i], trim);
-#else
-    MotorDriverL298N& driver = getDriverForMotor(motor);
-    MotorDriverL298N::MotorChannel channel = getChannelForMotor(motor);
-    driver.setMotorWithTrim(channel, motorValues[i], trim);
-#endif
   }
 }
 

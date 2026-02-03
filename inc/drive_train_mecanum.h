@@ -24,6 +24,9 @@
  * The motor driver type is selected via USE_MOTOR_DRIVER_DRV8833 in config.h:
  * - 0 = L298N (1 PWM + 2 direction pins per motor)
  * - 1 = DRV8833 (2 PWM pins per motor)
+ *
+ * The MotorDriver type alias (defined in config.h) abstracts the driver type,
+ * eliminating the need for most preprocessor conditionals in this header.
  ******************************************************************************/
 #pragma once
 
@@ -31,12 +34,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "drive_train.h"
 #include "config.h"
-
-#if USE_MOTOR_DRIVER_DRV8833
-#include "motor_driver_drv8833.h"
-#else
-#include "motor_driver_l298n.h"
-#endif
 
 
 /* Class Definition ----------------------------------------------------------*/
@@ -48,20 +45,6 @@
  * direction without rotating. This is useful for precise positioning
  * and navigating tight spaces.
  *
- * @par Example Usage (L298N):
- * @code
- * DriveTrainMecanum drive;
- * drive.addMotor(DriveTrainMecanum::MOTOR_FRONT_LEFT, 20, 18, 19);
- * drive.addMotor(DriveTrainMecanum::MOTOR_FRONT_RIGHT, 8, 10, 11);
- * drive.addMotor(DriveTrainMecanum::MOTOR_REAR_RIGHT, 9, 7, 6);
- * drive.addMotor(DriveTrainMecanum::MOTOR_REAR_LEFT, 21, 27, 26);
- *
- * drive.setSpeed(200);   // Forward
- * drive.setStrafe(100);  // Right
- * drive.setTurn(50);     // Slight clockwise
- * drive.update();
- * @endcode
- *
  * @par Example Usage (DRV8833):
  * @code
  * DriveTrainMecanum drive;
@@ -69,6 +52,20 @@
  * drive.addMotor(DriveTrainMecanum::MOTOR_FRONT_RIGHT, 10, 11);
  * drive.addMotor(DriveTrainMecanum::MOTOR_REAR_RIGHT, 7, 6);
  * drive.addMotor(DriveTrainMecanum::MOTOR_REAR_LEFT, 27, 26);
+ *
+ * drive.setSpeed(200);   // Forward
+ * drive.setStrafe(100);  // Right
+ * drive.setTurn(50);     // Slight clockwise
+ * drive.update();
+ * @endcode
+ *
+ * @par Example Usage (L298N):
+ * @code
+ * DriveTrainMecanum drive;
+ * drive.addMotor(DriveTrainMecanum::MOTOR_FRONT_LEFT, 20, 18, 19);
+ * drive.addMotor(DriveTrainMecanum::MOTOR_FRONT_RIGHT, 8, 10, 11);
+ * drive.addMotor(DriveTrainMecanum::MOTOR_REAR_RIGHT, 9, 7, 6);
+ * drive.addMotor(DriveTrainMecanum::MOTOR_REAR_LEFT, 21, 27, 26);
  *
  * drive.setSpeed(200);   // Forward
  * drive.setStrafe(100);  // Right
@@ -210,14 +207,8 @@ private:
 
   /* Private Variables -------------------------------------------------------*/
 
-#if USE_MOTOR_DRIVER_DRV8833
-  MotorDriverDRV8833 m_motorDriverFront;  /**< DRV8833 for front motors */
-  MotorDriverDRV8833 m_motorDriverRear;   /**< DRV8833 for rear motors */
-#else
-  MotorDriverL298N m_motorDriverFront;    /**< L298N for front motors */
-  MotorDriverL298N m_motorDriverRear;     /**< L298N for rear motors */
-#endif
-
+  MotorDriver m_motorDriverFront;        /**< Driver for front motors (type from config.h) */
+  MotorDriver m_motorDriverRear;         /**< Driver for rear motors (type from config.h) */
   MotorState m_motorState[MOTOR_COUNT];  /**< Motor state tracking */
   int m_strafe;                          /**< Strafe setpoint */
 
@@ -230,13 +221,15 @@ private:
    * @param motor Motor identifier
    * @return Reference to the appropriate motor driver
    ****************************************************************************/
-#if USE_MOTOR_DRIVER_DRV8833
-  MotorDriverDRV8833& getDriverForMotor(MotorId motor);
-  MotorDriverDRV8833::MotorChannel getChannelForMotor(MotorId motor);
-#else
-  MotorDriverL298N& getDriverForMotor(MotorId motor);
-  MotorDriverL298N::MotorChannel getChannelForMotor(MotorId motor);
-#endif
+  MotorDriver& getDriverForMotor(MotorId motor);
+
+  /*****************************************************************************
+   * @brief Get the motor channel for a given motor ID
+   *
+   * @param motor Motor identifier
+   * @return Corresponding motor channel on the driver
+   ****************************************************************************/
+  MotorChannel getChannelForMotor(MotorId motor) const;
 };
 
 

@@ -13,6 +13,9 @@
  * The motor driver type is selected via USE_MOTOR_DRIVER_DRV8833 in config.h:
  * - 0 = L298N (1 PWM + 2 direction pins per motor)
  * - 1 = DRV8833 (2 PWM pins per motor)
+ *
+ * The MotorDriver type alias (defined in config.h) abstracts the driver type,
+ * eliminating the need for preprocessor conditionals in this header.
  ******************************************************************************/
 #pragma once
 
@@ -20,12 +23,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "drive_train.h"
 #include "config.h"
-
-#if USE_MOTOR_DRIVER_DRV8833
-#include "motor_driver_drv8833.h"
-#else
-#include "motor_driver_l298n.h"
-#endif
 
 
 /* Class Definition ----------------------------------------------------------*/
@@ -39,22 +36,22 @@
  * turning is achieved by driving them in opposite directions or at
  * different speeds.
  *
- * @par Example Usage (L298N):
+ * @par Example Usage (DRV8833):
  * @code
  * DriveTrainDifferential drive;
- * drive.addMotorL298N(DriveTrainDifferential::MOTOR_LEFT, 9, 7, 6);
- * drive.addMotorL298N(DriveTrainDifferential::MOTOR_RIGHT, 8, 10, 11);
+ * drive.addMotor(DriveTrainDifferential::MOTOR_LEFT, 7, 6);
+ * drive.addMotor(DriveTrainDifferential::MOTOR_RIGHT, 10, 11);
  *
  * drive.setSpeed(250);   // 50% forward
  * drive.setTurn(100);    // Slight right turn
  * drive.update();
  * @endcode
  *
- * @par Example Usage (DRV8833):
+ * @par Example Usage (L298N):
  * @code
  * DriveTrainDifferential drive;
- * drive.addMotorDRV8833(DriveTrainDifferential::MOTOR_LEFT, 7, 6);
- * drive.addMotorDRV8833(DriveTrainDifferential::MOTOR_RIGHT, 10, 11);
+ * drive.addMotor(DriveTrainDifferential::MOTOR_LEFT, 9, 7, 6);
+ * drive.addMotor(DriveTrainDifferential::MOTOR_RIGHT, 8, 10, 11);
  *
  * drive.setSpeed(250);   // 50% forward
  * drive.setTurn(100);    // Slight right turn
@@ -180,16 +177,28 @@ private:
 
   /* Private Variables -------------------------------------------------------*/
 
-#if USE_MOTOR_DRIVER_DRV8833
-  MotorDriverDRV8833 m_motorDriver;  /**< DRV8833 motor driver instance */
-#else
-  MotorDriverL298N m_motorDriver;    /**< L298N motor driver instance */
-#endif
-
+  MotorDriver m_motorDriver;             /**< Motor driver instance (type from config.h) */
   MotorState m_motorState[MOTOR_COUNT];  /**< Motor state tracking */
 
 
   /* Private Function Declarations -------------------------------------------*/
+
+  /*****************************************************************************
+   * @brief Get the motor channel for a given motor ID
+   *
+   * @param motor Motor identifier
+   * @return Corresponding motor channel on the driver
+   ****************************************************************************/
+  MotorChannel getChannelForMotor(MotorId motor) const;
+
+  /*****************************************************************************
+   * @brief Configure encoder pin for a motor (if provided)
+   *
+   * @param motor Motor identifier
+   * @param pinEncoder Encoder pin (-1 if not used)
+   * @return true if configuration successful or encoder not used
+   ****************************************************************************/
+  bool configureEncoder(MotorId motor, int pinEncoder);
 
   /*****************************************************************************
    * @brief Measure encoder pulses for calibration

@@ -70,34 +70,16 @@ DriveTrainDifferential::~DriveTrainDifferential()
   stop();
 }
 
-#if USE_MOTOR_DRIVER_DRV8833
-bool DriveTrainDifferential::addMotor(MotorId motor,
-                                       int pinIn1,
-                                       int pinIn2,
-                                       int pinEncoder)
+MotorChannel DriveTrainDifferential::getChannelForMotor(MotorId motor) const
 {
-  /* Validate motor ID */
-  if (motor < MOTOR_LEFT || motor >= MOTOR_COUNT)
-  {
-    ERROR_REPORT(ERROR_DT_INVALID_MOTOR);
-    return false;
-  }
+  return (motor == MOTOR_LEFT) ? MOTOR_CHANNEL_A : MOTOR_CHANNEL_B;
+}
 
-  /* Map MotorId to driver channel */
-  MotorDriverDRV8833::MotorChannel channel = 
-    (motor == MOTOR_LEFT) ? MotorDriverDRV8833::MOTOR_A : MotorDriverDRV8833::MOTOR_B;
-
-  /* Configure motor through driver */
-  if (!m_motorDriver.configureMotor(channel, pinIn1, pinIn2, pinEncoder))
-  {
-    ERROR_REPORT(ERROR_DT_PWM_FAILED);
-    return false;
-  }
-
+bool DriveTrainDifferential::configureEncoder(MotorId motor, int pinEncoder)
+{
   /* Store encoder pin for calibration */
   m_motorState[motor].pinEncoder = pinEncoder;
 
-  /* Configure encoder if provided */
 #if ENABLE_ENCODER_CALIBRATION && !defined(UNIT_TEST)
   if (pinEncoder >= GPIO_PIN_MIN && pinEncoder <= GPIO_PIN_MAX)
   {
@@ -128,7 +110,36 @@ bool DriveTrainDifferential::addMotor(MotorId motor,
   (void)pinEncoder;
 #endif
 
-  /* Reset trim values */
+  return true;
+}
+
+#if USE_MOTOR_DRIVER_DRV8833
+bool DriveTrainDifferential::addMotor(MotorId motor,
+                                       int pinIn1,
+                                       int pinIn2,
+                                       int pinEncoder)
+{
+  /* Validate motor ID */
+  if (motor < MOTOR_LEFT || motor >= MOTOR_COUNT)
+  {
+    ERROR_REPORT(ERROR_DT_INVALID_MOTOR);
+    return false;
+  }
+
+  /* Get motor channel using helper */
+  MotorChannel channel = getChannelForMotor(motor);
+
+  /* Configure motor through driver */
+  if (!m_motorDriver.configureMotor(channel, pinIn1, pinIn2, pinEncoder))
+  {
+    ERROR_REPORT(ERROR_DT_PWM_FAILED);
+    return false;
+  }
+
+  /* Configure encoder using helper */
+  configureEncoder(motor, pinEncoder);
+
+  /* Reset trim values and mark initialized */
   m_motorState[motor].trimFwd = DEFAULT_TRIM;
   m_motorState[motor].trimRev = DEFAULT_TRIM;
   m_motorState[motor].initialized = true;
@@ -156,9 +167,8 @@ bool DriveTrainDifferential::addMotor(MotorId motor,
     return false;
   }
 
-  /* Map MotorId to driver channel */
-  MotorDriverL298N::MotorChannel channel = 
-    (motor == MOTOR_LEFT) ? MotorDriverL298N::MOTOR_A : MotorDriverL298N::MOTOR_B;
+  /* Get motor channel using helper */
+  MotorChannel channel = getChannelForMotor(motor);
 
   /* Configure motor through driver */
   if (!m_motorDriver.configureMotor(channel, pinPwm, pinDirFwd, pinDirRev, pinEncoder))
@@ -167,41 +177,10 @@ bool DriveTrainDifferential::addMotor(MotorId motor,
     return false;
   }
 
-  /* Store encoder pin for calibration */
-  m_motorState[motor].pinEncoder = pinEncoder;
+  /* Configure encoder using helper */
+  configureEncoder(motor, pinEncoder);
 
-  /* Configure encoder if provided */
-#if ENABLE_ENCODER_CALIBRATION && !defined(UNIT_TEST)
-  if (pinEncoder >= GPIO_PIN_MIN && pinEncoder <= GPIO_PIN_MAX)
-  {
-    gpio_init(pinEncoder);
-    gpio_set_dir(pinEncoder, GPIO_IN);
-    gpio_pull_up(pinEncoder);
-
-    /* Set up encoder interrupt based on motor */
-    gpio_irq_callback_t callback = nullptr;
-    if (motor == MOTOR_LEFT)
-    {
-      callback = __isr_encoder_left;
-    }
-    else if (motor == MOTOR_RIGHT)
-    {
-      callback = __isr_encoder_right;
-    }
-
-    if (callback != nullptr)
-    {
-      gpio_set_irq_enabled_with_callback(pinEncoder,
-                                         GPIO_IRQ_EDGE_RISE,
-                                         false,  /* Initially disabled */
-                                         callback);
-    }
-  }
-#else
-  (void)pinEncoder;
-#endif
-
-  /* Reset trim values */
+  /* Reset trim values and mark initialized */
   m_motorState[motor].trimFwd = DEFAULT_TRIM;
   m_motorState[motor].trimRev = DEFAULT_TRIM;
   m_motorState[motor].initialized = true;
@@ -244,16 +223,8 @@ void DriveTrainDifferential::update(void)
   for (int i = 0; i < MOTOR_COUNT; i++)
   {
     float trim = (motorValues[i] > 0) ? m_motorState[i].trimFwd : m_motorState[i].trimRev;
-    
-#if USE_MOTOR_DRIVER_DRV8833
-    MotorDriverDRV8833::MotorChannel channel = 
-      (i == MOTOR_LEFT) ? MotorDriverDRV8833::MOTOR_A : MotorDriverDRV8833::MOTOR_B;
+    MotorChannel channel = getChannelForMotor(static_cast<MotorId>(i));
     m_motorDriver.setMotorWithTrim(channel, motorValues[i], trim);
-#else
-    MotorDriverL298N::MotorChannel channel = 
-      (i == MOTOR_LEFT) ? MotorDriverL298N::MOTOR_A : MotorDriverL298N::MOTOR_B;
-    m_motorDriver.setMotorWithTrim(channel, motorValues[i], trim);
-#endif
   }
 }
 
@@ -387,16 +358,8 @@ void DriveTrainDifferential::measureMotorPulses(bool forward, int motorValue, in
   for (int i = 0; i < MOTOR_COUNT; i++)
   {
     gpio_set_irq_enabled(m_motorState[i].pinEncoder, GPIO_IRQ_EDGE_RISE, false);
-    
-#if USE_MOTOR_DRIVER_DRV8833
-    MotorDriverDRV8833::MotorChannel channel = 
-      (i == MOTOR_LEFT) ? MotorDriverDRV8833::MOTOR_A : MotorDriverDRV8833::MOTOR_B;
+    MotorChannel channel = getChannelForMotor(static_cast<MotorId>(i));
     m_motorDriver.setMotor(channel, value);
-#else
-    MotorDriverL298N::MotorChannel channel = 
-      (i == MOTOR_LEFT) ? MotorDriverL298N::MOTOR_A : MotorDriverL298N::MOTOR_B;
-    m_motorDriver.setMotor(channel, value);
-#endif
   }
 
   /* Let motors reach steady state */

@@ -104,9 +104,12 @@ static int g_tests_failed = 0;
     printf("  %-45s ", #name); \
     fflush(stdout); \
     g_tests_run++; \
+    int failed_before = g_tests_failed; \
     test_##name(); \
-    printf(COLOR_GREEN "PASS" COLOR_RESET "\n"); \
-    g_tests_passed++; \
+    if (g_tests_failed == failed_before) { \
+      printf(COLOR_GREEN "PASS" COLOR_RESET "\n"); \
+      g_tests_passed++; \
+    } \
   } while(0)
 
 /** @brief Print a test suite header */

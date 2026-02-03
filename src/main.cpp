@@ -344,12 +344,20 @@ int main(void)
 #endif
 
     /* Check for new RC data */
-    if (g_pIBus != nullptr && g_pIBus->hasNewMessage())
+    if (g_pIBus != nullptr)
     {
-      process_rc_input();
+      if (g_pIBus->hasNewMessage())
+      {
+        process_rc_input();
+      }
+      else if (!g_pIBus->isSignalValid())
+      {
+        handle_signal_loss();
+      }
     }
-    else if (!g_pIBus->isSignalValid())
+    else
     {
+      /* No iBus receiver - treat as signal loss */
       handle_signal_loss();
     }
 
