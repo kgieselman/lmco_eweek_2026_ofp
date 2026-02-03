@@ -83,7 +83,7 @@ public:
    *              Positive = forward, negative = reverse, 0 = stop
    * @return true if value applied successfully
    ****************************************************************************/
-  [[nodiscard]] virtual bool setMotor(MotorChannel channel, int value) = 0;
+  virtual bool setMotor(MotorChannel channel, int value) = 0;
 
   /*****************************************************************************
    * @brief Set motor output with trim applied
@@ -93,7 +93,7 @@ public:
    * @param trim Trim multiplier (0.0 to 1.0, where 1.0 = no trim)
    * @return true if value applied successfully
    ****************************************************************************/
-  [[nodiscard]] virtual bool setMotorWithTrim(MotorChannel channel, 
+  virtual bool setMotorWithTrim(MotorChannel channel, 
                                                int value, 
                                                float trim) = 0;
 
@@ -118,14 +118,14 @@ public:
    * @param channel Motor channel to check
    * @return true if the channel has been configured
    ****************************************************************************/
-  [[nodiscard]] virtual bool isConfigured(MotorChannel channel) const = 0;
+  virtual bool isConfigured(MotorChannel channel) const = 0;
 
   /*****************************************************************************
    * @brief Check if all motor channels are configured
    *
    * @return true if all channels have been configured
    ****************************************************************************/
-  [[nodiscard]] virtual bool isFullyConfigured() const = 0;
+  virtual bool isFullyConfigured() const = 0;
 };
 
 
