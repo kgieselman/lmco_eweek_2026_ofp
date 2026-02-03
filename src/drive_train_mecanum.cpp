@@ -51,14 +51,14 @@ MotorDriver& DriveTrainMecanum::getDriverForMotor(MotorId motor)
   return m_motorDriverRear;
 }
 
-MotorChannel DriveTrainMecanum::getChannelForMotor(MotorId motor) const
+MotorDriver::MotorChannel DriveTrainMecanum::getChannelForMotor(MotorId motor) const
 {
   /* Front: FL=A, FR=B; Rear: RR=A, RL=B */
   if (motor == MOTOR_FRONT_LEFT || motor == MOTOR_REAR_RIGHT)
   {
-    return MOTOR_CHANNEL_A;
+    return MotorDriver::MOTOR_A;
   }
-  return MOTOR_CHANNEL_B;
+  return MotorDriver::MOTOR_B;
 }
 
 #if USE_MOTOR_DRIVER_DRV8833
@@ -76,7 +76,7 @@ bool DriveTrainMecanum::addMotor(MotorId motor,
 
   /* Get the appropriate driver and channel */
   MotorDriver& driver = getDriverForMotor(motor);
-  MotorChannel channel = getChannelForMotor(motor);
+  MotorDriver::MotorChannel channel = getChannelForMotor(motor);
 
   /* Configure motor through driver */
   if (!driver.configureMotor(channel, pinIn1, pinIn2))
@@ -114,7 +114,7 @@ bool DriveTrainMecanum::addMotor(MotorId motor,
 
   /* Get the appropriate driver and channel */
   MotorDriver& driver = getDriverForMotor(motor);
-  MotorChannel channel = getChannelForMotor(motor);
+  MotorDriver::MotorChannel channel = getChannelForMotor(motor);
 
   /* Configure motor through driver */
   if (!driver.configureMotor(channel, pinPwm, pinDirFwd, pinDirRev))
@@ -199,8 +199,8 @@ void DriveTrainMecanum::update(void)
     MotorId motor = static_cast<MotorId>(i);
     
     MotorDriver& driver = getDriverForMotor(motor);
-    MotorChannel channel = getChannelForMotor(motor);
-    driver.setMotorWithTrim(channel, motorValues[i], trim);
+    MotorDriver::MotorChannel channel = getChannelForMotor(motor);
+    (void)driver.setMotorWithTrim(channel, motorValues[i], trim);
   }
 }
 

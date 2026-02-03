@@ -70,9 +70,9 @@ DriveTrainDifferential::~DriveTrainDifferential()
   stop();
 }
 
-MotorChannel DriveTrainDifferential::getChannelForMotor(MotorId motor) const
+MotorDriver::MotorChannel DriveTrainDifferential::getChannelForMotor(MotorId motor) const
 {
-  return (motor == MOTOR_LEFT) ? MOTOR_CHANNEL_A : MOTOR_CHANNEL_B;
+  return (motor == MOTOR_LEFT) ? MotorDriver::MOTOR_A : MotorDriver::MOTOR_B;
 }
 
 bool DriveTrainDifferential::configureEncoder(MotorId motor, int pinEncoder)
@@ -127,7 +127,7 @@ bool DriveTrainDifferential::addMotor(MotorId motor,
   }
 
   /* Get motor channel using helper */
-  MotorChannel channel = getChannelForMotor(motor);
+  MotorDriver::MotorChannel channel = getChannelForMotor(motor);
 
   /* Configure motor through driver */
   if (!m_motorDriver.configureMotor(channel, pinIn1, pinIn2, pinEncoder))
@@ -168,7 +168,7 @@ bool DriveTrainDifferential::addMotor(MotorId motor,
   }
 
   /* Get motor channel using helper */
-  MotorChannel channel = getChannelForMotor(motor);
+  MotorDriver::MotorChannel channel = getChannelForMotor(motor);
 
   /* Configure motor through driver */
   if (!m_motorDriver.configureMotor(channel, pinPwm, pinDirFwd, pinDirRev, pinEncoder))
@@ -223,8 +223,9 @@ void DriveTrainDifferential::update(void)
   for (int i = 0; i < MOTOR_COUNT; i++)
   {
     float trim = (motorValues[i] > 0) ? m_motorState[i].trimFwd : m_motorState[i].trimRev;
-    MotorChannel channel = getChannelForMotor(static_cast<MotorId>(i));
-    m_motorDriver.setMotorWithTrim(channel, motorValues[i], trim);
+    MotorDriver::MotorChannel channel = 
+      (i == MOTOR_LEFT) ? MotorDriver::MOTOR_A : MotorDriver::MOTOR_B;
+    (void)m_motorDriver.setMotorWithTrim(channel, motorValues[i], trim);
   }
 }
 
@@ -358,8 +359,9 @@ void DriveTrainDifferential::measureMotorPulses(bool forward, int motorValue, in
   for (int i = 0; i < MOTOR_COUNT; i++)
   {
     gpio_set_irq_enabled(m_motorState[i].pinEncoder, GPIO_IRQ_EDGE_RISE, false);
-    MotorChannel channel = getChannelForMotor(static_cast<MotorId>(i));
-    m_motorDriver.setMotor(channel, value);
+    MotorDriver::MotorChannel channel = 
+      (i == MOTOR_LEFT) ? MotorDriver::MOTOR_A : MotorDriver::MOTOR_B;
+    (void)m_motorDriver.setMotor(channel, value);
   }
 
   /* Let motors reach steady state */
