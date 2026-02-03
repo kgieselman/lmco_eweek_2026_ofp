@@ -32,28 +32,12 @@
  * depositor.init();
  *
  * // When ready to deposit
- * depositor.startDeposit(4);  // Deposit 4 items
- * while (depositor.getState() == MechDeposit::STATE_DEPOSITING) {
- *   depositor.update();
- * }
+ * despositor.update();
  * @endcode
  ******************************************************************************/
 class MechDeposit
 {
 public:
-  /* Public Types ------------------------------------------------------------*/
-
-  /*****************************************************************************
-   * @brief Deposit mechanism state
-   ****************************************************************************/
-  enum State {
-    STATE_IDLE,       /**< Mechanism not active */
-    STATE_DEPOSITING, /**< Currently depositing items */
-    STATE_COMPLETE,   /**< Deposit sequence complete */
-    STATE_ERROR       /**< Fault detected */
-  };
-
-
   /* Public Function Definitions ---------------------------------------------*/
 
   /*****************************************************************************
@@ -88,7 +72,6 @@ private:
   /* Private Variables -------------------------------------------------------*/
   bool m_initialized;      /**< Initialization status */
   uint32_t m_lastUpdateMs; /**< Last update timestamp */
-  uint32_t m_stateStartMs; /**< When current state began */
 };
 
 
