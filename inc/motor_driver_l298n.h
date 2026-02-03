@@ -20,7 +20,9 @@
  * MotorDriverL298N driver;
  * 
  * // Configure motor A with PWM pin 8, direction pins 9 and 10
- * driver.configureMotor(MotorDriverL298N::MOTOR_A, 8, 9, 10);
+ * if (!driver.configureMotor(MotorDriverL298N::MOTOR_A, 8, 9, 10)) {
+ *   // Handle error
+ * }
  * 
  * // Set motor to 75% forward
  * driver.setMotor(MotorDriverL298N::MOTOR_A, 375);  // 375/500 = 75%
@@ -120,11 +122,11 @@ public:
    *
    * @note If motor runs backwards, swap pinDirFwd and pinDirRev.
    ****************************************************************************/
-  bool configureMotor(MotorChannel channel,
-                      int pinPwm,
-                      int pinDirFwd,
-                      int pinDirRev,
-                      int pinEncoder = -1);
+  [[nodiscard]] bool configureMotor(MotorChannel channel,
+                                    int pinPwm,
+                                    int pinDirFwd,
+                                    int pinDirRev,
+                                    int pinEncoder = -1);
 
   /*****************************************************************************
    * @brief Set motor speed and direction
@@ -141,7 +143,7 @@ public:
    *
    * @note Values outside the valid range will be clamped.
    ****************************************************************************/
-  bool setMotor(MotorChannel channel, int value);
+  [[nodiscard]] bool setMotor(MotorChannel channel, int value);
 
   /*****************************************************************************
    * @brief Set motor output with trim applied
@@ -154,7 +156,7 @@ public:
    * @param trim Trim multiplier (0.0 to 1.0, where 1.0 = no trim)
    * @return true if value applied successfully
    ****************************************************************************/
-  bool setMotorWithTrim(MotorChannel channel, int value, float trim);
+  [[nodiscard]] bool setMotorWithTrim(MotorChannel channel, int value, float trim);
 
   /*****************************************************************************
    * @brief Stop motor with coasting (free spin)
@@ -195,14 +197,14 @@ public:
    * @param channel Motor channel to check
    * @return true if the channel has been configured
    ****************************************************************************/
-  bool isConfigured(MotorChannel channel) const;
+  [[nodiscard]] bool isConfigured(MotorChannel channel) const;
 
   /*****************************************************************************
    * @brief Check if all motor channels are configured
    *
    * @return true if all channels have been configured
    ****************************************************************************/
-  bool isFullyConfigured(void) const;
+  [[nodiscard]] bool isFullyConfigured() const;
 
   /*****************************************************************************
    * @brief Get the encoder pin for a motor channel
@@ -210,7 +212,7 @@ public:
    * @param channel Motor channel
    * @return Encoder pin number, or -1 if not configured
    ****************************************************************************/
-  int getEncoderPin(MotorChannel channel) const;
+  [[nodiscard]] int getEncoderPin(MotorChannel channel) const;
 
   /*****************************************************************************
    * @brief Set the default stop mode
@@ -224,7 +226,7 @@ public:
    *
    * @return Current default stop mode
    ****************************************************************************/
-  StopMode getDefaultStopMode(void) const { return m_defaultStopMode; }
+  [[nodiscard]] StopMode getDefaultStopMode() const { return m_defaultStopMode; }
 
 
 private:
@@ -264,7 +266,7 @@ private:
    * @param pin Pin number to validate
    * @return true if pin is in valid range
    ****************************************************************************/
-  bool validatePin(int pin) const;
+  [[nodiscard]] bool validatePin(int pin) const;
 
   /*****************************************************************************
    * @brief Initialize a GPIO pin for PWM output
@@ -272,7 +274,7 @@ private:
    * @param pin Pin number to configure
    * @return true if initialization successful
    ****************************************************************************/
-  bool initPwmPin(int pin);
+  [[nodiscard]] bool initPwmPin(int pin);
 
   /*****************************************************************************
    * @brief Initialize a GPIO pin for digital output
@@ -280,7 +282,7 @@ private:
    * @param pin Pin number to configure
    * @return true if initialization successful
    ****************************************************************************/
-  bool initDirectionPin(int pin);
+  [[nodiscard]] bool initDirectionPin(int pin);
 
   /*****************************************************************************
    * @brief Set PWM duty cycle on a pin
@@ -304,7 +306,7 @@ private:
    * @param freqHz Desired PWM frequency in Hz
    * @return Clock divider value
    ****************************************************************************/
-  float calculateClockDivider(int freqHz) const;
+  [[nodiscard]] float calculateClockDivider(int freqHz) const;
 
   /*****************************************************************************
    * @brief Clamp a value to the valid motor range
@@ -312,7 +314,11 @@ private:
    * @param value Value to clamp
    * @return Clamped value in range [MOTOR_VALUE_MIN, MOTOR_VALUE_MAX]
    ****************************************************************************/
-  int clampMotorValue(int value) const;
+  [[nodiscard]] static constexpr int clampMotorValue(int value)
+  {
+    return (value < MOTOR_VALUE_MIN) ? MOTOR_VALUE_MIN :
+           (value > MOTOR_VALUE_MAX) ? MOTOR_VALUE_MAX : value;
+  }
 };
 
 

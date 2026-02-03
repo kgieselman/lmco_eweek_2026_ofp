@@ -175,6 +175,60 @@ const char* error_get_string(ErrorCode_t code);
     } \
   } while(0)
 
+/*******************************************************************************
+ * @brief Report error and return specified value
+ *
+ * Use when error has already been determined (no condition check needed).
+ *
+ * @param code Error code to report
+ * @param retval Value to return
+ ******************************************************************************/
+#define ERROR_RETURN(code, retval) \
+  do { \
+    ERROR_REPORT(code); \
+    return (retval); \
+  } while(0)
+
+/*******************************************************************************
+ * @brief Report error and return from void function
+ *
+ * Use when error has already been determined in a void function.
+ *
+ * @param code Error code to report
+ ******************************************************************************/
+#define ERROR_RETURN_VOID(code) \
+  do { \
+    ERROR_REPORT(code); \
+    return; \
+  } while(0)
+
+/*******************************************************************************
+ * @brief Return from void function if pointer is null
+ *
+ * @param ptr Pointer to check
+ ******************************************************************************/
+#define ERROR_CHECK_NULL_VOID(ptr) \
+  do { \
+    if ((ptr) == nullptr) { \
+      ERROR_REPORT(ERROR_NULL_POINTER); \
+      return; \
+    } \
+  } while(0)
+
+/*******************************************************************************
+ * @brief Return from void function if condition is false
+ *
+ * @param condition Condition to check
+ * @param code Error code to report
+ ******************************************************************************/
+#define ERROR_CHECK_VOID(condition, code) \
+  do { \
+    if (!(condition)) { \
+      ERROR_REPORT(code); \
+      return; \
+    } \
+  } while(0)
+
 #ifdef __cplusplus
 }
 #endif

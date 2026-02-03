@@ -229,7 +229,7 @@ private:
    * @param motor Motor identifier
    * @return Corresponding motor channel on the driver
    ****************************************************************************/
-  MotorChannel getChannelForMotor(MotorId motor) const;
+  MotorDriver::MotorChannel getChannelForMotor(MotorId motor) const;
 };
 
 
