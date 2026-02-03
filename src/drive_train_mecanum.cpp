@@ -42,7 +42,7 @@ DriveTrainMecanum::~DriveTrainMecanum()
   stop();
 }
 
-MotorDriver& DriveTrainMecanum::getDriverForMotor(MotorId motor)
+MotorDriver& DriveTrainMecanum::getDriverForMotor(MotorId_e motor)
 {
   if (motor == MOTOR_FRONT_LEFT || motor == MOTOR_FRONT_RIGHT)
   {
@@ -51,7 +51,7 @@ MotorDriver& DriveTrainMecanum::getDriverForMotor(MotorId motor)
   return m_motorDriverRear;
 }
 
-MotorDriver::MotorChannel DriveTrainMecanum::getChannelForMotor(MotorId motor) const
+MotorDriver::MotorChannel_e DriveTrainMecanum::getChannelForMotor(MotorId_e motor) const
 {
   /* Front: FL=A, FR=B; Rear: RR=A, RL=B */
   if (motor == MOTOR_FRONT_LEFT || motor == MOTOR_REAR_RIGHT)
@@ -63,9 +63,9 @@ MotorDriver::MotorChannel DriveTrainMecanum::getChannelForMotor(MotorId motor) c
 
 #if USE_MOTOR_DRIVER_DRV8833
 
-bool DriveTrainMecanum::addMotor(MotorId motor,
-                                  int pinIn1,
-                                  int pinIn2)
+bool DriveTrainMecanum::addMotor(MotorId_e motor,
+                                 int       pinIn1,
+                                 int       pinIn2)
 {
   /* Validate motor ID */
   if (motor < MOTOR_FRONT_LEFT || motor >= MOTOR_COUNT)
@@ -76,7 +76,7 @@ bool DriveTrainMecanum::addMotor(MotorId motor,
 
   /* Get the appropriate driver and channel */
   MotorDriver& driver = getDriverForMotor(motor);
-  MotorDriver::MotorChannel channel = getChannelForMotor(motor);
+  MotorDriver::MotorChannel_e channel = getChannelForMotor(motor);
 
   /* Configure motor through driver */
   if (!driver.configureMotor(channel, pinIn1, pinIn2))
@@ -196,10 +196,10 @@ void DriveTrainMecanum::update(void)
   for (int i = 0; i < MOTOR_COUNT; i++)
   {
     float trim = (motorValues[i] > 0) ? m_motorState[i].trimFwd : m_motorState[i].trimRev;
-    MotorId motor = static_cast<MotorId>(i);
+    MotorId_e motor = static_cast<MotorId_e>(i);
     
     MotorDriver& driver = getDriverForMotor(motor);
-    MotorDriver::MotorChannel channel = getChannelForMotor(motor);
+    MotorDriver::MotorChannel_e channel = getChannelForMotor(motor);
     (void)driver.setMotorWithTrim(channel, motorValues[i], trim);
   }
 }

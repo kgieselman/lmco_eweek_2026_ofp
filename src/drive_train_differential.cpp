@@ -70,12 +70,12 @@ DriveTrainDifferential::~DriveTrainDifferential()
   stop();
 }
 
-MotorDriver::MotorChannel DriveTrainDifferential::getChannelForMotor(MotorId motor) const
+MotorDriver::MotorChannel_e DriveTrainDifferential::getChannelForMotor(MotorId_e motor) const
 {
   return (motor == MOTOR_LEFT) ? MotorDriver::MOTOR_A : MotorDriver::MOTOR_B;
 }
 
-bool DriveTrainDifferential::configureEncoder(MotorId motor, int pinEncoder)
+bool DriveTrainDifferential::configureEncoder(MotorId_e motor, int pinEncoder)
 {
   /* Store encoder pin for calibration */
   m_motorState[motor].pinEncoder = pinEncoder;
@@ -114,10 +114,10 @@ bool DriveTrainDifferential::configureEncoder(MotorId motor, int pinEncoder)
 }
 
 #if USE_MOTOR_DRIVER_DRV8833
-bool DriveTrainDifferential::addMotor(MotorId motor,
-                                       int pinIn1,
-                                       int pinIn2,
-                                       int pinEncoder)
+bool DriveTrainDifferential::addMotor(MotorId_e motor,
+                                      int       pinIn1,
+                                      int       pinIn2,
+                                      int       pinEncoder)
 {
   /* Validate motor ID */
   if (motor < MOTOR_LEFT || motor >= MOTOR_COUNT)
@@ -127,7 +127,7 @@ bool DriveTrainDifferential::addMotor(MotorId motor,
   }
 
   /* Get motor channel using helper */
-  MotorDriver::MotorChannel channel = getChannelForMotor(motor);
+  MotorDriver::MotorChannel_e channel = getChannelForMotor(motor);
 
   /* Configure motor through driver */
   if (!m_motorDriver.configureMotor(channel, pinIn1, pinIn2, pinEncoder))
@@ -154,11 +154,11 @@ bool DriveTrainDifferential::addMotor(MotorId motor,
 
 #else /* L298N */
 
-bool DriveTrainDifferential::addMotor(MotorId motor,
-                                       int pinPwm,
-                                       int pinDirFwd,
-                                       int pinDirRev,
-                                       int pinEncoder)
+bool DriveTrainDifferential::addMotor(MotorId_e motor,
+                                      int       pinPwm,
+                                      int       pinDirFwd,
+                                      int       pinDirRev,
+                                      int       pinEncoder)
 {
   /* Validate motor ID */
   if (motor < MOTOR_LEFT || motor >= MOTOR_COUNT)
@@ -168,7 +168,7 @@ bool DriveTrainDifferential::addMotor(MotorId motor,
   }
 
   /* Get motor channel using helper */
-  MotorDriver::MotorChannel channel = getChannelForMotor(motor);
+  MotorDriver::MotorChannel_e channel = getChannelForMotor(motor);
 
   /* Configure motor through driver */
   if (!m_motorDriver.configureMotor(channel, pinPwm, pinDirFwd, pinDirRev, pinEncoder))
@@ -223,7 +223,7 @@ void DriveTrainDifferential::update(void)
   for (int i = 0; i < MOTOR_COUNT; i++)
   {
     float trim = (motorValues[i] > 0) ? m_motorState[i].trimFwd : m_motorState[i].trimRev;
-    MotorDriver::MotorChannel channel = 
+    MotorDriver::MotorChannel_e channel = 
       (i == MOTOR_LEFT) ? MotorDriver::MOTOR_A : MotorDriver::MOTOR_B;
     (void)m_motorDriver.setMotorWithTrim(channel, motorValues[i], trim);
   }

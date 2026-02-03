@@ -179,7 +179,7 @@ bool FlySkyIBus::hasNewMessage(void)
   return true;
 }
 
-int FlySkyIBus::readChannel(Channel channel) const
+int FlySkyIBus::readChannel(Channel_e channel) const
 {
   if (/*channel < 0 || */channel >= CHAN_COUNT)
   {
@@ -189,7 +189,7 @@ int FlySkyIBus::readChannel(Channel channel) const
   return m_messageSnapshot.channels[channel];
 }
 
-int FlySkyIBus::readChannelNormalized(Channel channel) const
+int FlySkyIBus::readChannelNormalized(Channel_e channel) const
 {
   return readChannel(channel) - CHANNEL_VALUE_CENTER;
 }

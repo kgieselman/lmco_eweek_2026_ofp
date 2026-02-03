@@ -55,10 +55,10 @@ MotorDriverDRV8833::~MotorDriverDRV8833()
   stopAll(STOP_COAST);
 }
 
-bool MotorDriverDRV8833::configureMotor(MotorChannel channel,
-                                         int pinIn1,
-                                         int pinIn2,
-                                         int pinEncoder)
+bool MotorDriverDRV8833::configureMotor(MotorChannel_e channel,
+                                        int            pinIn1,
+                                        int            pinIn2,
+                                        int            pinEncoder)
 {
   /* Validate channel */
   if (channel >= MOTOR_COUNT)
@@ -97,12 +97,12 @@ bool MotorDriverDRV8833::configureMotor(MotorChannel channel,
   return true;
 }
 
-bool MotorDriverDRV8833::setMotor(MotorChannel channel, int value)
+bool MotorDriverDRV8833::setMotor(MotorChannel_e channel, int value)
 {
   return setMotorWithTrim(channel, value, 1.0f);
 }
 
-bool MotorDriverDRV8833::setMotorWithTrim(MotorChannel channel, int value, float trim)
+bool MotorDriverDRV8833::setMotorWithTrim(MotorChannel_e channel, int value, float trim)
 {
   /* Validate channel */
   if (channel >= MOTOR_COUNT)
@@ -157,7 +157,7 @@ bool MotorDriverDRV8833::setMotorWithTrim(MotorChannel channel, int value, float
   return true;
 }
 
-void MotorDriverDRV8833::coast(MotorChannel channel)
+void MotorDriverDRV8833::coast(MotorChannel_e channel)
 {
   if (channel >= MOTOR_COUNT || !m_motors[channel].configured)
   {
@@ -170,7 +170,7 @@ void MotorDriverDRV8833::coast(MotorChannel channel)
   m_motors[channel].currentValue = 0;
 }
 
-void MotorDriverDRV8833::brake(MotorChannel channel)
+void MotorDriverDRV8833::brake(MotorChannel_e channel)
 {
   if (channel >= MOTOR_COUNT || !m_motors[channel].configured)
   {
@@ -183,7 +183,7 @@ void MotorDriverDRV8833::brake(MotorChannel channel)
   m_motors[channel].currentValue = 0;
 }
 
-void MotorDriverDRV8833::stop(MotorChannel channel, StopMode mode)
+void MotorDriverDRV8833::stop(MotorChannel_e channel, StopMode_e mode)
 {
   if (mode == STOP_BRAKE)
   {
@@ -195,15 +195,15 @@ void MotorDriverDRV8833::stop(MotorChannel channel, StopMode mode)
   }
 }
 
-void MotorDriverDRV8833::stopAll(StopMode mode)
+void MotorDriverDRV8833::stopAll(StopMode_e mode)
 {
   for (int i = 0; i < MOTOR_COUNT; i++)
   {
-    stop(static_cast<MotorChannel>(i), mode);
+    stop(static_cast<MotorChannel_e>(i), mode);
   }
 }
 
-bool MotorDriverDRV8833::isConfigured(MotorChannel channel) const
+bool MotorDriverDRV8833::isConfigured(MotorChannel_e channel) const
 {
   if (channel >= MOTOR_COUNT)
   {
@@ -224,7 +224,7 @@ bool MotorDriverDRV8833::isFullyConfigured(void) const
   return true;
 }
 
-int MotorDriverDRV8833::getEncoderPin(MotorChannel channel) const
+int MotorDriverDRV8833::getEncoderPin(MotorChannel_e channel) const
 {
   if (channel >= MOTOR_COUNT)
   {

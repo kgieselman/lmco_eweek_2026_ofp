@@ -66,10 +66,10 @@ public:
   /*****************************************************************************
    * @brief Motor identifier enumeration
    ****************************************************************************/
-  enum MotorId {
-    MOTOR_LEFT  = 0,  /**< Left side motor */
-    MOTOR_RIGHT = 1,  /**< Right side motor */
-    MOTOR_COUNT = 2   /**< Total number of motors */
+  enum MotorId_e {
+    MOTOR_LEFT  = 0, /**< Left side motor */
+    MOTOR_RIGHT = 1, /**< Right side motor */
+    MOTOR_COUNT = 2  /**< Total number of motors */
   };
 
 
@@ -98,10 +98,10 @@ public:
    * @note If a motor spins backwards, swap pinIn1 and pinIn2
    *       rather than rewiring the motor.
    ****************************************************************************/
-  bool addMotor(MotorId motor,
-                int pinIn1,
-                int pinIn2,
-                int pinEncoder = PIN_INVALID);
+  bool addMotor(MotorId_e motor,
+                int       pinIn1,
+                int       pinIn2,
+                int       pinEncoder = PIN_INVALID);
 #else
   /*****************************************************************************
    * @brief Add and configure a motor (L298N)
@@ -116,11 +116,11 @@ public:
    * @note If a motor spins backwards, swap pinDirFwd and pinDirRev
    *       rather than rewiring the motor.
    ****************************************************************************/
-  bool addMotor(MotorId motor,
-                int pinPwm,
-                int pinDirFwd,
-                int pinDirRev,
-                int pinEncoder = PIN_INVALID);
+  bool addMotor(MotorId_e motor,
+                int       pinPwm,
+                int       pinDirFwd,
+                int       pinDirRev,
+                int       pinEncoder = PIN_INVALID);
 #endif
 
   /*****************************************************************************
@@ -189,7 +189,7 @@ private:
    * @param motor Motor identifier
    * @return Corresponding motor channel on the driver
    ****************************************************************************/
-  MotorDriver::MotorChannel getChannelForMotor(MotorId motor) const;
+  MotorDriver::MotorChannel_e getChannelForMotor(MotorId_e motor) const;
 
   /*****************************************************************************
    * @brief Configure encoder pin for a motor (if provided)
@@ -198,7 +198,7 @@ private:
    * @param pinEncoder Encoder pin
    * @return true if configuration successful or encoder not used
    ****************************************************************************/
-  bool configureEncoder(MotorId motor, int pinEncoder);
+  bool configureEncoder(MotorId_e motor, int pinEncoder);
 
   /*****************************************************************************
    * @brief Measure encoder pulses for calibration

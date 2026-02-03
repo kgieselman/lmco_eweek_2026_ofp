@@ -83,7 +83,7 @@ public:
    *
    * Motor positions are named from the robot's perspective.
    ****************************************************************************/
-  enum MotorId {
+  enum MotorId_e {
     MOTOR_FRONT_LEFT  = 0,  /**< Front left motor */
     MOTOR_FRONT_RIGHT = 1,  /**< Front right motor */
     MOTOR_REAR_RIGHT  = 2,  /**< Rear right motor */
@@ -116,9 +116,9 @@ public:
    * @note If a motor spins backwards, swap pinIn1 and pinIn2
    *       rather than rewiring the motor.
    ****************************************************************************/
-  bool addMotor(MotorId motor,
-                int pinIn1,
-                int pinIn2);
+  bool addMotor(MotorId_e motor,
+                int       pinIn1,
+                int       pinIn2);
 #else
   /*****************************************************************************
    * @brief Add and configure a motor (L298N)
@@ -132,10 +132,10 @@ public:
    * @note If a motor spins backwards, swap pinDirFwd and pinDirRev
    *       rather than rewiring the motor.
    ****************************************************************************/
-  bool addMotor(MotorId motor,
-                int pinPwm,
-                int pinDirFwd,
-                int pinDirRev);
+  bool addMotor(MotorId_e motor,
+                int       pinPwm,
+                int       pinDirFwd,
+                int       pinDirRev);
 #endif
 
   /*****************************************************************************
@@ -221,7 +221,7 @@ private:
    * @param motor Motor identifier
    * @return Reference to the appropriate motor driver
    ****************************************************************************/
-  MotorDriver& getDriverForMotor(MotorId motor);
+  MotorDriver& getDriverForMotor(MotorId_e motor);
 
   /*****************************************************************************
    * @brief Get the motor channel for a given motor ID
@@ -229,7 +229,7 @@ private:
    * @param motor Motor identifier
    * @return Corresponding motor channel on the driver
    ****************************************************************************/
-  MotorDriver::MotorChannel getChannelForMotor(MotorId motor) const;
+  MotorDriver::MotorChannel_e getChannelForMotor(MotorId_e motor) const;
 };
 
 

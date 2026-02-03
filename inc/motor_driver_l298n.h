@@ -67,18 +67,18 @@ public:
   /*****************************************************************************
    * @brief Motor channel identifier
    ****************************************************************************/
-  enum MotorChannel {
-    MOTOR_A = 0,    /**< Motor channel A (ENA/IN1/IN2) */
-    MOTOR_B = 1,    /**< Motor channel B (ENB/IN3/IN4) */
-    MOTOR_COUNT = 2 /**< Number of motor channels per driver */
+  enum MotorChannel_e {
+    MOTOR_A     = 0, /**< Motor channel A (ENA/IN1/IN2) */
+    MOTOR_B     = 1, /**< Motor channel B (ENB/IN3/IN4) */
+    MOTOR_COUNT = 2  /**< Number of motor channels per driver */
   };
 
   /*****************************************************************************
    * @brief Motor stop mode
    ****************************************************************************/
-  enum StopMode {
-    STOP_COAST,  /**< Coast/free spin (EN = LOW) */
-    STOP_BRAKE   /**< Active brake (EN = HIGH, IN1 = IN2 = HIGH) */
+  enum StopMode_e {
+    STOP_COAST, /**< Coast/free spin (EN = LOW) */
+    STOP_BRAKE  /**< Active brake (EN = HIGH, IN1 = IN2 = HIGH) */
   };
 
 
@@ -122,11 +122,11 @@ public:
    *
    * @note If motor runs backwards, swap pinDirFwd and pinDirRev.
    ****************************************************************************/
-  bool configureMotor(MotorChannel channel,
-                      int pinPwm,
-                      int pinDirFwd,
-                      int pinDirRev,
-                      int pinEncoder = PIN_INVALID);
+  bool configureMotor(MotorChannel_e channel,
+                      int            pinPwm,
+                      int            pinDirFwd,
+                      int            pinDirRev,
+                      int            pinEncoder = PIN_INVALID);
 
   /*****************************************************************************
    * @brief Set motor speed and direction
@@ -143,7 +143,7 @@ public:
    *
    * @note Values outside the valid range will be clamped.
    ****************************************************************************/
-  bool setMotor(MotorChannel channel, int value);
+  bool setMotor(MotorChannel_e channel, int value);
 
   /*****************************************************************************
    * @brief Set motor output with trim applied
@@ -156,7 +156,7 @@ public:
    * @param trim Trim multiplier (0.0 to 1.0, where 1.0 = no trim)
    * @return true if value applied successfully
    ****************************************************************************/
-  bool setMotorWithTrim(MotorChannel channel, int value, float trim);
+  bool setMotorWithTrim(MotorChannel_e channel, int value, float trim);
 
   /*****************************************************************************
    * @brief Stop motor with coasting (free spin)
@@ -165,7 +165,7 @@ public:
    *
    * @param channel Motor channel to stop
    ****************************************************************************/
-  void coast(MotorChannel channel);
+  void coast(MotorChannel_e channel);
 
   /*****************************************************************************
    * @brief Stop motor with active braking
@@ -174,7 +174,7 @@ public:
    *
    * @param channel Motor channel to brake
    ****************************************************************************/
-  void brake(MotorChannel channel);
+  void brake(MotorChannel_e channel);
 
   /*****************************************************************************
    * @brief Stop motor using specified mode
@@ -182,14 +182,14 @@ public:
    * @param channel Motor channel to stop
    * @param mode Stop mode (STOP_COAST or STOP_BRAKE)
    ****************************************************************************/
-  void stop(MotorChannel channel, StopMode mode = STOP_COAST);
+  void stop(MotorChannel_e channel, StopMode_e mode = STOP_COAST);
 
   /*****************************************************************************
    * @brief Stop all motors
    *
    * @param mode Stop mode to use for all motors
    ****************************************************************************/
-  void stopAll(StopMode mode = STOP_COAST);
+  void stopAll(StopMode_e mode = STOP_COAST);
 
   /*****************************************************************************
    * @brief Check if a motor channel is configured
@@ -197,7 +197,7 @@ public:
    * @param channel Motor channel to check
    * @return true if the channel has been configured
    ****************************************************************************/
-  bool isConfigured(MotorChannel channel) const;
+  bool isConfigured(MotorChannel_e channel) const;
 
   /*****************************************************************************
    * @brief Check if all motor channels are configured
@@ -212,21 +212,21 @@ public:
    * @param channel Motor channel
    * @return Encoder pin number, or -1 if not configured
    ****************************************************************************/
-  int getEncoderPin(MotorChannel channel) const;
+  int getEncoderPin(MotorChannel_e channel) const;
 
   /*****************************************************************************
    * @brief Set the default stop mode
    *
    * @param mode Default stop mode for setMotor(0) calls
    ****************************************************************************/
-  void setDefaultStopMode(StopMode mode) { m_defaultStopMode = mode; }
+  void setDefaultStopMode(StopMode_e mode) { m_defaultStopMode = mode; }
 
   /*****************************************************************************
    * @brief Get the current default stop mode
    *
    * @return Current default stop mode
    ****************************************************************************/
-  StopMode getDefaultStopMode() const { return m_defaultStopMode; }
+  StopMode_e getDefaultStopMode() const { return m_defaultStopMode; }
 
 
 private:
@@ -253,9 +253,9 @@ private:
 
   /* Private Variables -------------------------------------------------------*/
   MotorConfig m_motors[MOTOR_COUNT]; /**< Motor channel configurations */
-  int m_pwmFreqHz;                   /**< Configured PWM frequency */
-  float m_pwmClkDiv;                 /**< Calculated PWM clock divider */
-  StopMode m_defaultStopMode;        /**< Default stop mode */
+  int         m_pwmFreqHz;           /**< Configured PWM frequency */
+  float       m_pwmClkDiv;           /**< Calculated PWM clock divider */
+  StopMode_e  m_defaultStopMode;     /**< Default stop mode */
 
 
   /* Private Function Declarations -------------------------------------------*/

@@ -43,8 +43,8 @@
 #if USE_MOTOR_DRIVER_DRV8833
   #include "motor_driver_drv8833.h"
   using MotorDriver  = MotorDriverDRV8833;
-  using MotorChannel = MotorDriverDRV8833::MotorChannel;
-  using StopMode     = MotorDriverDRV8833::StopMode;
+  using MotorChannel = MotorDriverDRV8833::MotorChannel_e;
+  using StopMode     = MotorDriverDRV8833::StopMode_e;
 
   /** @brief Motor channel A constant */
   constexpr MotorChannel MOTOR_CHANNEL_A = MotorDriverDRV8833::MOTOR_A;
@@ -57,8 +57,8 @@
 #else
   #include "motor_driver_l298n.h"
   using MotorDriver  = MotorDriverL298N;
-  using MotorChannel = MotorDriverL298N::MotorChannel;
-  using StopMode     = MotorDriverL298N::StopMode;
+  using MotorChannel = MotorDriverL298N::MotorChannel_e;
+  using StopMode     = MotorDriverL298N::StopMode_e;
 
   /** @brief Motor channel A constant */
   constexpr MotorChannel MOTOR_CHANNEL_A = MotorDriverL298N::MOTOR_A;

@@ -44,18 +44,18 @@ public:
    *
    * Most dual H-bridge drivers support two motor channels.
    ****************************************************************************/
-  enum MotorChannel {
-    MOTOR_A = 0,    /**< Motor channel A */
-    MOTOR_B = 1,    /**< Motor channel B */
-    MOTOR_COUNT = 2 /**< Number of motor channels per driver */
+  enum MotorChannel_e {
+    MOTOR_A     = 0, /**< Motor channel A */
+    MOTOR_B     = 1, /**< Motor channel B */
+    MOTOR_COUNT = 2  /**< Number of motor channels per driver */
   };
 
   /*****************************************************************************
    * @brief Motor stop mode
    ****************************************************************************/
-  enum StopMode {
-    STOP_COAST,  /**< Coast/free spin (outputs floating/low) */
-    STOP_BRAKE   /**< Active brake (outputs shorted) */
+  enum StopMode_e {
+    STOP_COAST, /**< Coast/free spin (outputs floating/low) */
+    STOP_BRAKE  /**< Active brake (outputs shorted) */
   };
 
 
@@ -83,7 +83,7 @@ public:
    *              Positive = forward, negative = reverse, 0 = stop
    * @return true if value applied successfully
    ****************************************************************************/
-  virtual bool setMotor(MotorChannel channel, int value) = 0;
+  virtual bool setMotor(MotorChannel_e channel, int value) = 0;
 
   /*****************************************************************************
    * @brief Set motor output with trim applied
@@ -93,9 +93,9 @@ public:
    * @param trim Trim multiplier (0.0 to 1.0, where 1.0 = no trim)
    * @return true if value applied successfully
    ****************************************************************************/
-  virtual bool setMotorWithTrim(MotorChannel channel, 
-                                               int value, 
-                                               float trim) = 0;
+  virtual bool setMotorWithTrim(MotorChannel_e channel, 
+                                int            value, 
+                                float          trim) = 0;
 
   /*****************************************************************************
    * @brief Stop motor using specified mode
@@ -103,14 +103,14 @@ public:
    * @param channel Motor channel to stop
    * @param mode Stop mode (STOP_COAST or STOP_BRAKE)
    ****************************************************************************/
-  virtual void stop(MotorChannel channel, StopMode mode = STOP_COAST) = 0;
+  virtual void stop(MotorChannel_e channel, StopMode_e mode = STOP_COAST) = 0;
 
   /*****************************************************************************
    * @brief Stop all motors
    *
    * @param mode Stop mode to use for all motors
    ****************************************************************************/
-  virtual void stopAll(StopMode mode = STOP_COAST) = 0;
+  virtual void stopAll(StopMode_e mode = STOP_COAST) = 0;
 
   /*****************************************************************************
    * @brief Check if a motor channel is configured
@@ -118,7 +118,7 @@ public:
    * @param channel Motor channel to check
    * @return true if the channel has been configured
    ****************************************************************************/
-  virtual bool isConfigured(MotorChannel channel) const = 0;
+  virtual bool isConfigured(MotorChannel_e channel) const = 0;
 
   /*****************************************************************************
    * @brief Check if all motor channels are configured
