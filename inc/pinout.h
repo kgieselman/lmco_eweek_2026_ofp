@@ -75,7 +75,7 @@ constexpr int PIN_MECANUM_MOTOR_FL_DIR_REV = 19;  /**< Direction reverse (PWM if
  * @name Mecanum Front Right Motor
  * @{
  ******************************************************************************/
-constexpr int PIN_MECANUM_MOTOR_FR_ENABLE  = 8;   /**< PWM Slice 4 Channel A */
+constexpr int PIN_MECANUM_MOTOR_FR_ENABLE  = 9;   /**< PWM Slice 4 Channel B */
 constexpr int PIN_MECANUM_MOTOR_FR_DIR_FWD = 10;  /**< Direction forward (PWM if DRV8833)*/
 constexpr int PIN_MECANUM_MOTOR_FR_DIR_REV = 11;  /**< Direction reverse (PWM if DRV8833)*/
 /** @} */
@@ -84,7 +84,7 @@ constexpr int PIN_MECANUM_MOTOR_FR_DIR_REV = 11;  /**< Direction reverse (PWM if
  * @name Mecanum Rear Right Motor
  * @{
  ******************************************************************************/
-constexpr int PIN_MECANUM_MOTOR_RR_ENABLE  = 9;   /**< PWM Slice 4 Channel B */
+constexpr int PIN_MECANUM_MOTOR_RR_ENABLE  = 8;   /**< PWM Slice 4 Channel A */
 constexpr int PIN_MECANUM_MOTOR_RR_DIR_FWD = 7;   /**< Direction forward (PWM if DRV8833)*/
 constexpr int PIN_MECANUM_MOTOR_RR_DIR_REV = 6;   /**< Direction reverse (PWM if DRV8833)*/
 /** @} */
