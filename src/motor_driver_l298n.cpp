@@ -323,12 +323,5 @@ float MotorDriverL298N::calculateClockDivider(int freqHz) const
   return divider;
 }
 
-int MotorDriverL298N::clampMotorValue(int value) const
-{
-  if (value < MOTOR_VALUE_MIN) return MOTOR_VALUE_MIN;
-  if (value > MOTOR_VALUE_MAX) return MOTOR_VALUE_MAX;
-  return value;
-}
-
 
 /* EOF -----------------------------------------------------------------------*/

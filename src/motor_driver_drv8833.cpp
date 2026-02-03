@@ -284,12 +284,5 @@ float MotorDriverDRV8833::calculateClockDivider(int freqHz) const
   return divider;
 }
 
-int MotorDriverDRV8833::clampMotorValue(int value) const
-{
-  if (value < MOTOR_VALUE_MIN) return MOTOR_VALUE_MIN;
-  if (value > MOTOR_VALUE_MAX) return MOTOR_VALUE_MAX;
-  return value;
-}
-
 
 /* EOF -----------------------------------------------------------------------*/
