@@ -117,7 +117,7 @@ public:
    * @param pinPwm GPIO pin for PWM enable (ENA or ENB)
    * @param pinDirFwd GPIO pin for forward direction (IN1 or IN3)
    * @param pinDirRev GPIO pin for reverse direction (IN2 or IN4)
-   * @param pinEncoder Optional encoder input pin (-1 if not used)
+   * @param pinEncoder Optional encoder input pin
    * @return true if configuration successful, false on error
    *
    * @note If motor runs backwards, swap pinDirFwd and pinDirRev.
@@ -126,7 +126,7 @@ public:
                                     int pinPwm,
                                     int pinDirFwd,
                                     int pinDirRev,
-                                    int pinEncoder = -1);
+                                    int pinEncoder = PIN_INVALID);
 
   /*****************************************************************************
    * @brief Set motor speed and direction
@@ -240,7 +240,7 @@ private:
     int pinPwm;       /**< PWM enable pin */
     int pinDirFwd;    /**< Forward direction pin */
     int pinDirRev;    /**< Reverse direction pin */
-    int pinEncoder;   /**< Encoder pin (-1 if not used) */
+    int pinEncoder;   /**< Encoder pin */
     int currentValue; /**< Current motor value for state tracking */
   };
 

@@ -39,7 +39,7 @@ public:
 
   /** @brief Maximum user input value */
   static constexpr int USER_INPUT_MAX = 500;
-  
+
 
   /* Public Function Declarations --------------------------------------------*/
 
@@ -127,7 +127,7 @@ protected:
     int pinPwm;         /**< PWM output pin */
     int pinDirFwd;      /**< Direction pin for forward */
     int pinDirRev;      /**< Direction pin for reverse */
-    int pinEncoder;     /**< Encoder input pin (-1 if not used) */
+    int pinEncoder;     /**< Encoder input pin */
     float trimFwd;      /**< Forward direction trim (0.0 - 1.0) */
     float trimRev;      /**< Reverse direction trim (0.0 - 1.0) */
   };

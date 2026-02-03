@@ -59,9 +59,9 @@ DriveTrainDifferential::DriveTrainDifferential()
   for (int i = 0; i < MOTOR_COUNT; i++)
   {
     m_motorState[i].initialized = false;
-    m_motorState[i].pinEncoder = -1;
-    m_motorState[i].trimFwd = DEFAULT_TRIM;
-    m_motorState[i].trimRev = DEFAULT_TRIM;
+    m_motorState[i].pinEncoder  = PIN_INVALID;
+    m_motorState[i].trimFwd     = DEFAULT_TRIM;
+    m_motorState[i].trimRev     = DEFAULT_TRIM;
   }
 }
 

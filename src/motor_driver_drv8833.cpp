@@ -6,6 +6,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "motor_driver_drv8833.h"
 #include "error_handler.h"
+#include "pinout.h"
 
 #ifndef UNIT_TEST
 #include "pico/stdlib.h"
@@ -40,10 +41,10 @@ MotorDriverDRV8833::MotorDriverDRV8833(int pwmFreqHz)
   /* Initialize motor configurations */
   for (int i = 0; i < MOTOR_COUNT; i++)
   {
-    m_motors[i].configured = false;
-    m_motors[i].pinIn1 = -1;
-    m_motors[i].pinIn2 = -1;
-    m_motors[i].pinEncoder = -1;
+    m_motors[i].configured   = false;
+    m_motors[i].pinIn1       = PIN_INVALID;
+    m_motors[i].pinIn2       = PIN_INVALID;
+    m_motors[i].pinEncoder   = PIN_INVALID;
     m_motors[i].currentValue = 0;
   }
 }
@@ -74,7 +75,7 @@ bool MotorDriverDRV8833::configureMotor(MotorChannel channel,
   }
 
   /* Validate encoder pin if specified */
-  if (pinEncoder != -1 && !validatePin(pinEncoder))
+  if (!validatePin(pinEncoder))
   {
     ERROR_REPORT(ERROR_DT_INVALID_PIN);
     return false;
@@ -87,11 +88,11 @@ bool MotorDriverDRV8833::configureMotor(MotorChannel channel,
   }
 
   /* Store configuration */
-  m_motors[channel].pinIn1 = pinIn1;
-  m_motors[channel].pinIn2 = pinIn2;
-  m_motors[channel].pinEncoder = pinEncoder;
+  m_motors[channel].pinIn1       = pinIn1;
+  m_motors[channel].pinIn2       = pinIn2;
+  m_motors[channel].pinEncoder   = pinEncoder;
   m_motors[channel].currentValue = 0;
-  m_motors[channel].configured = true;
+  m_motors[channel].configured   = true;
 
   return true;
 }
@@ -227,7 +228,7 @@ int MotorDriverDRV8833::getEncoderPin(MotorChannel channel) const
 {
   if (channel >= MOTOR_COUNT)
   {
-    return -1;
+    return PIN_INVALID;
   }
   return m_motors[channel].pinEncoder;
 }

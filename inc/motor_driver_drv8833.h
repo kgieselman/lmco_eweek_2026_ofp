@@ -119,7 +119,7 @@ public:
    * @param channel Motor channel to configure (MOTOR_A or MOTOR_B)
    * @param pinIn1 GPIO pin for IN1 (forward PWM)
    * @param pinIn2 GPIO pin for IN2 (reverse PWM)
-   * @param pinEncoder Optional encoder input pin (-1 if not used)
+   * @param pinEncoder Optional encoder input pin
    * @return true if configuration successful, false on error
    *
    * @note For best results, use pins on the same PWM slice for synchronized
@@ -129,7 +129,7 @@ public:
   [[nodiscard]] bool configureMotor(MotorChannel channel,
                                     int pinIn1,
                                     int pinIn2,
-                                    int pinEncoder = -1);
+                                    int pinEncoder = PIN_INVALID);
 
   /*****************************************************************************
    * @brief Set motor speed and direction
@@ -242,7 +242,7 @@ private:
     bool configured;  /**< Channel is configured and ready */
     int pinIn1;       /**< IN1 (forward) PWM pin */
     int pinIn2;       /**< IN2 (reverse) PWM pin */
-    int pinEncoder;   /**< Encoder pin (-1 if not used) */
+    int pinEncoder;   /**< Encoder pin (Invalid if not used) */
     int currentValue; /**< Current motor value for state tracking */
   };
 
