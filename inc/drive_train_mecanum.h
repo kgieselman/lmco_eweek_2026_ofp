@@ -14,10 +14,10 @@
  *
  * @par Wheel Layout (top view):
  * @verbatim
- *     \\  //     Front
+ *     \\    //   Front
  *      FL  FR
  *      RL  RR
- *     //  \\     Back
+ *     //    \\   Back
  * @endverbatim
  *
  * @par Motor Driver Selection:
