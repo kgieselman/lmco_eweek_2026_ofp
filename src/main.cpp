@@ -76,7 +76,7 @@ static void init_motors_mecanum(DriveTrainMecanum* pDriveTrain)
     pDriveTrain->addMotor(DriveTrainMecanum::MOTOR_REAR_LEFT,
                           PIN_MECANUM_MOTOR_RL_DIR_FWD,
                           PIN_MECANUM_MOTOR_RL_DIR_REV);
-#else
+#elif MOTOR_DRIVER_L298N
     pDriveTrain->addMotor(DriveTrainMecanum::MOTOR_FRONT_LEFT,
                           PIN_MECANUM_MOTOR_FL_ENABLE,
                           PIN_MECANUM_MOTOR_FL_DIR_FWD,
@@ -110,7 +110,7 @@ static void init_motors_differential(DriveTrainDifferential* pDriveTrain)
                           PIN_DIFF_MOTOR_RIGHT_DIR_FWD,
                           PIN_DIFF_MOTOR_RIGHT_DIR_REV,
                           PIN_DIFF_MOTOR_RIGHT_ENC);
-#else
+#elif MOTOR_DRIVER_L298N
     pDriveTrain->addMotor(DriveTrainDifferential::MOTOR_LEFT,
                           PIN_DIFF_MOTOR_LEFT_ENABLE,
                           PIN_DIFF_MOTOR_LEFT_DIR_FWD,
