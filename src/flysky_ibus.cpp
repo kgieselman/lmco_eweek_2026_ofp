@@ -1,6 +1,6 @@
 /*******************************************************************************
  * @file flysky_ibus.cpp
- * @brief Implementation of FlySky iBUS protocol interface
+ * @brief Implementation of FlySky IBus protocol interface
  ******************************************************************************/
 
 /* Includes ------------------------------------------------------------------*/
@@ -114,7 +114,7 @@ FlySkyIBus::FlySkyIBus(uart_inst_t* pUart, int pinTx, int pinRx)
   m_initialized = true;
 
 #if ENABLE_DEBUG
-  printf("[iBUS] Initialized on UART1\n");
+  printf("[IBus] Initialized on UART1\n");
 #endif
 }
 
@@ -154,7 +154,7 @@ bool FlySkyIBus::hasNewMessage(void)
   if (msgLength < IBUS_MIN_MSG_LENGTH || msgLength > IBUS_MAX_MSG_LENGTH)
   {
 #if ENABLE_DEBUG_IBUS_VERBOSE
-    printf("[iBUS] Invalid length: %d\n", msgLength);
+    printf("[IBus] Invalid length: %d\n", msgLength);
 #endif
     return false;
   }
@@ -170,7 +170,7 @@ bool FlySkyIBus::hasNewMessage(void)
     default:
     {
 #if ENABLE_DEBUG_IBUS_VERBOSE
-        printf("[iBUS] Unknown command: 0x%02X\n", pMsg[IBUS_PROTOCOL_CMD_IDX]);
+        printf("[IBus] Unknown command: 0x%02X\n", pMsg[IBUS_PROTOCOL_CMD_IDX]);
 #endif
       return false;
     }
@@ -180,7 +180,7 @@ bool FlySkyIBus::hasNewMessage(void)
   if (!validateCrc((const uint8_t*)pMsg, msgLength))
   {
 #if ENABLE_DEBUG_IBUS_VERBOSE
-    printf("[iBUS] CRC mismatch\n");
+    printf("[IBus] CRC mismatch\n");
 #endif
     return false;
   }

@@ -75,7 +75,8 @@ bool MotorDriverDRV8833::configureMotor(MotorChannel_e channel,
   }
 
   /* Validate encoder pin if specified */
-  if (!validatePin(pinEncoder))
+  bool encoderPinSpecified = (pinEncoder != PIN_INVALID);
+  if (encoderPinSpecified && !validatePin(pinEncoder))
   {
     ERROR_REPORT(ERROR_DT_INVALID_PIN);
     return false;
