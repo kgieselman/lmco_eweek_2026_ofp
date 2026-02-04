@@ -132,7 +132,7 @@ bool DriveTrainDifferential::addMotor(MotorId_e motor,
   /* Configure motor through driver */
   if (!m_motorDriver.configureMotor(channel, pinFwd, pinRev, pinEncoder))
   {
-    ERROR_REPORT(ERROR_DT_PWM_FAILED);
+    ERROR_REPORT(ERROR_DT_NOT_INIT);
     return false;
   }
 
@@ -173,7 +173,7 @@ bool DriveTrainDifferential::addMotor(MotorId_e motor,
   /* Configure motor through driver */
   if (!m_motorDriver.configureMotor(channel, pinPwm, pinDirFwd, pinDirRev, pinEncoder))
   {
-    ERROR_REPORT(ERROR_DT_PWM_FAILED);
+    ERROR_REPORT(ERROR_DT_NOT_INIT);
     return false;
   }
 

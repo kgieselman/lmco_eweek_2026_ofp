@@ -81,7 +81,7 @@ bool DriveTrainMecanum::addMotor(MotorId_e motor,
   /* Configure motor through driver */
   if (!driver.configureMotor(channel, pinFwd, pinRev))
   {
-    ERROR_REPORT(ERROR_DT_PWM_FAILED);
+    ERROR_REPORT(ERROR_DT_NOT_INIT);
     return false;
   }
 
@@ -119,7 +119,7 @@ bool DriveTrainMecanum::addMotor(MotorId_e motor,
   /* Configure motor through driver */
   if (!driver.configureMotor(channel, pinPwm, pinDirFwd, pinDirRev))
   {
-    ERROR_REPORT(ERROR_DT_PWM_FAILED);
+    ERROR_REPORT(ERROR_DT_NOT_INIT);
     return false;
   }
 

@@ -20,6 +20,7 @@
 // Project headers
 #include "config.h"
 #include "pinout.h"
+#include "version.h"
 #include "error_handler.h"
 #include "flysky_ibus.h"
 #include "mech_collect.h"
@@ -139,9 +140,16 @@ static bool system_init(void )
   error_handler_init();
 
 #if ENABLE_DEBUG
-  printf("\n========================================\n");
-  printf(  "  E-Week 2026 Robot Controller\n");
-  printf(  "========================================\n\n");
+  printf("\n");
+  printf("========================================\n");
+  printf("  E-Week 2026 Robot Controller\n");
+  printf("  %s\n", BUILD_INFO_STRING);
+  printf("----------------------------------------\n");
+  printf("  Branch: %s\n", GIT_BRANCH);
+#if GIT_IS_DIRTY
+  printf("  Status: UNCOMMITTED CHANGES\n");
+#endif
+  printf("========================================\n\n");
 #endif
 
 #if ENABLE_WATCHDOG
