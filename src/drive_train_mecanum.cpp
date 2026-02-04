@@ -64,8 +64,8 @@ MotorDriver::MotorChannel_e DriveTrainMecanum::getChannelForMotor(MotorId_e moto
 #if USE_MOTOR_DRIVER_DRV8833
 
 bool DriveTrainMecanum::addMotor(MotorId_e motor,
-                                 int       pinIn1,
-                                 int       pinIn2)
+                                 int       pinFwd,
+                                 int       pinRev)
 {
   /* Validate motor ID */
   if (motor < MOTOR_FRONT_LEFT || motor >= MOTOR_COUNT)
@@ -79,7 +79,7 @@ bool DriveTrainMecanum::addMotor(MotorId_e motor,
   MotorDriver::MotorChannel_e channel = getChannelForMotor(motor);
 
   /* Configure motor through driver */
-  if (!driver.configureMotor(channel, pinIn1, pinIn2))
+  if (!driver.configureMotor(channel, pinFwd, pinRev))
   {
     ERROR_REPORT(ERROR_DT_PWM_FAILED);
     return false;
@@ -91,8 +91,8 @@ bool DriveTrainMecanum::addMotor(MotorId_e motor,
   m_motorState[motor].initialized = true;
 
 #if ENABLE_DEBUG
-  printf("[Mecanum] Motor %d configured (DRV8833): IN1=%d, IN2=%d\n",
-         motor, pinIn1, pinIn2);
+  printf("[Mecanum] Motor %d configured (DRV8833): FWD=%d, REV=%d\n",
+         motor, pinFwd, pinRev);
 #endif
 
   return true;

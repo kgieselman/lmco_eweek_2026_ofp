@@ -78,19 +78,19 @@ static void init_motors_mecanum(DriveTrainMecanum* pDriveTrain)
                           PIN_MECANUM_MOTOR_RL_DIR_REV);
 #else
     pDriveTrain->addMotor(DriveTrainMecanum::MOTOR_FRONT_LEFT,
-                          PIN_MECANUM_MOTOR_FL_PWM,
+                          PIN_MECANUM_MOTOR_FL_ENABLE,
                           PIN_MECANUM_MOTOR_FL_DIR_FWD,
                           PIN_MECANUM_MOTOR_FL_DIR_REV);
     pDriveTrain->addMotor(DriveTrainMecanum::MOTOR_FRONT_RIGHT,
-                          PIN_MECANUM_MOTOR_FR_PWM,
+                          PIN_MECANUM_MOTOR_FR_ENABLE,
                           PIN_MECANUM_MOTOR_FR_DIR_FWD,
                           PIN_MECANUM_MOTOR_FR_DIR_REV);
     pDriveTrain->addMotor(DriveTrainMecanum::MOTOR_REAR_RIGHT,
-                          PIN_MECANUM_MOTOR_RR_PWM,
+                          PIN_MECANUM_MOTOR_RR_ENABLE,
                           PIN_MECANUM_MOTOR_RR_DIR_FWD,
                           PIN_MECANUM_MOTOR_RR_DIR_REV);
     pDriveTrain->addMotor(DriveTrainMecanum::MOTOR_REAR_LEFT,
-                          PIN_MECANUM_MOTOR_RL_PWM,
+                          PIN_MECANUM_MOTOR_RL_ENABLE,
                           PIN_MECANUM_MOTOR_RL_DIR_FWD,
                           PIN_MECANUM_MOTOR_RL_DIR_REV);
 #endif
@@ -103,21 +103,21 @@ static void init_motors_differential(DriveTrainDifferential* pDriveTrain)
   {
 #if USE_MOTOR_DRIVER_DRV8833
     pDriveTrain->addMotor(DriveTrainDifferential::MOTOR_LEFT,
-                          PIN_DIFF_MOTOR_LEFT_IN1,
-                          PIN_DIFF_MOTOR_LEFT_IN2,
-                          PIN_DIFF_MOTOR_LEFT_ENC);
-    pDriveTrain->addMotor(DriveTrainDifferential::MOTOR_RIGHT,
-                          PIN_DIFF_MOTOR_RIGHT_IN1,
-                          PIN_DIFF_MOTOR_RIGHT_IN2,
-                          PIN_DIFF_MOTOR_RIGHT_ENC);
-#else
-    pDriveTrain->addMotor(DriveTrainDifferential::MOTOR_LEFT,
-                          PIN_DIFF_MOTOR_LEFT_PWM,
                           PIN_DIFF_MOTOR_LEFT_DIR_FWD,
                           PIN_DIFF_MOTOR_LEFT_DIR_REV,
                           PIN_DIFF_MOTOR_LEFT_ENC);
     pDriveTrain->addMotor(DriveTrainDifferential::MOTOR_RIGHT,
-                          PIN_DIFF_MOTOR_RIGHT_PWM,
+                          PIN_DIFF_MOTOR_RIGHT_DIR_FWD,
+                          PIN_DIFF_MOTOR_RIGHT_DIR_REV,
+                          PIN_DIFF_MOTOR_RIGHT_ENC);
+#else
+    pDriveTrain->addMotor(DriveTrainDifferential::MOTOR_LEFT,
+                          PIN_DIFF_MOTOR_LEFT_ENABLE,
+                          PIN_DIFF_MOTOR_LEFT_DIR_FWD,
+                          PIN_DIFF_MOTOR_LEFT_DIR_REV,
+                          PIN_DIFF_MOTOR_LEFT_ENC);
+    pDriveTrain->addMotor(DriveTrainDifferential::MOTOR_RIGHT,
+                          PIN_DIFF_MOTOR_RIGHT_ENABLE,
                           PIN_DIFF_MOTOR_RIGHT_DIR_FWD,
                           PIN_DIFF_MOTOR_RIGHT_DIR_REV,
                           PIN_DIFF_MOTOR_RIGHT_ENC);

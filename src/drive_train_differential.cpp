@@ -115,8 +115,8 @@ bool DriveTrainDifferential::configureEncoder(MotorId_e motor, int pinEncoder)
 
 #if USE_MOTOR_DRIVER_DRV8833
 bool DriveTrainDifferential::addMotor(MotorId_e motor,
-                                      int       pinIn1,
-                                      int       pinIn2,
+                                      int       pinFwd,
+                                      int       pinRev,
                                       int       pinEncoder)
 {
   /* Validate motor ID */
@@ -130,7 +130,7 @@ bool DriveTrainDifferential::addMotor(MotorId_e motor,
   MotorDriver::MotorChannel_e channel = getChannelForMotor(motor);
 
   /* Configure motor through driver */
-  if (!m_motorDriver.configureMotor(channel, pinIn1, pinIn2, pinEncoder))
+  if (!m_motorDriver.configureMotor(channel, pinFwd, pinRev, pinEncoder))
   {
     ERROR_REPORT(ERROR_DT_PWM_FAILED);
     return false;
@@ -145,8 +145,8 @@ bool DriveTrainDifferential::addMotor(MotorId_e motor,
   m_motorState[motor].initialized = true;
 
 #if ENABLE_DEBUG
-  printf("[DriveTrain] Motor %d configured (DRV8833): IN1=%d, IN2=%d\n",
-         motor, pinIn1, pinIn2);
+  printf("[DriveTrain] Motor %d configured (DRV8833): FWD=%d, REV=%d\n",
+         motor, pinFwd, pinRev);
 #endif
 
   return true;
