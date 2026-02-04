@@ -153,7 +153,7 @@ bool FlySkyIBus::hasNewMessage(void)
   uint8_t msgLength = pMsg[IBUS_PROTOCOL_LEN_IDX];
   if (msgLength < IBUS_MIN_MSG_LENGTH || msgLength > IBUS_MAX_MSG_LENGTH)
   {
-#if DEBUG_IBUS_VERBOSE
+#if ENABLE_DEBUG_IBUS_VERBOSE
     printf("[iBUS] Invalid length: %d\n", msgLength);
 #endif
     return false;
@@ -169,7 +169,7 @@ bool FlySkyIBus::hasNewMessage(void)
     }
     default:
     {
-#if DEBUG_IBUS_VERBOSE
+#if ENABLE_DEBUG_IBUS_VERBOSE
         printf("[iBUS] Unknown command: 0x%02X\n", pMsg[IBUS_PROTOCOL_CMD_IDX]);
 #endif
       return false;
@@ -179,7 +179,7 @@ bool FlySkyIBus::hasNewMessage(void)
   /* Validate CRC */
   if (!validateCrc((const uint8_t*)pMsg, msgLength))
   {
-#if DEBUG_IBUS_VERBOSE
+#if ENABLE_DEBUG_IBUS_VERBOSE
     printf("[iBUS] CRC mismatch\n");
 #endif
     return false;
@@ -219,7 +219,7 @@ bool FlySkyIBus::isSignalValid(void) const
   uint32_t now = to_ms_since_boot(get_absolute_time());
   uint32_t elapsed = now - m_lastMessageTimeMs;
 
-  return (elapsed < RC_SIGNAL_TIMEOUT_MS);
+  return (elapsed < TIMING_RC_SIGNAL_TIMEOUT_MS);
 }
 
 uint32_t FlySkyIBus::getTimeSinceLastMessage(void) const

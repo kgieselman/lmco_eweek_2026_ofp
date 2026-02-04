@@ -61,7 +61,7 @@ MotorDriver::MotorChannel_e DriveTrainMecanum::getChannelForMotor(MotorId_e moto
   return MotorDriver::MOTOR_B;
 }
 
-#if USE_MOTOR_DRIVER_DRV8833
+#if MOTOR_DRIVER_DRV8833
 
 bool DriveTrainMecanum::addMotor(MotorId_e motor,
                                  int       pinFwd,
@@ -98,7 +98,7 @@ bool DriveTrainMecanum::addMotor(MotorId_e motor,
   return true;
 }
 
-#else /* L298N */
+#elif MOTOR_DRIVER_L298N
 
 bool DriveTrainMecanum::addMotor(MotorId_e motor,
                                   int      pinPwm,
@@ -136,7 +136,7 @@ bool DriveTrainMecanum::addMotor(MotorId_e motor,
   return true;
 }
 
-#endif /* USE_MOTOR_DRIVER_DRV8833 */
+#endif /* MOTOR_DRIVER selection */
 
 bool DriveTrainMecanum::setStrafe(int strafe)
 {

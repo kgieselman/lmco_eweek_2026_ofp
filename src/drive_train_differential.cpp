@@ -113,7 +113,7 @@ bool DriveTrainDifferential::configureEncoder(MotorId_e motor, int pinEncoder)
   return true;
 }
 
-#if USE_MOTOR_DRIVER_DRV8833
+#if MOTOR_DRIVER_DRV8833
 bool DriveTrainDifferential::addMotor(MotorId_e motor,
                                       int       pinFwd,
                                       int       pinRev,
@@ -152,7 +152,7 @@ bool DriveTrainDifferential::addMotor(MotorId_e motor,
   return true;
 }
 
-#else /* L298N */
+#elif MOTOR_DRIVER_L298N
 
 bool DriveTrainDifferential::addMotor(MotorId_e motor,
                                       int       pinPwm,
@@ -192,7 +192,7 @@ bool DriveTrainDifferential::addMotor(MotorId_e motor,
 
   return true;
 }
-#endif /* USE_MOTOR_DRIVER_DRV8833 */
+#endif /* MOTOR_DRIVER selection */
 
 void DriveTrainDifferential::update(void)
 {
@@ -265,14 +265,14 @@ void DriveTrainDifferential::calibrate(void)
 
   /* Stop motors and wait for settle */
   stop();
-  sleep_ms(MOTOR_SETTLE_TIME_MS);
+  sleep_ms(TIMING_MOTOR_SETTLE_MS);
 
   /* Measure forward direction at 50% speed */
   int fwdPulses[MOTOR_COUNT] = {0};
   measureMotorPulses(true, USER_INPUT_MAX / 2, fwdPulses);
 
   stop();
-  sleep_ms(MOTOR_SETTLE_TIME_MS);
+  sleep_ms(TIMING_MOTOR_SETTLE_MS);
 
   /* Measure reverse direction */
   int revPulses[MOTOR_COUNT] = {0};
@@ -365,7 +365,7 @@ void DriveTrainDifferential::measureMotorPulses(bool forward, int motorValue, in
   }
 
   /* Let motors reach steady state */
-  sleep_ms(MOTOR_SETTLE_TIME_MS);
+  sleep_ms(TIMING_MOTOR_SETTLE_MS);
 
   /* Clear counters and enable interrupts */
   g_encoderLeftCount = 0;
@@ -378,7 +378,7 @@ void DriveTrainDifferential::measureMotorPulses(bool forward, int motorValue, in
   }
 
   /* Measure for calibration period */
-  sleep_ms(MOTOR_CALIBRATION_TIME_MS);
+  sleep_ms(TIMING_MOTOR_CALIBRATION_MS);
 
   /* Disable interrupts and capture counts */
   for (int i = MOTOR_COUNT - 1; i >= 0; i--)

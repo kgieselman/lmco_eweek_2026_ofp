@@ -21,7 +21,7 @@
  * @endverbatim
  *
  * @par Motor Driver Selection:
- * The motor driver type is selected via USE_MOTOR_DRIVER_DRV8833 in config.h:
+ * The motor driver type is selected via MOTOR_DRIVER_DRV8833 in config.h:
  * - 0 = L298N (1 PWM + 2 direction pins per motor)
  * - 1 = DRV8833 (2 PWM pins per motor)
  *
@@ -104,7 +104,7 @@ public:
    ****************************************************************************/
   ~DriveTrainMecanum() override;
 
-#if USE_MOTOR_DRIVER_DRV8833
+#if MOTOR_DRIVER_DRV8833
   /*****************************************************************************
    * @brief Add and configure a motor (DRV8833)
    *
@@ -119,7 +119,7 @@ public:
   bool addMotor(MotorId_e motor,
                 int       pinIn1,
                 int       pinIn2);
-#else
+#elif MOTOR_DRIVER_L298N
   /*****************************************************************************
    * @brief Add and configure a motor (L298N)
    *

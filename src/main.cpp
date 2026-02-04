@@ -27,9 +27,9 @@
 #include "mech_launcher.h"
 
 // Include appropriate drive train based on configuration
-#if USE_DRIVE_TRAIN_MECANUM
+#if DRIVE_TRAIN_MECANUM
 #include "drive_train_mecanum.h"
-#else
+#elif DRIVE_TRAIN_DIFFERENTIAL
 #include "drive_train_differential.h"
 #endif
 
@@ -40,9 +40,9 @@
 static FlySkyIBus* g_pIBus = nullptr;
 
 /** @brief Drive train controller */
-#if USE_DRIVE_TRAIN_MECANUM
+#if DRIVE_TRAIN_MECANUM
 static DriveTrainMecanum* g_pDriveTrain = nullptr;
-#else
+#elif DRIVE_TRAIN_DIFFERENTIAL
 static DriveTrainDifferential* g_pDriveTrain = nullptr;
 #endif
 
@@ -58,12 +58,12 @@ static MechLauncher* g_pLauncher = nullptr;
 
 /* Private Function Definitions ----------------------------------------------*/
 
-#if USE_DRIVE_TRAIN_MECANUM
+#if DRIVE_TRAIN_MECANUM
 static void init_motors_mecanum(DriveTrainMecanum* pDriveTrain)
 {
   if (pDriveTrain != nullptr)
   {
-#if USE_MOTOR_DRIVER_DRV8833
+#if MOTOR_DRIVER_DRV8833
     pDriveTrain->addMotor(DriveTrainMecanum::MOTOR_FRONT_LEFT,
                           PIN_MECANUM_MOTOR_FL_DIR_FWD,
                           PIN_MECANUM_MOTOR_FL_DIR_REV);
@@ -96,12 +96,12 @@ static void init_motors_mecanum(DriveTrainMecanum* pDriveTrain)
 #endif
   }
 }
-#else
+#elif DRIVE_TRAIN_DIFFERENTIAL
 static void init_motors_differential(DriveTrainDifferential* pDriveTrain)
 {
   if (pDriveTrain != nullptr)
   {
-#if USE_MOTOR_DRIVER_DRV8833
+#if MOTOR_DRIVER_DRV8833
     pDriveTrain->addMotor(DriveTrainDifferential::MOTOR_LEFT,
                           PIN_DIFF_MOTOR_LEFT_DIR_FWD,
                           PIN_DIFF_MOTOR_LEFT_DIR_REV,
@@ -124,7 +124,7 @@ static void init_motors_differential(DriveTrainDifferential* pDriveTrain)
 #endif
   }
 }
-#endif // Drive Train Differential
+#endif /* DRIVE_TRAIN_DIFFERENTIAL */
 
 /*******************************************************************************
  * @brief Initialize all system components
@@ -167,17 +167,17 @@ static bool system_init(void )
 
   /* Initialize drive train */
 #if ENABLE_DEBUG
-#if USE_DRIVE_TRAIN_MECANUM
+#if DRIVE_TRAIN_MECANUM
   printf("[Init] Configuring Mecanum drive train...\n");
-#else
+#elif DRIVE_TRAIN_DIFFERENTIAL
   printf("[Init] Configuring Differential drive train...\n");
 #endif
 #endif
 
-#if USE_DRIVE_TRAIN_MECANUM
+#if DRIVE_TRAIN_MECANUM
   g_pDriveTrain = new DriveTrainMecanum();
   init_motors_mecanum(g_pDriveTrain);
-#else
+#elif DRIVE_TRAIN_DIFFERENTIAL
   g_pDriveTrain = new DriveTrainDifferential();
   init_motors_differential(g_pDriveTrain);
 #endif
@@ -220,9 +220,9 @@ static bool system_init(void )
   /* Enable watchdog */
 #if ENABLE_WATCHDOG
 #if ENABLE_DEBUG
-  printf("[Init] Enabling watchdog (timeout: %d ms)...\n", WATCHDOG_TIMEOUT_MS);
+  printf("[Init] Enabling watchdog (timeout: %d ms)...\n", TIMING_WATCHDOG_TIMEOUT_MS);
 #endif
-  watchdog_enable(WATCHDOG_TIMEOUT_MS, true);
+  watchdog_enable(TIMING_WATCHDOG_TIMEOUT_MS, true);
 #endif
 
 #if ENABLE_DEBUG
@@ -258,7 +258,7 @@ static void process_rc_input(void)
   g_pDriveTrain->setSpeed(speed);
   g_pDriveTrain->setTurn(turn);
 
-#if USE_DRIVE_TRAIN_MECANUM
+#if DRIVE_TRAIN_MECANUM
   int strafe = g_pIBus->readChannelNormalized(FlySkyIBus::CHAN_LSTICK_HORIZ);
   static_cast<DriveTrainMecanum*>(g_pDriveTrain)->setStrafe(strafe);
 #endif
@@ -282,7 +282,7 @@ static void handle_signal_loss(void)
 #if ENABLE_DEBUG
   static uint32_t lastWarnTime = 0;
   uint32_t now = to_ms_since_boot(get_absolute_time());
-  if (now - lastWarnTime > SIGNAL_LOSS_PRINT_TIMEOUT_MS)
+  if (now - lastWarnTime > TIMING_SIGNAL_LOSS_PRINT_MS)
   {
     printf("[WARN] RC signal lost!\n");
     lastWarnTime = now;
@@ -304,7 +304,7 @@ int main(void)
   stdio_init_all();
 
 #if ENABLE_STDIO_USB
-  sleep_ms(STDIO_USB_DELAY_MS);
+  sleep_ms(TIMING_USB_STARTUP_DELAY_MS);
 #endif
 
   if (!system_init())
@@ -320,9 +320,9 @@ int main(void)
     while (true)
     {
       gpio_put(PIN_LED_ONBOARD, 1);
-      sleep_ms(ERROR_LED_DUTY_TIME_MS);
+      sleep_ms(TIMING_ERROR_LED_BLINK_MS);
       gpio_put(PIN_LED_ONBOARD, 0);
-      sleep_ms(ERROR_LED_DUTY_TIME_MS);
+      sleep_ms(TIMING_ERROR_LED_BLINK_MS);
 
 #if ENABLE_WATCHDOG
       watchdog_update();
@@ -378,11 +378,11 @@ int main(void)
     }
 
     /* Rate limiting */
-#if MAIN_LOOP_PERIOD_MS > 0
+#if TIMING_MAIN_LOOP_PERIOD_MS > 0
     uint32_t elapsed = to_ms_since_boot(get_absolute_time()) - loopStart;
-    if (elapsed < MAIN_LOOP_PERIOD_MS)
+    if (elapsed < TIMING_MAIN_LOOP_PERIOD_MS)
     {
-      sleep_ms(MAIN_LOOP_PERIOD_MS - elapsed);
+      sleep_ms(TIMING_MAIN_LOOP_PERIOD_MS - elapsed);
     }
 #endif
   }
