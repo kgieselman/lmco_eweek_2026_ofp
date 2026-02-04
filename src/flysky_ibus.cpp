@@ -62,7 +62,7 @@ void __isr_uart1_rx(void)
     g_rxWriteIdx = (g_rxWriteIdx + 1) % RX_BUFFER_COUNT;
 
     /* Signal new message available */
-    g_newMessageFlag = true;
+    __atomic_store_n(&g_newMessageFlag, true, __ATOMIC_RELEASE);
   }
 }
 
@@ -138,13 +138,11 @@ bool FlySkyIBus::hasNewMessage(void)
     return false;
   }
 
-  if (!g_newMessageFlag)
+  bool newMsg = __atomic_exchange_n(&g_newMessageFlag, false, __ATOMIC_ACQ_REL);
+  if (!newMsg)
   {
     return false;
   }
-
-  /* Clear the flag atomically */
-  g_newMessageFlag = false;
 
   /* Get pointer to received data */
   volatile uint8_t* pMsg = g_rxBuffers[g_rxReadIdx];
