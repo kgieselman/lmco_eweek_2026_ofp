@@ -102,6 +102,44 @@ Edit `inc/config.h` to configure:
 - Watchdog timeout
 - Other feature flags
 
+## Version Information
+
+The build system automatically embeds Git version information into the firmware:
+
+### Automatic Version Tracking
+
+During the build process, CMake generates a `version.h` file containing:
+- **Semantic Version**: Project version (e.g., "1.0.0")
+- **Git Commit Hash**: Short (7 char) and full (40 char) commit hash
+- **Git Branch**: Current branch name
+- **Git Tag**: Tag name if HEAD is on a tag
+- **Dirty Flag**: Indicates uncommitted changes in working directory
+- **Build Timestamp**: Date and time of compilation
+- **Build Type**: Debug, Release, etc.
+
+### Usage in Code
+
+Include the generated header to access version information:
+
+```cpp
+#include "version.h"
+
+// Display full version string
+printf("Firmware: %s\n", BUILD_VERSION_FULL);  // e.g., "1.0.0-abc1234"
+
+// Boot message with build info
+printf("%s\n", BUILD_INFO_STRING);  // e.g., "v1.0.0 (abc1234) built Feb 4 2026 09:30:45"
+
+// Check for uncommitted changes
+#if GIT_IS_DIRTY
+  printf("Warning: Built from uncommitted changes\n");
+#endif
+```
+
+### Template File
+
+The version information is defined in `inc/version.h.in` and automatically populated during the CMake configuration step. The generated file is placed in `build/generated/version.h` and included via the build system.
+
 ## Hardware Setup
 
 ### Pin Assignments
