@@ -66,7 +66,7 @@ public:
    *
    * Maps logical control names to iBUS channel indices.
    ****************************************************************************/
-  enum Channel {
+  enum Channel_e {
     CHAN_RSTICK_HORIZ = 0,  /**< Right stick horizontal (aileron) */
     CHAN_RSTICK_VERT  = 1,  /**< Right stick vertical (elevator) */
     CHAN_LSTICK_VERT  = 2,  /**< Left stick vertical (throttle) */
@@ -131,7 +131,7 @@ public:
    * @param channel Channel to read
    * @return Channel value (1000-2000), or 1500 if invalid channel
    ****************************************************************************/
-  int readChannel(Channel channel) const;
+  int readChannel(Channel_e channel) const;
 
   /*****************************************************************************
    * @brief Read channel value normalized to -500 to +500 range
@@ -141,7 +141,7 @@ public:
    * @param channel Channel to read
    * @return Normalized value (-500 to +500), or 0 if invalid channel
    ****************************************************************************/
-  int readChannelNormalized(Channel channel) const;
+  int readChannelNormalized(Channel_e channel) const;
 
   /*****************************************************************************
    * @brief Check if RC signal is currently valid
@@ -200,6 +200,15 @@ private:
 
 
   /* Private Function Declarations -------------------------------------------*/
+
+  /*****************************************************************************
+   * @brief Validates if a given pin is valid for the given UART
+   * @param pUart  - Pointer to the UART instance
+   * @param isTx   - true if given pin is transmit, false if receive
+   * @param pinNum - Number of the pin be validated
+   * @return true if the pin is valid, false otherwise
+   ****************************************************************************/
+  bool validateUartPin(uart_inst_t* pUart, bool isTx, int pinNum);
 
   /*****************************************************************************
    * @brief Calculate iBUS CRC

@@ -43,8 +43,8 @@
 #if USE_MOTOR_DRIVER_DRV8833
   #include "motor_driver_drv8833.h"
   using MotorDriver  = MotorDriverDRV8833;
-  using MotorChannel = MotorDriverDRV8833::MotorChannel;
-  using StopMode     = MotorDriverDRV8833::StopMode;
+  using MotorChannel = MotorDriverDRV8833::MotorChannel_e;
+  using StopMode     = MotorDriverDRV8833::StopMode_e;
 
   /** @brief Motor channel A constant */
   constexpr MotorChannel MOTOR_CHANNEL_A = MotorDriverDRV8833::MOTOR_A;
@@ -57,8 +57,8 @@
 #else
   #include "motor_driver_l298n.h"
   using MotorDriver  = MotorDriverL298N;
-  using MotorChannel = MotorDriverL298N::MotorChannel;
-  using StopMode     = MotorDriverL298N::StopMode;
+  using MotorChannel = MotorDriverL298N::MotorChannel_e;
+  using StopMode     = MotorDriverL298N::StopMode_e;
 
   /** @brief Motor channel A constant */
   constexpr MotorChannel MOTOR_CHANNEL_A = MotorDriverL298N::MOTOR_A;
@@ -91,11 +91,6 @@
  * @brief Milliseconds between prints when sinal is lost
  ******************************************************************************/
 #define SIGNAL_LOSS_PRINT_TIMEOUT_MS (1000)
-
-/*******************************************************************************
- * @brief Milliseconds to delay and allow USB to enumerate and work for stdio
- ******************************************************************************/
-#define STDIO_USB_DELAY_MS (2000)
 
 /*******************************************************************************
  * @brief Milliseconds before toggling LED that signals error ocurred
@@ -142,13 +137,6 @@
 #define MAIN_LOOP_PERIOD_MS (1)
 
 /*******************************************************************************
- * @brief Default PWM frequency divider
- *
- * Adjusts PWM frequency. Higher values = lower frequency.
- ******************************************************************************/
-#define PWM_CLOCK_DIVIDER (4.0f)
-
-/*******************************************************************************
  * @brief Motor settling time during calibration (ms)
  ******************************************************************************/
 #define MOTOR_SETTLE_TIME_MS (500)
@@ -157,21 +145,6 @@
  * @brief Motor pulse counting time during calibration (ms)
  ******************************************************************************/
 #define MOTOR_CALIBRATION_TIME_MS (2000)
-
-/*******************************************************************************
- * @brief Enable collection mechanism
- ******************************************************************************/
-#define ENABLE_MECH_COLLECT (1)
-
-/*******************************************************************************
- * @brief Enable deposit mechanism
- ******************************************************************************/
-#define ENABLE_MECH_DEPOSIT (1)
-
-/*******************************************************************************
- * @brief Enable launcher mechanism
- ******************************************************************************/
-#define ENABLE_MECH_LAUNCHER (1)
 
 /*******************************************************************************
  * @brief Enable encoder feedback for motor calibration
@@ -187,6 +160,11 @@
  * @brief Enable USB output for stdio
  ******************************************************************************/
 #define ENABLE_STDIO_USB (1)
+
+/*******************************************************************************
+ * @brief Milliseconds to delay and allow USB to enumerate and work for stdio
+ ******************************************************************************/
+#define STDIO_USB_DELAY_MS (2000)
 
 
 /* EOF -----------------------------------------------------------------------*/

@@ -31,22 +31,6 @@ MechCollect::~MechCollect()
 
 bool MechCollect::init(void)
 {
-#if ENABLE_MECH_COLLECT
-  /* TODO: Initialize GPIO pins for collection mechanism
-   *
-   * Example:
-   * if (PIN_COLLECT_MOTOR_PWM != PIN_INVALID) {
-   *   gpio_set_function(PIN_COLLECT_MOTOR_PWM, GPIO_FUNC_PWM);
-   *   // Configure PWM...
-   * }
-   *
-   * if (PIN_COLLECT_SENSOR != PIN_INVALID) {
-   *   gpio_init(PIN_COLLECT_SENSOR);
-   *   gpio_set_dir(PIN_COLLECT_SENSOR, GPIO_IN);
-   *   gpio_pull_up(PIN_COLLECT_SENSOR);
-   * }
-   */
-
   m_initialized = true;
 
 #if ENABLE_DEBUG
@@ -54,14 +38,10 @@ bool MechCollect::init(void)
 #endif
 
   return true;
-#else
-  return false;
-#endif /* ENABLE_MECH_COLLECT */
 }
 
 void MechCollect::update(void)
 {
-#if ENABLE_MECH_COLLECT
   if (!m_initialized)
   {
     return;
@@ -69,7 +49,6 @@ void MechCollect::update(void)
 
   uint32_t now = to_ms_since_boot(get_absolute_time());
   m_lastUpdateMs = now;
-#endif /* ENABLE_MECH_COLLECT */
 }
 
 

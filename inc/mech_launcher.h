@@ -31,21 +31,6 @@
 class MechLauncher
 {
 public:
-  /* Public Types ------------------------------------------------------------*/
-
-  /*****************************************************************************
-   * @brief Launcher mechanism state
-   ****************************************************************************/
-  enum State {
-    STATE_IDLE,       /**< Mechanism not active */
-    STATE_SPINNING_UP,/**< Flywheel coming up to speed */
-    STATE_READY,      /**< Ready to launch */
-    STATE_LAUNCHING,  /**< Launch in progress */
-    STATE_COOLDOWN,   /**< Cooling down between launches */
-    STATE_ERROR       /**< Fault detected */
-  };
-
-
   /* Public Function Declarations --------------------------------------------*/
 
   /*****************************************************************************
@@ -80,7 +65,6 @@ private:
   /* Private Variables -------------------------------------------------------*/
   bool m_initialized;      /**< Initialization status */
   uint32_t m_lastUpdateMs; /**< Last update timestamp */
-  uint32_t m_stateStartMs; /**< When current state began */
 };
 
 

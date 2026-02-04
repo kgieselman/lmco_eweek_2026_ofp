@@ -88,6 +88,13 @@ FlySkyIBus::FlySkyIBus(uart_inst_t* pUart, int pinTx, int pinRx)
   }
 
   /* Configure UART */
+  if (!validateUartPin(m_pUart, true,  pinTx) ||
+      !validateUartPin(m_pUart, false, pinRx))
+  {
+    ERROR_REPORT(ERROR_IBUS_INIT_FAILED);
+    return;
+  }
+
   uart_init(m_pUart, IBUS_BAUD_RATE);
   gpio_set_function(pinTx, GPIO_FUNC_UART);
   gpio_set_function(pinRx, GPIO_FUNC_UART);
@@ -153,12 +160,20 @@ bool FlySkyIBus::hasNewMessage(void)
   }
 
   /* Validate command code */
-  if (pMsg[IBUS_PROTOCOL_CMD_IDX] != IBUS_CMD_CHAN_DATA)
+  switch (pMsg[IBUS_PROTOCOL_CMD_IDX])
   {
+    case IBUS_CMD_CHAN_DATA:
+    {
+      // Command supported, continue
+      break;
+    }
+    default:
+    {
 #if DEBUG_IBUS_VERBOSE
-    printf("[iBUS] Unknown command: 0x%02X\n", pMsg[IBUS_PROTOCOL_CMD_IDX]);
+        printf("[iBUS] Unknown command: 0x%02X\n", pMsg[IBUS_PROTOCOL_CMD_IDX]);
 #endif
-    return false;
+      return false;
+    }
   }
 
   /* Validate CRC */
@@ -179,7 +194,7 @@ bool FlySkyIBus::hasNewMessage(void)
   return true;
 }
 
-int FlySkyIBus::readChannel(Channel channel) const
+int FlySkyIBus::readChannel(Channel_e channel) const
 {
   if (/*channel < 0 || */channel >= CHAN_COUNT)
   {
@@ -189,7 +204,7 @@ int FlySkyIBus::readChannel(Channel channel) const
   return m_messageSnapshot.channels[channel];
 }
 
-int FlySkyIBus::readChannelNormalized(Channel channel) const
+int FlySkyIBus::readChannelNormalized(Channel_e channel) const
 {
   return readChannel(channel) - CHANNEL_VALUE_CENTER;
 }
@@ -233,6 +248,61 @@ void FlySkyIBus::debugPrint(void) const
          readChannel(CHAN_SWC),
          readChannel(CHAN_SWD));
 #endif
+}
+
+bool FlySkyIBus::validateUartPin(uart_inst_t* pUart, bool isTx, int pinNum)
+{
+  if (pUart == uart0)
+  {
+    if (isTx)
+    {
+      if ((pinNum == 0) ||
+          (pinNum == 12) ||
+          (pinNum == 16))
+      {
+        // Valid transmit pin for UART 0
+        return true;
+      }
+    }
+    else
+    {
+      if ((pinNum == 1) ||
+          (pinNum == 13) ||
+          (pinNum == 17))
+      {
+        // Valid receive pin for UART 0
+        return true;
+      }
+    }
+  }
+  else if (pUart == uart1)
+  {
+    if (isTx)
+    {
+      // Valid transmit pin for UART 1
+      if ((pinNum == 4) ||
+          (pinNum == 8))
+      {
+        return true;
+      }
+    }
+    else
+    {
+      if ((pinNum == 5) ||
+          (pinNum == 9))
+      {
+        // Valid receive pin for UART 1
+        return true;
+      }
+    }
+  }
+  else
+  {
+    // ERROR: Uart handle invalid or null
+    return false;
+  }
+
+  return false;
 }
 
 uint16_t FlySkyIBus::calculateCrc(const uint8_t* pData, int length)

@@ -32,25 +32,12 @@
  * collector.init();
  *
  * // In main loop
- * collector.setActive(true);  // Start collecting
  * collector.update();
  * @endcode
  ******************************************************************************/
 class MechCollect
 {
 public:
-  /* Public Types ------------------------------------------------------------*/
-
-  /*****************************************************************************
-   * @brief Collection mechanism state
-   ****************************************************************************/
-  enum State {
-    STATE_IDLE,       /**< Mechanism not active */
-    STATE_COLLECTING, /**< Actively collecting */
-    STATE_FULL,       /**< Storage is full */
-    STATE_ERROR       /**< Fault detected */
-  };
-
   /* Public Function Declarations --------------------------------------------*/
 
   /*****************************************************************************

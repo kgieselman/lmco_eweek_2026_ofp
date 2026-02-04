@@ -44,11 +44,11 @@ MotorDriverL298N::MotorDriverL298N(int pwmFreqHz)
   /* Initialize motor configurations */
   for (int i = 0; i < MOTOR_COUNT; i++)
   {
-    m_motors[i].configured = false;
-    m_motors[i].pinPwm = -1;
-    m_motors[i].pinDirFwd = -1;
-    m_motors[i].pinDirRev = -1;
-    m_motors[i].pinEncoder = -1;
+    m_motors[i].configured   = false;
+    m_motors[i].pinPwm       = PIN_INVALID;
+    m_motors[i].pinDirFwd    = PIN_INVALID;
+    m_motors[i].pinDirRev    = PIN_INVALID;
+    m_motors[i].pinEncoder   = PIN_INVALID;
     m_motors[i].currentValue = 0;
   }
 }
@@ -59,11 +59,11 @@ MotorDriverL298N::~MotorDriverL298N()
   stopAll(STOP_COAST);
 }
 
-bool MotorDriverL298N::configureMotor(MotorChannel channel,
-                                       int pinPwm,
-                                       int pinDirFwd,
-                                       int pinDirRev,
-                                       int pinEncoder)
+bool MotorDriverL298N::configureMotor(MotorChannel_e channel,
+                                      int            pinPwm,
+                                      int            pinDirFwd,
+                                      int            pinDirRev,
+                                      int            pinEncoder)
 {
   /* Validate channel */
   if (channel >= MOTOR_COUNT)
@@ -80,7 +80,7 @@ bool MotorDriverL298N::configureMotor(MotorChannel channel,
   }
 
   /* Validate encoder pin if specified */
-  if (pinEncoder != -1 && !validatePin(pinEncoder))
+  if (!validatePin(pinEncoder))
   {
     ERROR_REPORT(ERROR_DT_INVALID_PIN);
     return false;
@@ -109,12 +109,12 @@ bool MotorDriverL298N::configureMotor(MotorChannel channel,
   return true;
 }
 
-bool MotorDriverL298N::setMotor(MotorChannel channel, int value)
+bool MotorDriverL298N::setMotor(MotorChannel_e channel, int value)
 {
   return setMotorWithTrim(channel, value, 1.0f);
 }
 
-bool MotorDriverL298N::setMotorWithTrim(MotorChannel channel, int value, float trim)
+bool MotorDriverL298N::setMotorWithTrim(MotorChannel_e channel, int value, float trim)
 {
   /* Validate channel */
   if (channel >= MOTOR_COUNT)
@@ -172,7 +172,7 @@ bool MotorDriverL298N::setMotorWithTrim(MotorChannel channel, int value, float t
   return true;
 }
 
-void MotorDriverL298N::coast(MotorChannel channel)
+void MotorDriverL298N::coast(MotorChannel_e channel)
 {
   if (channel >= MOTOR_COUNT || !m_motors[channel].configured)
   {
@@ -186,7 +186,7 @@ void MotorDriverL298N::coast(MotorChannel channel)
   m_motors[channel].currentValue = 0;
 }
 
-void MotorDriverL298N::brake(MotorChannel channel)
+void MotorDriverL298N::brake(MotorChannel_e channel)
 {
   if (channel >= MOTOR_COUNT || !m_motors[channel].configured)
   {
@@ -200,7 +200,7 @@ void MotorDriverL298N::brake(MotorChannel channel)
   m_motors[channel].currentValue = 0;
 }
 
-void MotorDriverL298N::stop(MotorChannel channel, StopMode mode)
+void MotorDriverL298N::stop(MotorChannel_e channel, StopMode_e mode)
 {
   if (mode == STOP_BRAKE)
   {
@@ -212,15 +212,15 @@ void MotorDriverL298N::stop(MotorChannel channel, StopMode mode)
   }
 }
 
-void MotorDriverL298N::stopAll(StopMode mode)
+void MotorDriverL298N::stopAll(StopMode_e mode)
 {
   for (int i = 0; i < MOTOR_COUNT; i++)
   {
-    stop(static_cast<MotorChannel>(i), mode);
+    stop(static_cast<MotorChannel_e>(i), mode);
   }
 }
 
-bool MotorDriverL298N::isConfigured(MotorChannel channel) const
+bool MotorDriverL298N::isConfigured(MotorChannel_e channel) const
 {
   if (channel >= MOTOR_COUNT)
   {
@@ -241,11 +241,11 @@ bool MotorDriverL298N::isFullyConfigured(void) const
   return true;
 }
 
-int MotorDriverL298N::getEncoderPin(MotorChannel channel) const
+int MotorDriverL298N::getEncoderPin(MotorChannel_e channel) const
 {
   if (channel >= MOTOR_COUNT)
   {
-    return -1;
+    return PIN_INVALID;
   }
   return m_motors[channel].pinEncoder;
 }
