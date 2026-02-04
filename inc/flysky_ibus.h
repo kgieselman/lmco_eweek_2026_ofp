@@ -202,6 +202,15 @@ private:
   /* Private Function Declarations -------------------------------------------*/
 
   /*****************************************************************************
+   * @brief Validates if a given pin is valid for the given UART
+   * @param pUart  - Pointer to the UART instance
+   * @param isTx   - true if given pin is transmit, false if receive
+   * @param pinNum - Number of the pin be validated
+   * @return true if the pin is valid, false otherwise
+   ****************************************************************************/
+  bool validateUartPin(uart_inst_t* pUart, bool isTx, int pinNum);
+
+  /*****************************************************************************
    * @brief Calculate iBUS CRC
    *
    * @param pData Pointer to message data
