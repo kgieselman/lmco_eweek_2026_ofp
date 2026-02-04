@@ -100,10 +100,10 @@ bool DriveTrainMecanum::addMotor(MotorId_e motor,
 
 #else /* L298N */
 
-bool DriveTrainMecanum::addMotor(MotorId motor,
-                                  int pinPwm,
-                                  int pinDirFwd,
-                                  int pinDirRev)
+bool DriveTrainMecanum::addMotor(MotorId_e motor,
+                                  int      pinPwm,
+                                  int      pinDirFwd,
+                                  int      pinDirRev)
 {
   /* Validate motor ID */
   if (motor < MOTOR_FRONT_LEFT || motor >= MOTOR_COUNT)
@@ -114,7 +114,7 @@ bool DriveTrainMecanum::addMotor(MotorId motor,
 
   /* Get the appropriate driver and channel */
   MotorDriver& driver = getDriverForMotor(motor);
-  MotorDriver::MotorChannel channel = getChannelForMotor(motor);
+  MotorDriver::MotorChannel_e channel = getChannelForMotor(motor);
 
   /* Configure motor through driver */
   if (!driver.configureMotor(channel, pinPwm, pinDirFwd, pinDirRev))
