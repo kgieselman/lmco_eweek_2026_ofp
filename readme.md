@@ -109,10 +109,10 @@ The version information is defined in `inc/version.h.in` and automatically popul
 
 See `inc/pinout.h` for complete pin mappings. Key connections:
 
-| Function | GPIO |
-|----------|------|
-| iBUS RX  | 5    |
-| iBUS TX  | 4    |
+| Function | GPIO      |
+|----------|-----------|
+| iBUS RX  | 5         |
+| iBUS TX  | 4         |
 | UART0 TX | 0 (debug) |
 | UART0 RX | 1 (debug) |
 
