@@ -160,12 +160,20 @@ bool FlySkyIBus::hasNewMessage(void)
   }
 
   /* Validate command code */
-  if (pMsg[IBUS_PROTOCOL_CMD_IDX] != IBUS_CMD_CHAN_DATA)
+  switch (pMsg[IBUS_PROTOCOL_CMD_IDX])
   {
+    case IBUS_CMD_CHAN_DATA:
+    {
+      // Command supported, continue
+      break;
+    }
+    default:
+    {
 #if DEBUG_IBUS_VERBOSE
-    printf("[iBUS] Unknown command: 0x%02X\n", pMsg[IBUS_PROTOCOL_CMD_IDX]);
+        printf("[iBUS] Unknown command: 0x%02X\n", pMsg[IBUS_PROTOCOL_CMD_IDX]);
 #endif
-    return false;
+      return false;
+    }
   }
 
   /* Validate CRC */
