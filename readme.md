@@ -25,46 +25,6 @@ at targets.
 - These are separate ping pong balls from those being collected
 - Balls are manually fed by a teammate near the ball pit
 
-## Project Structure
-
-```
-eweek_2026/
-├── CMakeLists.txt           # Build configuration
-├── README.md                # This file
-├── pico_sdk_import.cmake    # Pico SDK import script
-├── inc/                     # Header files
-│   ├── config.h             # Project configuration and feature flags
-│   ├── error_handler.h      # Error handling utilities
-│   ├── pinout.h             # GPIO pin definitions
-│   ├── drive_train.h        # Base drive train class
-│   ├── drive_train_differential.h
-│   ├── drive_train_mecanum.h
-│   ├── flysky_ibus.h        # RC receiver interface
-│   ├── ring_buffer.h        # Circular buffer utility
-│   ├── mech_collect.h       # Collection mechanism
-│   ├── mech_deposit.h       # Deposit mechanism
-│   └── mech_launcher.h      # Launcher mechanism
-├── src/                     # Source files
-│   ├── main.cpp             # Application entry point
-│   ├── error_handler.cpp
-│   ├── drive_train.cpp
-│   ├── drive_train_differential.cpp
-│   ├── drive_train_mecanum.cpp
-│   ├── flysky_ibus.cpp
-│   ├── ring_buffer.cpp
-│   ├── mech_collect.cpp
-│   ├── mech_deposit.cpp
-│   └── mech_launcher.cpp
-└── test/                    # Unit tests (host-side)
-    ├── Makefile
-    ├── README.md
-    ├── unit_test.h
-    ├── test_ring_buffer.cpp
-    ├── test_ibus.cpp
-    ├── test_differential.cpp
-    └── test_mecanum.cpp
-```
-
 ## Building
 
 ### Prerequisites
@@ -73,6 +33,9 @@ eweek_2026/
 2. CMake (v3.13 or later)
 3. ARM GCC toolchain
 4. (Optional) VS Code with Pico extension
+    + Open VS Code in a non-repo
+    + Use Pico Extension to import the cloned project
+
 
 ### Build Steps
 
