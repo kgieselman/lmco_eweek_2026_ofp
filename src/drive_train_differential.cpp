@@ -14,6 +14,7 @@
 #endif
 
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 
 #if ENABLE_DEBUG
@@ -54,14 +55,17 @@ void __isr_encoder_right(uint gpio, uint32_t events)
 DriveTrainDifferential::DriveTrainDifferential()
   : DriveTrain()
   , m_motorDriver()
+  , m_useManualTrim(true)  /* Default to manual trim mode */
 {
   /* Initialize motor state */
   for (int i = 0; i < MOTOR_COUNT; i++)
   {
-    m_motorState[i].initialized = false;
-    m_motorState[i].pinEncoder  = PIN_INVALID;
-    m_motorState[i].trimFwd     = DEFAULT_TRIM;
-    m_motorState[i].trimRev     = DEFAULT_TRIM;
+    m_motorState[i].initialized  = false;
+    m_motorState[i].pinEncoder   = PIN_INVALID;
+    m_motorState[i].trimFwd      = DEFAULT_TRIM;
+    m_motorState[i].trimRev      = DEFAULT_TRIM;
+    m_motorState[i].calibTrimFwd = DEFAULT_TRIM;
+    m_motorState[i].calibTrimRev = DEFAULT_TRIM;
   }
 }
 
@@ -140,9 +144,11 @@ bool DriveTrainDifferential::addMotor(MotorId_e motor,
   configureEncoder(motor, pinEncoder);
 
   /* Reset trim values and mark initialized */
-  m_motorState[motor].trimFwd = DEFAULT_TRIM;
-  m_motorState[motor].trimRev = DEFAULT_TRIM;
-  m_motorState[motor].initialized = true;
+  m_motorState[motor].trimFwd      = DEFAULT_TRIM;
+  m_motorState[motor].trimRev      = DEFAULT_TRIM;
+  m_motorState[motor].calibTrimFwd = DEFAULT_TRIM;
+  m_motorState[motor].calibTrimRev = DEFAULT_TRIM;
+  m_motorState[motor].initialized  = true;
 
 #if ENABLE_DEBUG
   printf("[DriveTrain] Motor %d configured (DRV8833): FWD=%d, REV=%d\n",
@@ -181,9 +187,11 @@ bool DriveTrainDifferential::addMotor(MotorId_e motor,
   configureEncoder(motor, pinEncoder);
 
   /* Reset trim values and mark initialized */
-  m_motorState[motor].trimFwd = DEFAULT_TRIM;
-  m_motorState[motor].trimRev = DEFAULT_TRIM;
-  m_motorState[motor].initialized = true;
+  m_motorState[motor].trimFwd      = DEFAULT_TRIM;
+  m_motorState[motor].trimRev      = DEFAULT_TRIM;
+  m_motorState[motor].calibTrimFwd = DEFAULT_TRIM;
+  m_motorState[motor].calibTrimRev = DEFAULT_TRIM;
+  m_motorState[motor].initialized  = true;
 
 #if ENABLE_DEBUG
   printf("[DriveTrain] Motor %d configured (L298N): PWM=%d, FWD=%d, REV=%d\n",
@@ -223,8 +231,13 @@ void DriveTrainDifferential::update(void)
   for (int i = 0; i < MOTOR_COUNT; i++)
   {
     float trim = (motorValues[i] > 0) ? m_motorState[i].trimFwd : m_motorState[i].trimRev;
-    MotorDriver::MotorChannel_e channel = 
-      (i == MOTOR_LEFT) ? MotorDriver::MOTOR_A : MotorDriver::MOTOR_B;
+
+    MotorDriver::MotorChannel_e channel = MotorDriver::MOTOR_A; // Default to left
+    if (i == MOTOR_RIGHT)
+    {
+      channel = MotorDriver::MOTOR_B;
+    }
+
     (void)m_motorDriver.setMotorWithTrim(channel, motorValues[i], trim);
   }
 }
@@ -257,8 +270,18 @@ void DriveTrainDifferential::calibrate(void)
     /* No encoders - use default trim */
     for (int i = 0; i < MOTOR_COUNT; i++)
     {
-      m_motorState[i].trimFwd = DEFAULT_TRIM;
-      m_motorState[i].trimRev = DEFAULT_TRIM;
+      m_motorState[i].calibTrimFwd = DEFAULT_TRIM;
+      m_motorState[i].calibTrimRev = DEFAULT_TRIM;
+    }
+    
+    /* Apply calibrated values if in calibrated mode */
+    if (!m_useManualTrim)
+    {
+      for (int i = 0; i < MOTOR_COUNT; i++)
+      {
+        m_motorState[i].trimFwd = m_motorState[i].calibTrimFwd;
+        m_motorState[i].trimRev = m_motorState[i].calibTrimRev;
+      }
     }
     return;
   }
@@ -284,49 +307,69 @@ void DriveTrainDifferential::calibrate(void)
   int minFwd = std::min(fwdPulses[MOTOR_LEFT], fwdPulses[MOTOR_RIGHT]);
   int minRev = std::min(revPulses[MOTOR_LEFT], revPulses[MOTOR_RIGHT]);
 
-  /* Apply forward trim */
+  /* Calculate and store forward calibrated trim */
   if (minFwd > 0)
   {
-    m_motorState[MOTOR_LEFT].trimFwd = 
+    m_motorState[MOTOR_LEFT].calibTrimFwd = 
       static_cast<float>(minFwd) / static_cast<float>(fwdPulses[MOTOR_LEFT]);
-    m_motorState[MOTOR_RIGHT].trimFwd = 
+    m_motorState[MOTOR_RIGHT].calibTrimFwd = 
       static_cast<float>(minFwd) / static_cast<float>(fwdPulses[MOTOR_RIGHT]);
   }
   else
   {
-    m_motorState[MOTOR_LEFT].trimFwd  = DEFAULT_TRIM;
-    m_motorState[MOTOR_RIGHT].trimFwd = DEFAULT_TRIM;
+    m_motorState[MOTOR_LEFT].calibTrimFwd  = DEFAULT_TRIM;
+    m_motorState[MOTOR_RIGHT].calibTrimFwd = DEFAULT_TRIM;
   }
 
-  /* Apply reverse trim */
+  /* Calculate and store reverse calibrated trim */
   if (minRev > 0)
   {
-    m_motorState[MOTOR_LEFT].trimRev = 
+    m_motorState[MOTOR_LEFT].calibTrimRev = 
       static_cast<float>(minRev) / static_cast<float>(revPulses[MOTOR_LEFT]);
-    m_motorState[MOTOR_RIGHT].trimRev = 
+    m_motorState[MOTOR_RIGHT].calibTrimRev = 
       static_cast<float>(minRev) / static_cast<float>(revPulses[MOTOR_RIGHT]);
   }
   else
   {
-    m_motorState[MOTOR_LEFT].trimRev  = DEFAULT_TRIM;
-    m_motorState[MOTOR_RIGHT].trimRev = DEFAULT_TRIM;
+    m_motorState[MOTOR_LEFT].calibTrimRev  = DEFAULT_TRIM;
+    m_motorState[MOTOR_RIGHT].calibTrimRev = DEFAULT_TRIM;
+  }
+
+  /* Apply calibrated values if in calibrated mode */
+  if (!m_useManualTrim)
+  {
+    for (int i = 0; i < MOTOR_COUNT; i++)
+    {
+      m_motorState[i].trimFwd = m_motorState[i].calibTrimFwd;
+      m_motorState[i].trimRev = m_motorState[i].calibTrimRev;
+    }
   }
 
 #if ENABLE_DEBUG
   printf("[Calibration] Fwd pulses: L=%d R=%d\n", fwdPulses[MOTOR_LEFT], fwdPulses[MOTOR_RIGHT]);
   printf("[Calibration] Rev pulses: L=%d R=%d\n", revPulses[MOTOR_LEFT], revPulses[MOTOR_RIGHT]);
-  printf("[Calibration] Trim L: fwd=%.3f rev=%.3f\n", 
-         m_motorState[MOTOR_LEFT].trimFwd, m_motorState[MOTOR_LEFT].trimRev);
-  printf("[Calibration] Trim R: fwd=%.3f rev=%.3f\n", 
-         m_motorState[MOTOR_RIGHT].trimFwd, m_motorState[MOTOR_RIGHT].trimRev);
+  printf("[Calibration] Calib Trim L: fwd=%.3f rev=%.3f\n", 
+         m_motorState[MOTOR_LEFT].calibTrimFwd, m_motorState[MOTOR_LEFT].calibTrimRev);
+  printf("[Calibration] Calib Trim R: fwd=%.3f rev=%.3f\n", 
+         m_motorState[MOTOR_RIGHT].calibTrimFwd, m_motorState[MOTOR_RIGHT].calibTrimRev);
 #endif
 
 #else
   /* Encoders not enabled - use default trim */
   for (int i = 0; i < MOTOR_COUNT; i++)
   {
-    m_motorState[i].trimFwd = DEFAULT_TRIM;
-    m_motorState[i].trimRev = DEFAULT_TRIM;
+    m_motorState[i].calibTrimFwd = DEFAULT_TRIM;
+    m_motorState[i].calibTrimRev = DEFAULT_TRIM;
+  }
+  
+  /* Apply calibrated values if in calibrated mode */
+  if (!m_useManualTrim)
+  {
+    for (int i = 0; i < MOTOR_COUNT; i++)
+    {
+      m_motorState[i].trimFwd = m_motorState[i].calibTrimFwd;
+      m_motorState[i].trimRev = m_motorState[i].calibTrimRev;
+    }
   }
 #endif /* ENABLE_ENCODER_CALIBRATION */
 }
@@ -397,6 +440,186 @@ void DriveTrainDifferential::measureMotorPulses(bool forward, int motorValue, in
     pPulses[MOTOR_RIGHT] = 0;
   }
 #endif /* ENABLE_ENCODER_CALIBRATION */
+}
+
+void DriveTrainDifferential::channelToTrim(int channelValue, 
+                                           float* pLeftTrim, 
+                                           float* pRightTrim) const
+{
+  if ((pLeftTrim == nullptr) || (pRightTrim == nullptr))
+  {
+    return;
+  }
+
+  /* Clamp channel value to valid range */
+  if (channelValue < IBUS_CHANNEL_MIN)
+  {
+    channelValue = IBUS_CHANNEL_MIN;
+  }
+  else if (channelValue > IBUS_CHANNEL_MAX)
+  {
+    channelValue = IBUS_CHANNEL_MAX;
+  }
+
+  /* Calculate offset from center (-500 to +500) */
+  int offset = channelValue - IBUS_CHANNEL_CENTER;
+
+  /* Convert offset to trim value
+   * - Positive offset (>1500): reduce left motor power (right is weaker)
+   * - Negative offset (<1500): reduce right motor power (left is weaker)
+   * - Zero offset (1500): no trim applied
+   * 
+   * Trim range is MIN_TRIM to DEFAULT_TRIM (0.5 to 1.0)
+   * At max offset (500), the reduced motor gets MIN_TRIM
+   */
+  float trimRange = DEFAULT_TRIM - MIN_TRIM;  /* 0.5 */
+  float offsetNormalized = static_cast<float>(std::abs(offset)) / 500.0f;
+
+  if (offset > 0)
+  {
+    /* Reduce left motor (right is weaker, so left needs to slow down) */
+    *pLeftTrim = DEFAULT_TRIM - (trimRange * offsetNormalized);
+    *pRightTrim = DEFAULT_TRIM;
+  }
+  else if (offset < 0)
+  {
+    /* Reduce right motor (left is weaker, so right needs to slow down) */
+    *pLeftTrim = DEFAULT_TRIM;
+    *pRightTrim = DEFAULT_TRIM - (trimRange * offsetNormalized);
+  }
+  else
+  {
+    /* No trim */
+    *pLeftTrim = DEFAULT_TRIM;
+    *pRightTrim = DEFAULT_TRIM;
+  }
+}
+
+void DriveTrainDifferential::setForwardTrimFromChannel(int channelValue)
+{
+  /* Only apply manual trim when in manual mode */
+  if (!m_useManualTrim)
+  {
+    return;
+  }
+
+  float leftTrim  = DEFAULT_TRIM;
+  float rightTrim = DEFAULT_TRIM;
+  channelToTrim(channelValue, &leftTrim, &rightTrim);
+
+#if ENABLE_DEBUG
+  /* Only print if trim values actually changed (avoid flooding console) */
+  static constexpr float TRIM_CHANGE_THRESHOLD = 0.01f;
+  bool changed = (std::abs(leftTrim - m_motorState[MOTOR_LEFT].trimFwd) > TRIM_CHANGE_THRESHOLD) ||
+                 (std::abs(rightTrim - m_motorState[MOTOR_RIGHT].trimFwd) > TRIM_CHANGE_THRESHOLD);
+#endif
+
+  m_motorState[MOTOR_LEFT].trimFwd = leftTrim;
+  m_motorState[MOTOR_RIGHT].trimFwd = rightTrim;
+
+#if ENABLE_DEBUG
+  if (changed)
+  {
+    printf("[DriveTrain] Forward trim set: L=%.3f R=%.3f (channel=%d)\n",
+           leftTrim, rightTrim, channelValue);
+  }
+#endif
+}
+
+void DriveTrainDifferential::setReverseTrimFromChannel(int channelValue)
+{
+  /* Only apply manual trim when in manual mode */
+  if (!m_useManualTrim)
+  {
+    return;
+  }
+
+  float leftTrim, rightTrim;
+  channelToTrim(channelValue, &leftTrim, &rightTrim);
+
+#if ENABLE_DEBUG
+  /* Only print if trim values actually changed (avoid flooding console) */
+  static constexpr float TRIM_CHANGE_THRESHOLD = 0.01f;
+  bool changed = (std::abs(leftTrim - m_motorState[MOTOR_LEFT].trimRev) > TRIM_CHANGE_THRESHOLD) ||
+                 (std::abs(rightTrim - m_motorState[MOTOR_RIGHT].trimRev) > TRIM_CHANGE_THRESHOLD);
+#endif
+
+  m_motorState[MOTOR_LEFT].trimRev = leftTrim;
+  m_motorState[MOTOR_RIGHT].trimRev = rightTrim;
+
+#if ENABLE_DEBUG
+  if (changed)
+  {
+    printf("[DriveTrain] Reverse trim set: L=%.3f R=%.3f (channel=%d)\n",
+           leftTrim, rightTrim, channelValue);
+  }
+#endif
+}
+
+void DriveTrainDifferential::getForwardTrim(float* pLeftTrim, float* pRightTrim) const
+{
+  if (pLeftTrim != nullptr)
+  {
+    *pLeftTrim = m_motorState[MOTOR_LEFT].trimFwd;
+  }
+  if (pRightTrim != nullptr)
+  {
+    *pRightTrim = m_motorState[MOTOR_RIGHT].trimFwd;
+  }
+}
+
+void DriveTrainDifferential::getReverseTrim(float* pLeftTrim, float* pRightTrim) const
+{
+  if (pLeftTrim != nullptr)
+  {
+    *pLeftTrim = m_motorState[MOTOR_LEFT].trimRev;
+  }
+  if (pRightTrim != nullptr)
+  {
+    *pRightTrim = m_motorState[MOTOR_RIGHT].trimRev;
+  }
+}
+
+void DriveTrainDifferential::setManualTrimMode(bool useManual)
+{
+  /* Only take action if mode is actually changing */
+  if (useManual == m_useManualTrim)
+  {
+    return;
+  }
+
+  m_useManualTrim = useManual;
+
+  if (!useManual)
+  {
+    /* Switching to calibrated mode - restore calibrated trim values */
+    for (int i = 0; i < MOTOR_COUNT; i++)
+    {
+      m_motorState[i].trimFwd = m_motorState[i].calibTrimFwd;
+      m_motorState[i].trimRev = m_motorState[i].calibTrimRev;
+    }
+
+#if ENABLE_DEBUG
+    printf("[DriveTrain] Switched to CALIBRATED trim mode\n");
+    printf("[DriveTrain] Trim L: fwd=%.3f rev=%.3f\n",
+           m_motorState[MOTOR_LEFT].trimFwd, m_motorState[MOTOR_LEFT].trimRev);
+    printf("[DriveTrain] Trim R: fwd=%.3f rev=%.3f\n",
+           m_motorState[MOTOR_RIGHT].trimFwd, m_motorState[MOTOR_RIGHT].trimRev);
+#endif
+  }
+  else
+  {
+#if ENABLE_DEBUG
+    printf("[DriveTrain] Switched to MANUAL trim mode\n");
+#endif
+    /* When switching to manual mode, keep current trim values until
+     * explicitly changed by setForwardTrimFromChannel/setReverseTrimFromChannel */
+  }
+}
+
+bool DriveTrainDifferential::isManualTrimMode(void) const
+{
+  return m_useManualTrim;
 }
 
 /* EOF -----------------------------------------------------------------------*/

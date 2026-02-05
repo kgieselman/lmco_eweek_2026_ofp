@@ -30,8 +30,8 @@
  * - DRIVE_TRAIN_DIFFERENTIAL: Two-wheel tank drive (skid steering)
  * - DRIVE_TRAIN_MECANUM: Four-wheel omnidirectional drive
  ******************************************************************************/
-#define DRIVE_TRAIN_DIFFERENTIAL  (0)
-#define DRIVE_TRAIN_MECANUM       (1)
+#define DRIVE_TRAIN_DIFFERENTIAL  (1)
+#define DRIVE_TRAIN_MECANUM       (0)
 
 /*******************************************************************************
  * @brief Motor driver IC selection
@@ -40,8 +40,8 @@
  * - MOTOR_DRIVER_L298N: Classic H-bridge (1 PWM + 2 DIR pins per motor)
  * - MOTOR_DRIVER_DRV8833: TI DRV8833 (2 PWM pins per motor, more efficient)
  ******************************************************************************/
-#define MOTOR_DRIVER_L298N        (0)
-#define MOTOR_DRIVER_DRV8833      (1)
+#define MOTOR_DRIVER_L298N        (1)
+#define MOTOR_DRIVER_DRV8833      (0)
 
 /** @} */ /* End of hw_select */
 

@@ -151,6 +151,92 @@ public:
    ****************************************************************************/
   bool isInitialized(void) const override;
 
+  /*****************************************************************************
+   * @brief Set forward trim manually from IBus channel value
+   *
+   * Allows the user to set motor trim via the VRA potentiometer channel.
+   * The trim value adjusts the relative strength of the left vs right motor
+   * to compensate for motor/wheel differences.
+   *
+   * @param channelValue Raw IBus channel value (1000-2000)
+   *                     - 1500 = no trim (both motors at equal power)
+   *                     - 2000 = max trim on left motor (right is weaker)
+   *                     - 1000 = max trim on right motor (left is weaker)
+   *
+   * @par Example:
+   * @code
+   * int vra = ibus.readChannel(FlySkyIBus::CHAN_VRA);
+   * drive.setForwardTrimFromChannel(vra);
+   * @endcode
+   ****************************************************************************/
+  void setForwardTrimFromChannel(int channelValue);
+
+  /*****************************************************************************
+   * @brief Set reverse trim manually from IBus channel value
+   *
+   * Allows the user to set motor trim via the VRB potentiometer channel.
+   * The trim value adjusts the relative strength of the left vs right motor
+   * to compensate for motor/wheel differences when driving in reverse.
+   *
+   * @param channelValue Raw IBus channel value (1000-2000)
+   *                     - 1500 = no trim (both motors at equal power)
+   *                     - 2000 = max trim on left motor (right is weaker)
+   *                     - 1000 = max trim on right motor (left is weaker)
+   *
+   * @par Example:
+   * @code
+   * int vrb = ibus.readChannel(FlySkyIBus::CHAN_VRB);
+   * drive.setReverseTrimFromChannel(vrb);
+   * @endcode
+   ****************************************************************************/
+  void setReverseTrimFromChannel(int channelValue);
+
+  /*****************************************************************************
+   * @brief Get current forward trim values
+   *
+   * @param pLeftTrim Pointer to store left motor forward trim (0.0-1.0)
+   * @param pRightTrim Pointer to store right motor forward trim (0.0-1.0)
+   ****************************************************************************/
+  void getForwardTrim(float* pLeftTrim, float* pRightTrim) const;
+
+  /*****************************************************************************
+   * @brief Get current reverse trim values
+   *
+   * @param pLeftTrim Pointer to store left motor reverse trim (0.0-1.0)
+   * @param pRightTrim Pointer to store right motor reverse trim (0.0-1.0)
+   ****************************************************************************/
+  void getReverseTrim(float* pLeftTrim, float* pRightTrim) const;
+
+  /*****************************************************************************
+   * @brief Set the trim mode (manual vs calibrated)
+   *
+   * Switches between using manually-set trim values (from VRA/VRB channels)
+   * and trim values determined by the calibrate() function.
+   *
+   * @param useManual true = use manual trim from setForwardTrimFromChannel/
+   *                         setReverseTrimFromChannel
+   *                  false = use calibrated trim values
+   *
+   * @note When switching to calibrated mode, the stored calibrated values
+   *       are restored. When switching to manual mode, the current trim
+   *       values are preserved until changed by setForwardTrimFromChannel/
+   *       setReverseTrimFromChannel.
+   *
+   * @par Example (tie to switch channel):
+   * @code
+   * bool useManual = (ibus.readChannel(FlySkyIBus::CHAN_SWA) > 1500);
+   * drive.setManualTrimMode(useManual);
+   * @endcode
+   ****************************************************************************/
+  void setManualTrimMode(bool useManual);
+
+  /*****************************************************************************
+   * @brief Check if manual trim mode is active
+   *
+   * @return true if using manual trim, false if using calibrated trim
+   ****************************************************************************/
+  bool isManualTrimMode(void) const;
+
 
 private:
   /* Private Types -----------------------------------------------------------*/
@@ -159,10 +245,12 @@ private:
    * @brief Motor state tracking
    ****************************************************************************/
   struct MotorState {
-    bool initialized;  /**< Motor is configured and ready */
-    int pinEncoder;    /**< Encoder input pin (Invalid if not used) */
-    float trimFwd;     /**< Forward direction trim (0.0 - 1.0) */
-    float trimRev;     /**< Reverse direction trim (0.0 - 1.0) */
+    bool initialized;      /**< Motor is configured and ready */
+    int pinEncoder;        /**< Encoder input pin (Invalid if not used) */
+    float trimFwd;         /**< Active forward direction trim (0.0 - 1.0) */
+    float trimRev;         /**< Active reverse direction trim (0.0 - 1.0) */
+    float calibTrimFwd;    /**< Calibrated forward trim (stored from calibrate()) */
+    float calibTrimRev;    /**< Calibrated reverse trim (stored from calibrate()) */
   };
 
 
@@ -174,11 +262,24 @@ private:
   /** @brief Default trim value (no trim) */
   static constexpr float DEFAULT_TRIM = 1.0f;
 
+  /** @brief Minimum trim value (maximum reduction) */
+  static constexpr float MIN_TRIM = 0.5f;
+
+  /** @brief IBus channel minimum value */
+  static constexpr int IBUS_CHANNEL_MIN = 1000;
+
+  /** @brief IBus channel maximum value */
+  static constexpr int IBUS_CHANNEL_MAX = 2000;
+
+  /** @brief IBus channel center value (no trim) */
+  static constexpr int IBUS_CHANNEL_CENTER = 1500;
+
 
   /* Private Variables -------------------------------------------------------*/
 
   MotorDriver m_motorDriver;             /**< Motor driver instance (type from config.h) */
   MotorState m_motorState[MOTOR_COUNT];  /**< Motor state tracking */
+  bool m_useManualTrim;                  /**< true = manual trim, false = calibrated trim */
 
 
   /* Private Function Declarations -------------------------------------------*/
@@ -208,6 +309,19 @@ private:
    * @param pPulses Array to store pulse counts [MOTOR_COUNT]
    ****************************************************************************/
   void measureMotorPulses(bool forward, int motorValue, int* pPulses);
+
+  /*****************************************************************************
+   * @brief Convert IBus channel value to motor trim values
+   *
+   * Calculates trim values for left and right motors based on potentiometer
+   * position. Channel values above center reduce left motor power (right is
+   * weaker), values below center reduce right motor power (left is weaker).
+   *
+   * @param channelValue Raw IBus channel value (1000-2000)
+   * @param pLeftTrim Pointer to store left motor trim (0.5-1.0)
+   * @param pRightTrim Pointer to store right motor trim (0.5-1.0)
+   ****************************************************************************/
+  void channelToTrim(int channelValue, float* pLeftTrim, float* pRightTrim) const;
 };
 
 

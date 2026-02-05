@@ -269,7 +269,27 @@ static void process_rc_input(void)
 #if DRIVE_TRAIN_MECANUM
   int strafe = g_pIBus->readChannelNormalized(FlySkyIBus::CHAN_LSTICK_HORIZ);
   static_cast<DriveTrainMecanum*>(g_pDriveTrain)->setStrafe(strafe);
-#endif
+#endif // DRIVE_TRAIN_MECANUM
+
+#if DRIVE_TRAIN_DIFFERENTIAL
+  // Check if user wants to use manual trim (SWA in DOWN position)
+    // note: Up is 1000, Down is 2000
+  if (g_pIBus->readChannel(FlySkyIBus::CHAN_SWA) > FlySkyIBus::CHANNEL_VALUE_CENTER)
+  {
+    /* Read VRA/VRB for manual trim adjustment (raw values 1000-2000) */
+    int vraValue = g_pIBus->readChannel(FlySkyIBus::CHAN_VRA);
+    int vrbValue = g_pIBus->readChannel(FlySkyIBus::CHAN_VRB);
+
+    g_pDriveTrain->setForwardTrimFromChannel(vraValue);
+    g_pDriveTrain->setReverseTrimFromChannel(vrbValue);
+    g_pDriveTrain->setManualTrimMode(true);
+  }
+  else
+  {
+    // Switch is Up, use default trim (Calibrated)
+    g_pDriveTrain->setManualTrimMode(false);
+  }
+#endif // DRIVE_TRAIN_DIFFERENTIAL
 
   g_pDriveTrain->update();
 }
