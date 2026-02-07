@@ -60,69 +60,34 @@ constexpr int PIN_IBUS_TX = 4;
 constexpr int PIN_IBUS_RX = 5;
 
 
-/* Drive Train - Mecanum -----------------------------------------------------*/
-
-/*******************************************************************************
- * @name Mecanum Front Left Motor
- * @{
- ******************************************************************************/
-constexpr int PIN_MECANUM_MOTOR_FL_ENABLE  = 20;  /**< PWM Slice 2 Channel A */
-constexpr int PIN_MECANUM_MOTOR_FL_DIR_FWD = 18;  /**< Direction forward (PWM if DRV8833)*/
-constexpr int PIN_MECANUM_MOTOR_FL_DIR_REV = 19;  /**< Direction reverse (PWM if DRV8833)*/
-constexpr int PIN_MECANUM_MOTOR_FL_ENC     = PIN_INVALID; /**< Encoder (Optional) */
-/** @} */
-
-/*******************************************************************************
- * @name Mecanum Front Right Motor
- * @{
- ******************************************************************************/
-constexpr int PIN_MECANUM_MOTOR_FR_ENABLE  = 9;   /**< PWM Slice 4 Channel B */
-constexpr int PIN_MECANUM_MOTOR_FR_DIR_FWD = 10;  /**< Direction forward (PWM if DRV8833)*/
-constexpr int PIN_MECANUM_MOTOR_FR_DIR_REV = 11;  /**< Direction reverse (PWM if DRV8833)*/
-constexpr int PIN_MECANUM_MOTOR_FR_ENC     = PIN_INVALID; /**< Encoder (Optional) */
-/** @} */
-
-/*******************************************************************************
- * @name Mecanum Rear Right Motor
- * @{
- ******************************************************************************/
-constexpr int PIN_MECANUM_MOTOR_RR_ENABLE  = 8;   /**< PWM Slice 4 Channel A */
-constexpr int PIN_MECANUM_MOTOR_RR_DIR_FWD = 7;   /**< Direction forward (PWM if DRV8833)*/
-constexpr int PIN_MECANUM_MOTOR_RR_DIR_REV = 6;   /**< Direction reverse (PWM if DRV8833)*/
-constexpr int PIN_MECANUM_MOTOR_RR_ENC     = PIN_INVALID; /**< Encoder (Optional) */
-/** @} */
-
-/*******************************************************************************
- * @name Mecanum Rear Left Motor
- * @{
- ******************************************************************************/
-constexpr int PIN_MECANUM_MOTOR_RL_ENABLE  = 21;  /**< PWM Slice 2 Channel B */
-constexpr int PIN_MECANUM_MOTOR_RL_DIR_FWD = 27;  /**< Direction forward (PWM if DRV8833)*/
-constexpr int PIN_MECANUM_MOTOR_RL_DIR_REV = 26;  /**< Direction reverse (PWM if DRV8833)*/
-constexpr int PIN_MECANUM_MOTOR_RL_ENC     = PIN_INVALID; /**< Encoder (Optional) */
-/** @} */
-
-
 /* Drive Train - Differential ------------------------------------------------*/
 
 /*******************************************************************************
  * @name Differential Left Motor
+ *
+ * Pin usage depends on motor driver wiring mode (see config.h):
+ * - MODE_2PWM:      DIR_FWD = IN1 (PWM), DIR_REV = IN2 (PWM), ENABLE = unused
+ * - MODE_1PWM_2DIR: ENABLE = PWM, DIR_FWD = digital, DIR_REV = digital
  * @{
  ******************************************************************************/
-constexpr int PIN_DIFF_MOTOR_LEFT_ENABLE  = PIN_MECANUM_MOTOR_RL_ENABLE;
-constexpr int PIN_DIFF_MOTOR_LEFT_DIR_FWD = PIN_MECANUM_MOTOR_RL_DIR_FWD;
-constexpr int PIN_DIFF_MOTOR_LEFT_DIR_REV = PIN_MECANUM_MOTOR_RL_DIR_REV;
-constexpr int PIN_DIFF_MOTOR_LEFT_ENC     = PIN_MECANUM_MOTOR_RL_ENC;
+constexpr int PIN_DIFF_MOTOR_LEFT_ENABLE  = 21;  /**< PWM enable (Slice 2 Chan B) */
+constexpr int PIN_DIFF_MOTOR_LEFT_DIR_FWD = 27;  /**< Forward direction / IN1 */
+constexpr int PIN_DIFF_MOTOR_LEFT_DIR_REV = 26;  /**< Reverse direction / IN2 */
+constexpr int PIN_DIFF_MOTOR_LEFT_ENC     = PIN_INVALID; /**< Encoder (Optional) */
 /** @} */
 
 /*******************************************************************************
  * @name Differential Right Motor
+ *
+ * Pin usage depends on motor driver wiring mode (see config.h):
+ * - MODE_2PWM:      DIR_FWD = IN1 (PWM), DIR_REV = IN2 (PWM), ENABLE = unused
+ * - MODE_1PWM_2DIR: ENABLE = PWM, DIR_FWD = digital, DIR_REV = digital
  * @{
  ******************************************************************************/
-constexpr int PIN_DIFF_MOTOR_RIGHT_ENABLE  = PIN_MECANUM_MOTOR_RR_ENABLE;
-constexpr int PIN_DIFF_MOTOR_RIGHT_DIR_FWD = PIN_MECANUM_MOTOR_RR_DIR_FWD;
-constexpr int PIN_DIFF_MOTOR_RIGHT_DIR_REV = PIN_MECANUM_MOTOR_RR_DIR_REV;
-constexpr int PIN_DIFF_MOTOR_RIGHT_ENC     = PIN_MECANUM_MOTOR_RR_ENC;
+constexpr int PIN_DIFF_MOTOR_RIGHT_ENABLE  = 8;   /**< PWM enable (Slice 4 Chan A) */
+constexpr int PIN_DIFF_MOTOR_RIGHT_DIR_FWD = 7;   /**< Forward direction / IN1 */
+constexpr int PIN_DIFF_MOTOR_RIGHT_DIR_REV = 6;   /**< Reverse direction / IN2 */
+constexpr int PIN_DIFF_MOTOR_RIGHT_ENC     = PIN_INVALID; /**< Encoder (Optional) */
 /** @} */
 
 

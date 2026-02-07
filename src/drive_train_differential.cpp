@@ -53,8 +53,9 @@ void __isr_encoder_right(uint gpio, uint32_t events)
 
 /* Method Definitions --------------------------------------------------------*/
 DriveTrainDifferential::DriveTrainDifferential()
-  : DriveTrain()
-  , m_motorDriver()
+  : m_motorDriver(MOTOR_DRIVER_MODE)
+  , m_speed(0)
+  , m_turn(0)
   , m_useManualTrim(true)  /* Default to manual trim mode */
 {
   /* Initialize motor state */
@@ -72,6 +73,11 @@ DriveTrainDifferential::DriveTrainDifferential()
 DriveTrainDifferential::~DriveTrainDifferential()
 {
   stop();
+}
+
+bool DriveTrainDifferential::validateUserInput(int value) const
+{
+  return (value >= USER_INPUT_MIN) && (value <= USER_INPUT_MAX);
 }
 
 MotorDriver::MotorChannel_e DriveTrainDifferential::getChannelForMotor(MotorId_e motor) const
@@ -117,7 +123,7 @@ bool DriveTrainDifferential::configureEncoder(MotorId_e motor, int pinEncoder)
   return true;
 }
 
-#if MOTOR_DRIVER_DRV8833
+#if MOTOR_DRIVER_MODE_2PWM
 bool DriveTrainDifferential::addMotor(MotorId_e motor,
                                       int       pinFwd,
                                       int       pinRev,
@@ -151,14 +157,14 @@ bool DriveTrainDifferential::addMotor(MotorId_e motor,
   m_motorState[motor].initialized  = true;
 
 #if ENABLE_DEBUG
-  printf("[DriveTrain] Motor %d configured (DRV8833): FWD=%d, REV=%d\n",
+  printf("[DriveTrain] Motor %d configured (2-PWM): FWD=%d, REV=%d\n",
          motor, pinFwd, pinRev);
 #endif
 
   return true;
 }
 
-#elif MOTOR_DRIVER_L298N
+#elif MOTOR_DRIVER_MODE_1PWM_2DIR
 
 bool DriveTrainDifferential::addMotor(MotorId_e motor,
                                       int       pinPwm,
@@ -194,13 +200,37 @@ bool DriveTrainDifferential::addMotor(MotorId_e motor,
   m_motorState[motor].initialized  = true;
 
 #if ENABLE_DEBUG
-  printf("[DriveTrain] Motor %d configured (L298N): PWM=%d, FWD=%d, REV=%d\n",
+  printf("[DriveTrain] Motor %d configured (1-PWM+2-DIR): PWM=%d, FWD=%d, REV=%d\n",
          motor, pinPwm, pinDirFwd, pinDirRev);
 #endif
 
   return true;
 }
-#endif /* MOTOR_DRIVER selection */
+#endif /* MOTOR_DRIVER_MODE selection */
+
+bool DriveTrainDifferential::setSpeed(int speed)
+{
+  if (!validateUserInput(speed))
+  {
+    ERROR_REPORT(ERROR_OUT_OF_RANGE);
+    return false;
+  }
+
+  m_speed = speed;
+  return true;
+}
+
+bool DriveTrainDifferential::setTurn(int turn)
+{
+  if (!validateUserInput(turn))
+  {
+    ERROR_REPORT(ERROR_OUT_OF_RANGE);
+    return false;
+  }
+
+  m_turn = turn;
+  return true;
+}
 
 void DriveTrainDifferential::update(void)
 {
@@ -219,7 +249,7 @@ void DriveTrainDifferential::update(void)
   /* Scale to prevent clipping while maintaining direction ratio */
   int maxAbs = std::max(std::abs(motorValues[MOTOR_LEFT]),
                         std::abs(motorValues[MOTOR_RIGHT]));
-  
+
   if (maxAbs > USER_INPUT_MAX)
   {
     float scale = static_cast<float>(USER_INPUT_MAX) / static_cast<float>(maxAbs);
@@ -232,11 +262,9 @@ void DriveTrainDifferential::update(void)
   {
     float trim = (motorValues[i] > 0) ? m_motorState[i].trimFwd : m_motorState[i].trimRev;
 
-    MotorDriver::MotorChannel_e channel = MotorDriver::MOTOR_A; // Default to left
-    if (i == MOTOR_RIGHT)
-    {
-      channel = MotorDriver::MOTOR_B;
-    }
+    MotorDriver::MotorChannel_e channel = (i == MOTOR_LEFT)
+      ? MotorDriver::MOTOR_A
+      : MotorDriver::MOTOR_B;
 
     (void)m_motorDriver.setMotorWithTrim(channel, motorValues[i], trim);
   }
@@ -257,7 +285,7 @@ void DriveTrainDifferential::calibrate(void)
   bool encodersReady = true;
   for (int i = 0; i < MOTOR_COUNT; i++)
   {
-    if (m_motorState[i].pinEncoder < GPIO_PIN_MIN || 
+    if (m_motorState[i].pinEncoder < GPIO_PIN_MIN ||
         m_motorState[i].pinEncoder > GPIO_PIN_MAX)
     {
       encodersReady = false;
@@ -273,7 +301,7 @@ void DriveTrainDifferential::calibrate(void)
       m_motorState[i].calibTrimFwd = DEFAULT_TRIM;
       m_motorState[i].calibTrimRev = DEFAULT_TRIM;
     }
-    
+
     /* Apply calibrated values if in calibrated mode */
     if (!m_useManualTrim)
     {
@@ -310,9 +338,9 @@ void DriveTrainDifferential::calibrate(void)
   /* Calculate and store forward calibrated trim */
   if (minFwd > 0)
   {
-    m_motorState[MOTOR_LEFT].calibTrimFwd = 
+    m_motorState[MOTOR_LEFT].calibTrimFwd =
       static_cast<float>(minFwd) / static_cast<float>(fwdPulses[MOTOR_LEFT]);
-    m_motorState[MOTOR_RIGHT].calibTrimFwd = 
+    m_motorState[MOTOR_RIGHT].calibTrimFwd =
       static_cast<float>(minFwd) / static_cast<float>(fwdPulses[MOTOR_RIGHT]);
   }
   else
@@ -324,9 +352,9 @@ void DriveTrainDifferential::calibrate(void)
   /* Calculate and store reverse calibrated trim */
   if (minRev > 0)
   {
-    m_motorState[MOTOR_LEFT].calibTrimRev = 
+    m_motorState[MOTOR_LEFT].calibTrimRev =
       static_cast<float>(minRev) / static_cast<float>(revPulses[MOTOR_LEFT]);
-    m_motorState[MOTOR_RIGHT].calibTrimRev = 
+    m_motorState[MOTOR_RIGHT].calibTrimRev =
       static_cast<float>(minRev) / static_cast<float>(revPulses[MOTOR_RIGHT]);
   }
   else
@@ -348,9 +376,9 @@ void DriveTrainDifferential::calibrate(void)
 #if ENABLE_DEBUG
   printf("[Calibration] Fwd pulses: L=%d R=%d\n", fwdPulses[MOTOR_LEFT], fwdPulses[MOTOR_RIGHT]);
   printf("[Calibration] Rev pulses: L=%d R=%d\n", revPulses[MOTOR_LEFT], revPulses[MOTOR_RIGHT]);
-  printf("[Calibration] Calib Trim L: fwd=%.3f rev=%.3f\n", 
+  printf("[Calibration] Calib Trim L: fwd=%.3f rev=%.3f\n",
          m_motorState[MOTOR_LEFT].calibTrimFwd, m_motorState[MOTOR_LEFT].calibTrimRev);
-  printf("[Calibration] Calib Trim R: fwd=%.3f rev=%.3f\n", 
+  printf("[Calibration] Calib Trim R: fwd=%.3f rev=%.3f\n",
          m_motorState[MOTOR_RIGHT].calibTrimFwd, m_motorState[MOTOR_RIGHT].calibTrimRev);
 #endif
 
@@ -361,7 +389,7 @@ void DriveTrainDifferential::calibrate(void)
     m_motorState[i].calibTrimFwd = DEFAULT_TRIM;
     m_motorState[i].calibTrimRev = DEFAULT_TRIM;
   }
-  
+
   /* Apply calibrated values if in calibrated mode */
   if (!m_useManualTrim)
   {
@@ -398,11 +426,11 @@ void DriveTrainDifferential::measureMotorPulses(bool forward, int motorValue, in
 
   /* Set motor direction and speed */
   int value = forward ? motorValue : -motorValue;
-  
+
   for (int i = 0; i < MOTOR_COUNT; i++)
   {
     gpio_set_irq_enabled(m_motorState[i].pinEncoder, GPIO_IRQ_EDGE_RISE, false);
-    MotorDriver::MotorChannel channel = 
+    MotorDriver::MotorChannel_e channel =
       (i == MOTOR_LEFT) ? MotorDriver::MOTOR_A : MotorDriver::MOTOR_B;
     (void)m_motorDriver.setMotor(channel, value);
   }
@@ -442,8 +470,8 @@ void DriveTrainDifferential::measureMotorPulses(bool forward, int motorValue, in
 #endif /* ENABLE_ENCODER_CALIBRATION */
 }
 
-void DriveTrainDifferential::channelToTrim(int channelValue, 
-                                           float* pLeftTrim, 
+void DriveTrainDifferential::channelToTrim(int channelValue,
+                                           float* pLeftTrim,
                                            float* pRightTrim) const
 {
   if ((pLeftTrim == nullptr) || (pRightTrim == nullptr))
@@ -468,7 +496,7 @@ void DriveTrainDifferential::channelToTrim(int channelValue,
    * - Positive offset (>1500): reduce left motor power (right is weaker)
    * - Negative offset (<1500): reduce right motor power (left is weaker)
    * - Zero offset (1500): no trim applied
-   * 
+   *
    * Trim range is MIN_TRIM to DEFAULT_TRIM (0.5 to 1.0)
    * At max offset (500), the reduced motor gets MIN_TRIM
    */
@@ -621,5 +649,6 @@ bool DriveTrainDifferential::isManualTrimMode(void) const
 {
   return m_useManualTrim;
 }
+
 
 /* EOF -----------------------------------------------------------------------*/

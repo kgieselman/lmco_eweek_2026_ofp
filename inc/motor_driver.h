@@ -1,40 +1,36 @@
 /*******************************************************************************
- * @file motor_driver_l298n.h
- * @brief L298N dual H-bridge motor driver interface
+ * @file motor_driver.h
+ * @brief Generic dual H-bridge motor driver interface
  *
- * Provides a motor driver implementation for the L298N chip. This driver uses
- * a single PWM signal for speed control and two digital outputs for direction:
+ * Provides a single motor driver implementation that supports two common
+ * wiring configurations, selected at construction time:
+ *
+ * @par MODE_2PWM (e.g. DRV8833, TB6612FNG):
+ * Two PWM signals per motor channel (IN1/IN2):
+ *   - Forward:  IN1 = PWM duty cycle, IN2 = LOW (0% duty)
+ *   - Reverse:  IN1 = LOW (0% duty),  IN2 = PWM duty cycle
+ *   - Brake:    IN1 = HIGH,           IN2 = HIGH
+ *   - Coast:    IN1 = LOW,            IN2 = LOW
+ *
+ * @par MODE_1PWM_2DIR (e.g. L298N, BTS7960):
+ * One PWM signal for speed, two digital pins for direction:
  *   - Forward:  EN = PWM duty cycle, IN1 = HIGH, IN2 = LOW
  *   - Reverse:  EN = PWM duty cycle, IN1 = LOW,  IN2 = HIGH
  *   - Brake:    EN = HIGH,           IN1 = HIGH, IN2 = HIGH
- *   - Coast:    EN = LOW,            IN1 = X,    IN2 = X
+ *   - Coast:    EN = LOW,            IN1 = LOW,  IN2 = LOW
  *
- * @par L298N Specifications:
- *   - Operating voltage: 5V to 35V
- *   - Output current: 2A per channel (3A peak)
- *   - Logic voltage: 5V (can use 3.3V with level shifter)
- *   - Built-in flyback diodes on most modules
- *
- * @par Example Usage:
+ * @par Example Usage (2-PWM mode):
  * @code
- * MotorDriverL298N driver;
- * 
- * // Configure motor A with PWM pin 8, direction pins 9 and 10
- * if (!driver.configureMotor(MotorDriverL298N::MOTOR_A, 8, 9, 10)) {
- *   // Handle error
- * }
- * 
- * // Set motor to 75% forward
- * driver.setMotor(MotorDriverL298N::MOTOR_A, 375);  // 375/500 = 75%
- * 
- * // Set motor to 50% reverse
- * driver.setMotor(MotorDriverL298N::MOTOR_A, -250); // -250/500 = 50% reverse
- * 
- * // Stop with braking
- * driver.brake(MotorDriverL298N::MOTOR_A);
- * 
- * // Stop with coasting (free spin)
- * driver.coast(MotorDriverL298N::MOTOR_A);
+ * MotorDriver driver(MotorDriver::MODE_2PWM);
+ * driver.configureMotor(MotorDriver::MOTOR_A, 8, 9);
+ * driver.setMotor(MotorDriver::MOTOR_A, 375);  // 75% forward
+ * @endcode
+ *
+ * @par Example Usage (1-PWM + 2-DIR mode):
+ * @code
+ * MotorDriver driver(MotorDriver::MODE_1PWM_2DIR);
+ * driver.configureMotor(MotorDriver::MOTOR_A, 8, 9, 10);
+ * driver.setMotor(MotorDriver::MOTOR_A, -250); // 50% reverse
  * @endcode
  ******************************************************************************/
 #pragma once
@@ -50,26 +46,34 @@
 /* Class Definition ----------------------------------------------------------*/
 
 /*******************************************************************************
- * @class MotorDriverL298N
- * @brief Driver for L298N dual H-bridge motor controller
+ * @class MotorDriver
+ * @brief Generic driver for dual H-bridge motor controllers
  *
- * This class provides an interface for controlling motors through the L298N
- * motor driver IC. Each L298N chip can control two DC motors independently.
- *
- * The L298N uses a PWM enable pin for speed control and two direction pins
- * to control the H-bridge state.
+ * This class provides a unified interface for controlling motors through
+ * various H-bridge motor driver ICs. The wiring mode is selected at
+ * construction time and applies to all channels on the driver instance.
  ******************************************************************************/
-class MotorDriverL298N
+class MotorDriver
 {
 public:
   /* Public Types ------------------------------------------------------------*/
 
   /*****************************************************************************
+   * @brief Wiring mode enumeration
+   *
+   * Determines how the motor driver IC is wired to the microcontroller.
+   ****************************************************************************/
+  enum Mode_e {
+    MODE_2PWM,       /**< Two PWM pins per channel (e.g. DRV8833) */
+    MODE_1PWM_2DIR   /**< One PWM + two direction pins per channel (e.g. L298N) */
+  };
+
+  /*****************************************************************************
    * @brief Motor channel identifier
    ****************************************************************************/
   enum MotorChannel_e {
-    MOTOR_A     = 0, /**< Motor channel A (ENA/IN1/IN2) */
-    MOTOR_B     = 1, /**< Motor channel B (ENB/IN3/IN4) */
+    MOTOR_A     = 0, /**< Motor channel A */
+    MOTOR_B     = 1, /**< Motor channel B */
     MOTOR_COUNT = 2  /**< Number of motor channels per driver */
   };
 
@@ -77,8 +81,8 @@ public:
    * @brief Motor stop mode
    ****************************************************************************/
   enum StopMode_e {
-    STOP_COAST, /**< Coast/free spin (EN = LOW) */
-    STOP_BRAKE  /**< Active brake (EN = HIGH, IN1 = IN2 = HIGH) */
+    STOP_COAST, /**< Coast/free spin (outputs floating/low) */
+    STOP_BRAKE  /**< Active brake (outputs shorted/high) */
   };
 
 
@@ -97,36 +101,59 @@ public:
   /* Public Function Declarations --------------------------------------------*/
 
   /*****************************************************************************
-   * @brief Construct a L298N motor driver instance
-   * 
+   * @brief Construct a motor driver instance
+   *
+   * @param mode Wiring mode for all channels on this driver
    * @param pwmFreqHz PWM frequency in Hz (default 20kHz)
    ****************************************************************************/
-  explicit MotorDriverL298N(int pwmFreqHz = DEFAULT_PWM_FREQ_HZ);
+  explicit MotorDriver(Mode_e mode = MODE_2PWM,
+                       int    pwmFreqHz = DEFAULT_PWM_FREQ_HZ);
 
   /*****************************************************************************
    * @brief Destructor - stops all motors
    ****************************************************************************/
-  ~MotorDriverL298N();
+  ~MotorDriver();
 
   /*****************************************************************************
-   * @brief Configure a motor channel
+   * @brief Configure a motor channel (2-PWM mode)
+   *
+   * Initializes the PWM outputs for a motor channel. Both pins must be valid
+   * GPIO pins capable of PWM output.
+   *
+   * @param channel Motor channel to configure (MOTOR_A or MOTOR_B)
+   * @param pinIn1 PWM pin for forward direction
+   * @param pinIn2 PWM pin for reverse direction
+   * @param pinEncoder Optional encoder input pin
+   * @return true if configuration successful, false on error
+   *
+   * @note Only valid when driver is constructed with MODE_2PWM.
+   * @note If motor runs backwards, swap pinIn1 and pinIn2.
+   ****************************************************************************/
+  bool configureMotor(MotorChannel_e channel,
+                      int            pinIn1,
+                      int            pinIn2,
+                      int            pinEncoder = PIN_INVALID);
+
+  /*****************************************************************************
+   * @brief Configure a motor channel (1-PWM + 2-DIR mode)
    *
    * Initializes the PWM and GPIO outputs for a motor channel.
    *
    * @param channel Motor channel to configure (MOTOR_A or MOTOR_B)
-   * @param pinPwm GPIO pin for PWM enable (ENA or ENB)
-   * @param pinDirFwd GPIO pin for forward direction (IN1 or IN3)
-   * @param pinDirRev GPIO pin for reverse direction (IN2 or IN4)
+   * @param pinPwm GPIO pin for PWM speed control
+   * @param pinDirFwd GPIO pin for forward direction
+   * @param pinDirRev GPIO pin for reverse direction
    * @param pinEncoder Optional encoder input pin
    * @return true if configuration successful, false on error
    *
+   * @note Only valid when driver is constructed with MODE_1PWM_2DIR.
    * @note If motor runs backwards, swap pinDirFwd and pinDirRev.
    ****************************************************************************/
   bool configureMotor(MotorChannel_e channel,
                       int            pinPwm,
                       int            pinDirFwd,
                       int            pinDirRev,
-                      int            pinEncoder = PIN_INVALID);
+                      int            pinEncoder);
 
   /*****************************************************************************
    * @brief Set motor speed and direction
@@ -161,16 +188,12 @@ public:
   /*****************************************************************************
    * @brief Stop motor with coasting (free spin)
    *
-   * Sets PWM output to 0%, allowing the motor to coast to a stop.
-   *
    * @param channel Motor channel to stop
    ****************************************************************************/
   void coast(MotorChannel_e channel);
 
   /*****************************************************************************
    * @brief Stop motor with active braking
-   *
-   * Sets PWM to 100% and both direction pins HIGH for active braking.
    *
    * @param channel Motor channel to brake
    ****************************************************************************/
@@ -210,9 +233,16 @@ public:
    * @brief Get the encoder pin for a motor channel
    *
    * @param channel Motor channel
-   * @return Encoder pin number, or -1 if not configured
+   * @return Encoder pin number, or PIN_INVALID if not configured
    ****************************************************************************/
   int getEncoderPin(MotorChannel_e channel) const;
+
+  /*****************************************************************************
+   * @brief Get the wiring mode
+   *
+   * @return Wiring mode set at construction
+   ****************************************************************************/
+  Mode_e getMode() const { return m_mode; }
 
   /*****************************************************************************
    * @brief Set the default stop mode
@@ -234,13 +264,17 @@ private:
 
   /*****************************************************************************
    * @brief Motor channel configuration
+   *
+   * Pin usage depends on the wiring mode:
+   * - MODE_2PWM:      pin1 = IN1 (fwd PWM), pin2 = IN2 (rev PWM), pin3 = unused
+   * - MODE_1PWM_2DIR: pin1 = PWM enable,    pin2 = DIR fwd,       pin3 = DIR rev
    ****************************************************************************/
   struct MotorConfig {
     bool configured;  /**< Channel is configured and ready */
-    int pinPwm;       /**< PWM enable pin */
-    int pinDirFwd;    /**< Forward direction pin */
-    int pinDirRev;    /**< Reverse direction pin */
-    int pinEncoder;   /**< Encoder pin */
+    int pin1;         /**< Primary pin (IN1 or PWM) */
+    int pin2;         /**< Secondary pin (IN2 or DIR_FWD) */
+    int pin3;         /**< Tertiary pin (unused or DIR_REV) */
+    int pinEncoder;   /**< Encoder pin (PIN_INVALID if not used) */
     int currentValue; /**< Current motor value for state tracking */
   };
 
@@ -252,10 +286,12 @@ private:
 
 
   /* Private Variables -------------------------------------------------------*/
-  MotorConfig m_motors[MOTOR_COUNT]; /**< Motor channel configurations */
-  int         m_pwmFreqHz;           /**< Configured PWM frequency */
-  float       m_pwmClkDiv;           /**< Calculated PWM clock divider */
-  StopMode_e  m_defaultStopMode;     /**< Default stop mode */
+
+  Mode_e     m_mode;                     /**< Wiring mode for all channels */
+  MotorConfig m_motors[MOTOR_COUNT];     /**< Motor channel configurations */
+  int         m_pwmFreqHz;               /**< Configured PWM frequency */
+  float       m_pwmClkDiv;               /**< Calculated PWM clock divider */
+  StopMode_e  m_defaultStopMode;         /**< Default stop mode */
 
 
   /* Private Function Declarations -------------------------------------------*/
@@ -299,6 +335,24 @@ private:
    * @param state Pin state (true = HIGH, false = LOW)
    ****************************************************************************/
   void setDigitalOut(int pin, bool state);
+
+  /*****************************************************************************
+   * @brief Apply motor output in 2-PWM mode
+   *
+   * @param motor Motor configuration
+   * @param dutyCycle Calculated duty cycle
+   * @param forward true if forward direction
+   ****************************************************************************/
+  void applyOutput2Pwm(const MotorConfig& motor, uint16_t dutyCycle, bool forward);
+
+  /*****************************************************************************
+   * @brief Apply motor output in 1-PWM + 2-DIR mode
+   *
+   * @param motor Motor configuration
+   * @param dutyCycle Calculated duty cycle
+   * @param forward true if forward direction
+   ****************************************************************************/
+  void applyOutput1Pwm2Dir(const MotorConfig& motor, uint16_t dutyCycle, bool forward);
 
   /*****************************************************************************
    * @brief Calculate clock divider for desired PWM frequency

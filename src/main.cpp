@@ -7,7 +7,7 @@
  *
  * @par System Overview:
  * - RC Receiver: FlySky iBUS protocol on UART1
- * - Drive Train: Differential or Mecanum (configurable)
+ * - Drive Train: Differential (tank) drive
  * - Mechanisms: Collection, Deposit, Launch
  * - Safety: Watchdog timer, signal loss detection
  ******************************************************************************/
@@ -23,16 +23,10 @@
 #include "version.h"
 #include "error_handler.h"
 #include "flysky_ibus.h"
+#include "drive_train_differential.h"
 #include "mech_collect.h"
 #include "mech_deposit.h"
 #include "mech_launcher.h"
-
-// Include appropriate drive train based on configuration
-#if DRIVE_TRAIN_MECANUM
-#include "drive_train_mecanum.h"
-#elif DRIVE_TRAIN_DIFFERENTIAL
-#include "drive_train_differential.h"
-#endif
 
 
 /* Globals -------------------------------------------------------------------*/
@@ -41,11 +35,7 @@
 static FlySkyIBus* g_pIBus = nullptr;
 
 /** @brief Drive train controller */
-#if DRIVE_TRAIN_MECANUM
-static DriveTrainMecanum* g_pDriveTrain = nullptr;
-#elif DRIVE_TRAIN_DIFFERENTIAL
 static DriveTrainDifferential* g_pDriveTrain = nullptr;
-#endif
 
 /** @brief Collection mechanism */
 static MechCollect*  g_pCollect = nullptr;
@@ -59,50 +49,19 @@ static MechLauncher* g_pLauncher = nullptr;
 
 /* Private Function Definitions ----------------------------------------------*/
 
-#if DRIVE_TRAIN_MECANUM
-static void init_motors_mecanum(DriveTrainMecanum* pDriveTrain)
+/*******************************************************************************
+ * @brief Initialize the differential drive motors
+ *
+ * Configures left and right motors with the appropriate pin assignments
+ * based on the motor driver wiring mode selected in config.h.
+ *
+ * @param pDriveTrain Pointer to the drive train controller
+ ******************************************************************************/
+static void init_motors(DriveTrainDifferential* pDriveTrain)
 {
   if (pDriveTrain != nullptr)
   {
-#if MOTOR_DRIVER_DRV8833
-    pDriveTrain->addMotor(DriveTrainMecanum::MOTOR_FRONT_LEFT,
-                          PIN_MECANUM_MOTOR_FL_DIR_FWD,
-                          PIN_MECANUM_MOTOR_FL_DIR_REV);
-    pDriveTrain->addMotor(DriveTrainMecanum::MOTOR_FRONT_RIGHT,
-                          PIN_MECANUM_MOTOR_FR_DIR_FWD,
-                          PIN_MECANUM_MOTOR_FR_DIR_REV);
-    pDriveTrain->addMotor(DriveTrainMecanum::MOTOR_REAR_RIGHT,
-                          PIN_MECANUM_MOTOR_RR_DIR_FWD,
-                          PIN_MECANUM_MOTOR_RR_DIR_REV);
-    pDriveTrain->addMotor(DriveTrainMecanum::MOTOR_REAR_LEFT,
-                          PIN_MECANUM_MOTOR_RL_DIR_FWD,
-                          PIN_MECANUM_MOTOR_RL_DIR_REV);
-#elif MOTOR_DRIVER_L298N
-    pDriveTrain->addMotor(DriveTrainMecanum::MOTOR_FRONT_LEFT,
-                          PIN_MECANUM_MOTOR_FL_ENABLE,
-                          PIN_MECANUM_MOTOR_FL_DIR_FWD,
-                          PIN_MECANUM_MOTOR_FL_DIR_REV);
-    pDriveTrain->addMotor(DriveTrainMecanum::MOTOR_FRONT_RIGHT,
-                          PIN_MECANUM_MOTOR_FR_ENABLE,
-                          PIN_MECANUM_MOTOR_FR_DIR_FWD,
-                          PIN_MECANUM_MOTOR_FR_DIR_REV);
-    pDriveTrain->addMotor(DriveTrainMecanum::MOTOR_REAR_RIGHT,
-                          PIN_MECANUM_MOTOR_RR_ENABLE,
-                          PIN_MECANUM_MOTOR_RR_DIR_FWD,
-                          PIN_MECANUM_MOTOR_RR_DIR_REV);
-    pDriveTrain->addMotor(DriveTrainMecanum::MOTOR_REAR_LEFT,
-                          PIN_MECANUM_MOTOR_RL_ENABLE,
-                          PIN_MECANUM_MOTOR_RL_DIR_FWD,
-                          PIN_MECANUM_MOTOR_RL_DIR_REV);
-#endif
-  }
-}
-#elif DRIVE_TRAIN_DIFFERENTIAL
-static void init_motors_differential(DriveTrainDifferential* pDriveTrain)
-{
-  if (pDriveTrain != nullptr)
-  {
-#if MOTOR_DRIVER_DRV8833
+#if MOTOR_DRIVER_MODE_2PWM
     pDriveTrain->addMotor(DriveTrainDifferential::MOTOR_LEFT,
                           PIN_DIFF_MOTOR_LEFT_DIR_FWD,
                           PIN_DIFF_MOTOR_LEFT_DIR_REV,
@@ -111,7 +70,7 @@ static void init_motors_differential(DriveTrainDifferential* pDriveTrain)
                           PIN_DIFF_MOTOR_RIGHT_DIR_FWD,
                           PIN_DIFF_MOTOR_RIGHT_DIR_REV,
                           PIN_DIFF_MOTOR_RIGHT_ENC);
-#elif MOTOR_DRIVER_L298N
+#elif MOTOR_DRIVER_MODE_1PWM_2DIR
     pDriveTrain->addMotor(DriveTrainDifferential::MOTOR_LEFT,
                           PIN_DIFF_MOTOR_LEFT_ENABLE,
                           PIN_DIFF_MOTOR_LEFT_DIR_FWD,
@@ -125,14 +84,13 @@ static void init_motors_differential(DriveTrainDifferential* pDriveTrain)
 #endif
   }
 }
-#endif /* DRIVE_TRAIN_DIFFERENTIAL */
 
 /*******************************************************************************
  * @brief Initialize all system components
  *
  * @return true if all components initialized successfully
  *****************************************************************************/
-static bool system_init(void )
+static bool system_init(void)
 {
   bool success = true;
 
@@ -175,22 +133,13 @@ static bool system_init(void )
 
   /* Initialize drive train */
 #if ENABLE_DEBUG
-#if DRIVE_TRAIN_MECANUM
-  printf("[Init] Configuring Mecanum drive train...\n");
-#elif DRIVE_TRAIN_DIFFERENTIAL
   printf("[Init] Configuring Differential drive train...\n");
 #endif
-#endif
 
-#if DRIVE_TRAIN_MECANUM
-  g_pDriveTrain = new DriveTrainMecanum();
-  init_motors_mecanum(g_pDriveTrain);
-#elif DRIVE_TRAIN_DIFFERENTIAL
   g_pDriveTrain = new DriveTrainDifferential();
-  init_motors_differential(g_pDriveTrain);
-#endif
+  init_motors(g_pDriveTrain);
 
-  if ((g_pDriveTrain == nullptr) || 
+  if ((g_pDriveTrain == nullptr) ||
       (g_pDriveTrain->isInitialized() == false))
   {
     ERROR_REPORT(ERROR_DT_NOT_INIT);
@@ -266,14 +215,8 @@ static void process_rc_input(void)
   g_pDriveTrain->setSpeed(speed);
   g_pDriveTrain->setTurn(turn);
 
-#if DRIVE_TRAIN_MECANUM
-  int strafe = g_pIBus->readChannelNormalized(FlySkyIBus::CHAN_LSTICK_HORIZ);
-  static_cast<DriveTrainMecanum*>(g_pDriveTrain)->setStrafe(strafe);
-#endif // DRIVE_TRAIN_MECANUM
-
-#if DRIVE_TRAIN_DIFFERENTIAL
-  // Check if user wants to use manual trim (SWA in DOWN position)
-    // note: Up is 1000, Down is 2000
+  /* Check if user wants to use manual trim (SWA in DOWN position) */
+  /* note: Up is 1000, Down is 2000 */
   if (g_pIBus->readChannel(FlySkyIBus::CHAN_SWA) > FlySkyIBus::CHANNEL_VALUE_CENTER)
   {
     /* Read VRA/VRB for manual trim adjustment (raw values 1000-2000) */
@@ -286,10 +229,9 @@ static void process_rc_input(void)
   }
   else
   {
-    // Switch is Up, use default trim (Calibrated)
+    /* Switch is Up, use default trim (Calibrated) */
     g_pDriveTrain->setManualTrimMode(false);
   }
-#endif // DRIVE_TRAIN_DIFFERENTIAL
 
   g_pDriveTrain->update();
 }
