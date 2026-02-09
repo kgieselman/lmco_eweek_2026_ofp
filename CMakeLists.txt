@@ -155,14 +155,11 @@ set(SOURCES
   src/error_handler.cpp
   src/ring_buffer.cpp
   src/flysky_ibus.cpp
-  src/drive_train.cpp
   src/drive_train_differential.cpp
-  src/drive_train_mecanum.cpp
+  src/motor_driver.cpp
   src/mech_collect.cpp
   src/mech_deposit.cpp
   src/mech_launcher.cpp
-  src/motor_driver_drv8833.cpp
-  src/motor_driver_l298n.cpp
 )
 
 # Create executable

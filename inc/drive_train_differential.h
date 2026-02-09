@@ -9,20 +9,43 @@
  * - Left motor  = speed + turn
  * - Right motor = speed - turn
  *
- * @par Motor Driver Selection:
- * The motor driver type is selected via MOTOR_DRIVER_DRV8833 in config.h:
- * - 0 = L298N (1 PWM + 2 direction pins per motor)
- * - 1 = DRV8833 (2 PWM pins per motor)
+ * @par Motor Driver Mode:
+ * The motor driver wiring mode is selected via config.h:
+ * - MOTOR_DRIVER_MODE_2PWM:      Two PWM pins per motor (e.g. DRV8833)
+ * - MOTOR_DRIVER_MODE_1PWM_2DIR: One PWM + two direction pins (e.g. L298N)
  *
- * The MotorDriver type alias (defined in config.h) abstracts the driver type,
- * eliminating the need for preprocessor conditionals in this header.
+ * @par Example Usage (2-PWM mode):
+ * @code
+ * DriveTrainDifferential drive;
+ * drive.addMotor(DriveTrainDifferential::MOTOR_LEFT, 27, 26);
+ * drive.addMotor(DriveTrainDifferential::MOTOR_RIGHT, 7, 6);
+ *
+ * drive.setSpeed(250);   // 50% forward
+ * drive.setTurn(100);    // Slight right turn
+ * drive.update();
+ * @endcode
+ *
+ * @par Example Usage (1-PWM + 2-DIR mode):
+ * @code
+ * DriveTrainDifferential drive;
+ * drive.addMotor(DriveTrainDifferential::MOTOR_LEFT, 21, 27, 26);
+ * drive.addMotor(DriveTrainDifferential::MOTOR_RIGHT, 8, 7, 6);
+ *
+ * drive.setSpeed(250);   // 50% forward
+ * drive.setTurn(100);    // Slight right turn
+ * drive.update();
+ * @endcode
  ******************************************************************************/
 #pragma once
 
 
 /* Includes ------------------------------------------------------------------*/
-#include "drive_train.h"
 #include "config.h"
+#include "motor_driver.h"
+#include "pinout.h"
+
+#include <stdint.h>
+#include <stdbool.h>
 
 
 /* Class Definition ----------------------------------------------------------*/
@@ -35,30 +58,8 @@
  * motion is achieved by driving both wheels in the same direction, while
  * turning is achieved by driving them in opposite directions or at
  * different speeds.
- *
- * @par Example Usage (DRV8833):
- * @code
- * DriveTrainDifferential drive;
- * drive.addMotor(DriveTrainDifferential::MOTOR_LEFT, 7, 6);
- * drive.addMotor(DriveTrainDifferential::MOTOR_RIGHT, 10, 11);
- *
- * drive.setSpeed(250);   // 50% forward
- * drive.setTurn(100);    // Slight right turn
- * drive.update();
- * @endcode
- *
- * @par Example Usage (L298N):
- * @code
- * DriveTrainDifferential drive;
- * drive.addMotor(DriveTrainDifferential::MOTOR_LEFT, 9, 7, 6);
- * drive.addMotor(DriveTrainDifferential::MOTOR_RIGHT, 8, 10, 11);
- *
- * drive.setSpeed(250);   // 50% forward
- * drive.setTurn(100);    // Slight right turn
- * drive.update();
- * @endcode
  ******************************************************************************/
-class DriveTrainDifferential : public DriveTrain
+class DriveTrainDifferential
 {
 public:
   /* Public Types ------------------------------------------------------------*/
@@ -73,6 +74,15 @@ public:
   };
 
 
+  /* Public Constants --------------------------------------------------------*/
+
+  /** @brief Minimum user input value */
+  static constexpr int USER_INPUT_MIN = -500;
+
+  /** @brief Maximum user input value */
+  static constexpr int USER_INPUT_MAX = 500;
+
+
   /* Public Function Declarations --------------------------------------------*/
 
   /*****************************************************************************
@@ -83,16 +93,16 @@ public:
   /*****************************************************************************
    * @brief Destructor
    ****************************************************************************/
-  ~DriveTrainDifferential() override;
+  ~DriveTrainDifferential();
 
-#if MOTOR_DRIVER_DRV8833
+#if MOTOR_DRIVER_MODE_2PWM
   /*****************************************************************************
-   * @brief Add and configure a motor (DRV8833)
+   * @brief Add and configure a motor (2-PWM mode)
    *
    * @param motor Which motor to configure (MOTOR_LEFT or MOTOR_RIGHT)
    * @param pinIn1 PWM pin for forward direction (IN1)
    * @param pinIn2 PWM pin for reverse direction (IN2)
-   * @param pinEncoder Optional encoder input pin (Invalid if not used)
+   * @param pinEncoder Optional encoder input pin (PIN_INVALID if not used)
    * @return true if configuration successful
    *
    * @note If a motor spins backwards, swap pinIn1 and pinIn2
@@ -102,15 +112,16 @@ public:
                 int       pinIn1,
                 int       pinIn2,
                 int       pinEncoder = PIN_INVALID);
-#elif MOTOR_DRIVER_L298N
+
+#elif MOTOR_DRIVER_MODE_1PWM_2DIR
   /*****************************************************************************
-   * @brief Add and configure a motor (L298N)
+   * @brief Add and configure a motor (1-PWM + 2-DIR mode)
    *
    * @param motor Which motor to configure (MOTOR_LEFT or MOTOR_RIGHT)
    * @param pinPwm PWM output pin for speed control
    * @param pinDirFwd Direction pin for forward
    * @param pinDirRev Direction pin for reverse
-   * @param pinEncoder Optional encoder input pin (Invalid if not used)
+   * @param pinEncoder Optional encoder input pin (PIN_INVALID if not used)
    * @return true if configuration successful
    *
    * @note If a motor spins backwards, swap pinDirFwd and pinDirRev
@@ -124,17 +135,52 @@ public:
 #endif
 
   /*****************************************************************************
-   * @brief Update motor outputs
+   * @brief Set desired speed
+   *
+   * @param speed Speed value in range [-500, +500]
+   *              Positive = forward, negative = reverse
+   * @return true if value is valid and accepted
+   ****************************************************************************/
+  bool setSpeed(int speed);
+
+  /*****************************************************************************
+   * @brief Set desired turn rate
+   *
+   * @param turn Turn value in range [-500, +500]
+   *             Positive = right, negative = left
+   * @return true if value is valid and accepted
+   ****************************************************************************/
+  bool setTurn(int turn);
+
+  /*****************************************************************************
+   * @brief Get current speed setpoint
+   *
+   * @return Current speed value
+   ****************************************************************************/
+  int getSpeed(void) const { return m_speed; }
+
+  /*****************************************************************************
+   * @brief Get current turn setpoint
+   *
+   * @return Current turn value
+   ****************************************************************************/
+  int getTurn(void) const { return m_turn; }
+
+  /*****************************************************************************
+   * @brief Update motor outputs based on current setpoints
    *
    * Calculates motor values from speed/turn setpoints and applies them.
    * Includes scaling to prevent clipping while maintaining direction ratio.
+   * Must be called periodically.
    ****************************************************************************/
-  void update(void) override;
+  void update(void);
 
   /*****************************************************************************
    * @brief Stop all motors immediately
+   *
+   * Sets all motor outputs to zero and resets setpoints.
    ****************************************************************************/
-  void stop(void) override;
+  void stop(void);
 
   /*****************************************************************************
    * @brief Run encoder-based calibration
@@ -142,14 +188,14 @@ public:
    * If encoders are configured, measures motor speed in both directions
    * and calculates trim values to equalize wheel speeds.
    ****************************************************************************/
-  void calibrate(void) override;
+  void calibrate(void);
 
   /*****************************************************************************
    * @brief Check if both motors are configured
    *
    * @return true if all motors initialized
    ****************************************************************************/
-  bool isInitialized(void) const override;
+  bool isInitialized(void) const;
 
   /*****************************************************************************
    * @brief Set forward trim manually from IBus channel value
@@ -162,12 +208,6 @@ public:
    *                     - 1500 = no trim (both motors at equal power)
    *                     - 2000 = max trim on left motor (right is weaker)
    *                     - 1000 = max trim on right motor (left is weaker)
-   *
-   * @par Example:
-   * @code
-   * int vra = ibus.readChannel(FlySkyIBus::CHAN_VRA);
-   * drive.setForwardTrimFromChannel(vra);
-   * @endcode
    ****************************************************************************/
   void setForwardTrimFromChannel(int channelValue);
 
@@ -175,19 +215,8 @@ public:
    * @brief Set reverse trim manually from IBus channel value
    *
    * Allows the user to set motor trim via the VRB potentiometer channel.
-   * The trim value adjusts the relative strength of the left vs right motor
-   * to compensate for motor/wheel differences when driving in reverse.
    *
    * @param channelValue Raw IBus channel value (1000-2000)
-   *                     - 1500 = no trim (both motors at equal power)
-   *                     - 2000 = max trim on left motor (right is weaker)
-   *                     - 1000 = max trim on right motor (left is weaker)
-   *
-   * @par Example:
-   * @code
-   * int vrb = ibus.readChannel(FlySkyIBus::CHAN_VRB);
-   * drive.setReverseTrimFromChannel(vrb);
-   * @endcode
    ****************************************************************************/
   void setReverseTrimFromChannel(int channelValue);
 
@@ -210,23 +239,7 @@ public:
   /*****************************************************************************
    * @brief Set the trim mode (manual vs calibrated)
    *
-   * Switches between using manually-set trim values (from VRA/VRB channels)
-   * and trim values determined by the calibrate() function.
-   *
-   * @param useManual true = use manual trim from setForwardTrimFromChannel/
-   *                         setReverseTrimFromChannel
-   *                  false = use calibrated trim values
-   *
-   * @note When switching to calibrated mode, the stored calibrated values
-   *       are restored. When switching to manual mode, the current trim
-   *       values are preserved until changed by setForwardTrimFromChannel/
-   *       setReverseTrimFromChannel.
-   *
-   * @par Example (tie to switch channel):
-   * @code
-   * bool useManual = (ibus.readChannel(FlySkyIBus::CHAN_SWA) > 1500);
-   * drive.setManualTrimMode(useManual);
-   * @endcode
+   * @param useManual true = use manual trim, false = use calibrated trim
    ****************************************************************************/
   void setManualTrimMode(bool useManual);
 
@@ -246,7 +259,7 @@ private:
    ****************************************************************************/
   struct MotorState {
     bool initialized;      /**< Motor is configured and ready */
-    int pinEncoder;        /**< Encoder input pin (Invalid if not used) */
+    int pinEncoder;        /**< Encoder input pin (PIN_INVALID if not used) */
     float trimFwd;         /**< Active forward direction trim (0.0 - 1.0) */
     float trimRev;         /**< Active reverse direction trim (0.0 - 1.0) */
     float calibTrimFwd;    /**< Calibrated forward trim (stored from calibrate()) */
@@ -277,12 +290,22 @@ private:
 
   /* Private Variables -------------------------------------------------------*/
 
-  MotorDriver m_motorDriver;             /**< Motor driver instance (type from config.h) */
+  MotorDriver m_motorDriver;             /**< Motor driver instance */
   MotorState m_motorState[MOTOR_COUNT];  /**< Motor state tracking */
+  int m_speed;                           /**< Current speed setpoint */
+  int m_turn;                            /**< Current turn setpoint */
   bool m_useManualTrim;                  /**< true = manual trim, false = calibrated trim */
 
 
   /* Private Function Declarations -------------------------------------------*/
+
+  /*****************************************************************************
+   * @brief Validate user input value is in range
+   *
+   * @param value Value to validate
+   * @return true if value is in [-500, +500] range
+   ****************************************************************************/
+  bool validateUserInput(int value) const;
 
   /*****************************************************************************
    * @brief Get the motor channel for a given motor ID
@@ -312,10 +335,6 @@ private:
 
   /*****************************************************************************
    * @brief Convert IBus channel value to motor trim values
-   *
-   * Calculates trim values for left and right motors based on potentiometer
-   * position. Channel values above center reduce left motor power (right is
-   * weaker), values below center reduce right motor power (left is weaker).
    *
    * @param channelValue Raw IBus channel value (1000-2000)
    * @param pLeftTrim Pointer to store left motor trim (0.5-1.0)

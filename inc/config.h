@@ -6,10 +6,9 @@
  * robot control system. Modify these settings to customize behavior.
  *
  * @section config_sections Configuration Sections
- * - Hardware Selection: Drive train type, motor driver IC
+ * - Hardware Selection: Motor driver wiring mode
  * - Feature Enables: Debug output, watchdog, safety features
  * - Timing Parameters: Timeouts, loop rates, calibration durations
- * - Type Aliases: Unified motor driver types (auto-generated)
  ******************************************************************************/
 #pragma once
 
@@ -24,24 +23,14 @@
  */
 
 /*******************************************************************************
- * @brief Drive train type selection
+ * @brief Motor driver wiring mode selection
  *
  * Enable exactly ONE of the following options:
- * - DRIVE_TRAIN_DIFFERENTIAL: Two-wheel tank drive (skid steering)
- * - DRIVE_TRAIN_MECANUM: Four-wheel omnidirectional drive
+ * - MOTOR_DRIVER_MODE_2PWM:      Two PWM pins per motor (e.g. DRV8833, TB6612FNG)
+ * - MOTOR_DRIVER_MODE_1PWM_2DIR: One PWM + two direction pins per motor (e.g. L298N)
  ******************************************************************************/
-#define DRIVE_TRAIN_DIFFERENTIAL  (1)
-#define DRIVE_TRAIN_MECANUM       (0)
-
-/*******************************************************************************
- * @brief Motor driver IC selection
- *
- * Enable exactly ONE of the following options:
- * - MOTOR_DRIVER_L298N: Classic H-bridge (1 PWM + 2 DIR pins per motor)
- * - MOTOR_DRIVER_DRV8833: TI DRV8833 (2 PWM pins per motor, more efficient)
- ******************************************************************************/
-#define MOTOR_DRIVER_L298N        (1)
-#define MOTOR_DRIVER_DRV8833      (0)
+#define MOTOR_DRIVER_MODE_2PWM        (0)
+#define MOTOR_DRIVER_MODE_1PWM_2DIR   (1)
 
 /** @} */ /* End of hw_select */
 
@@ -209,18 +198,11 @@
  *  @{
  */
 
-/* Validate drive train selection (exactly one must be enabled) */
-#if (DRIVE_TRAIN_DIFFERENTIAL + DRIVE_TRAIN_MECANUM) == 0
-  #error "No drive train selected. Enable DRIVE_TRAIN_DIFFERENTIAL or DRIVE_TRAIN_MECANUM."
-#elif (DRIVE_TRAIN_DIFFERENTIAL + DRIVE_TRAIN_MECANUM) > 1
-  #error "Multiple drive trains selected. Enable only ONE of DRIVE_TRAIN_DIFFERENTIAL or DRIVE_TRAIN_MECANUM."
-#endif
-
-/* Validate motor driver selection (exactly one must be enabled) */
-#if (MOTOR_DRIVER_L298N + MOTOR_DRIVER_DRV8833) == 0
-  #error "No motor driver selected. Enable MOTOR_DRIVER_L298N or MOTOR_DRIVER_DRV8833."
-#elif (MOTOR_DRIVER_L298N + MOTOR_DRIVER_DRV8833) > 1
-  #error "Multiple motor drivers selected. Enable only ONE of MOTOR_DRIVER_L298N or MOTOR_DRIVER_DRV8833."
+/* Validate motor driver mode selection (exactly one must be enabled) */
+#if (MOTOR_DRIVER_MODE_2PWM + MOTOR_DRIVER_MODE_1PWM_2DIR) == 0
+  #error "No motor driver mode selected. Enable MOTOR_DRIVER_MODE_2PWM or MOTOR_DRIVER_MODE_1PWM_2DIR."
+#elif (MOTOR_DRIVER_MODE_2PWM + MOTOR_DRIVER_MODE_1PWM_2DIR) > 1
+  #error "Multiple motor driver modes selected. Enable only ONE of MOTOR_DRIVER_MODE_2PWM or MOTOR_DRIVER_MODE_1PWM_2DIR."
 #endif
 
 /* Validate watchdog timeout range */
@@ -239,45 +221,26 @@
 
 
 /*============================================================================*/
-/* Motor Driver Type Aliases                                                  */
+/* Motor Driver Mode Alias                                                    */
 /*============================================================================*/
 
-/** @defgroup type_aliases Motor Driver Type Aliases
- *  @brief Unified type names for hardware abstraction
+/** @defgroup mode_alias Motor Driver Mode Alias
+ *  @brief Maps config flag to MotorDriver::Mode_e at compile time
  *
- *  These aliases allow drive train code to use consistent type names
- *  regardless of which motor driver is selected. This eliminates
- *  preprocessor conditionals throughout the codebase.
+ *  Provides a compile-time constant that drive train code can use to
+ *  construct the motor driver with the correct mode.
  *  @{
  */
 
-#if MOTOR_DRIVER_DRV8833
-  #include "motor_driver_drv8833.h"
+#include "motor_driver.h"
 
-  using MotorDriver  = MotorDriverDRV8833;
-  using MotorChannel = MotorDriverDRV8833::MotorChannel_e;
-  using StopMode     = MotorDriverDRV8833::StopMode_e;
-
-  constexpr MotorChannel MOTOR_CHANNEL_A = MotorDriverDRV8833::MOTOR_A;
-  constexpr MotorChannel MOTOR_CHANNEL_B = MotorDriverDRV8833::MOTOR_B;
-  constexpr StopMode     STOP_MODE_COAST = MotorDriverDRV8833::STOP_COAST;
-  constexpr StopMode     STOP_MODE_BRAKE = MotorDriverDRV8833::STOP_BRAKE;
-
-#elif MOTOR_DRIVER_L298N
-  #include "motor_driver_l298n.h"
-
-  using MotorDriver  = MotorDriverL298N;
-  using MotorChannel = MotorDriverL298N::MotorChannel_e;
-  using StopMode     = MotorDriverL298N::StopMode_e;
-
-  constexpr MotorChannel MOTOR_CHANNEL_A = MotorDriverL298N::MOTOR_A;
-  constexpr MotorChannel MOTOR_CHANNEL_B = MotorDriverL298N::MOTOR_B;
-  constexpr StopMode     STOP_MODE_COAST = MotorDriverL298N::STOP_COAST;
-  constexpr StopMode     STOP_MODE_BRAKE = MotorDriverL298N::STOP_BRAKE;
-
+#if MOTOR_DRIVER_MODE_2PWM
+  constexpr MotorDriver::Mode_e MOTOR_DRIVER_MODE = MotorDriver::MODE_2PWM;
+#elif MOTOR_DRIVER_MODE_1PWM_2DIR
+  constexpr MotorDriver::Mode_e MOTOR_DRIVER_MODE = MotorDriver::MODE_1PWM_2DIR;
 #endif
 
-/** @} */ /* End of type_aliases */
+/** @} */ /* End of mode_alias */
 
 
 /* EOF -----------------------------------------------------------------------*/
