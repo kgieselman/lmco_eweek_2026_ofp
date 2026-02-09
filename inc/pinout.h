@@ -70,9 +70,9 @@ constexpr int PIN_IBUS_RX = 5;
  * - MODE_1PWM_2DIR: ENABLE = PWM, DIR_FWD = digital, DIR_REV = digital
  * @{
  ******************************************************************************/
-constexpr int PIN_DIFF_MOTOR_LEFT_ENABLE  = 21;  /**< PWM enable (Slice 2 Chan B) */
-constexpr int PIN_DIFF_MOTOR_LEFT_DIR_FWD = 27;  /**< Forward direction / IN1 */
-constexpr int PIN_DIFF_MOTOR_LEFT_DIR_REV = 26;  /**< Reverse direction / IN2 */
+constexpr int PIN_DIFF_MOTOR_LEFT_ENABLE  = 9;  /**< PWM enable (Slice 4 Chan B) */
+constexpr int PIN_DIFF_MOTOR_LEFT_DIR_FWD = 10;  /**< Forward direction / IN1 */
+constexpr int PIN_DIFF_MOTOR_LEFT_DIR_REV = 11;  /**< Reverse direction / IN2 */
 constexpr int PIN_DIFF_MOTOR_LEFT_ENC     = PIN_INVALID; /**< Encoder (Optional) */
 /** @} */
 

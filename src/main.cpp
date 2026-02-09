@@ -213,6 +213,13 @@ static void process_rc_input(void)
   int turn  = g_pIBus->readChannelNormalized(FlySkyIBus::CHAN_RSTICK_HORIZ);
 
   g_pDriveTrain->setSpeed(speed);
+
+  // If SWB is UP, divide turn value by 2
+  if (g_pIBus->readChannelNormalized(FlySkyIBus::CHAN_SWB) > 0)
+  {
+    float newTurn = static_cast<float>(turn) / 2.0f;
+    turn = static_cast<int>(newTurn);
+  }
   g_pDriveTrain->setTurn(turn);
 
   /* Check if user wants to use manual trim (SWA in DOWN position) */
