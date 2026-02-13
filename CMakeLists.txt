@@ -159,6 +159,7 @@ set(SOURCES
   src/mech_collect.cpp
   src/mech_deposit.cpp
   src/mech_launcher.cpp
+  src/ssd1306_display.cpp
 )
 
 # Create executable
@@ -182,10 +183,12 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 # Link required libraries
 target_link_libraries(${PROJECT_NAME}
   pico_stdlib
+  pico_multicore
   hardware_pwm
   hardware_timer
   hardware_clocks
   hardware_watchdog
+  hardware_i2c
 )
 
 # Compiler warnings

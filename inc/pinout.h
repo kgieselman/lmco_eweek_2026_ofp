@@ -126,6 +126,20 @@ constexpr int PIN_LAUNCHER_TILT_SERVO    = PIN_INVALID;  /**< Angle adjustment s
 /** @} */
 
 
+/* I2C Display (SSD1306 OLED) ------------------------------------------------*/
+
+/*******************************************************************************
+ * @name SSD1306 OLED Display Pins
+ * @note Using I2C0 on core 1. Choose pins that map to the desired I2C instance.
+ *       I2C0 SDA options: GP0, GP4, GP8, GP12, GP16, GP20
+ *       I2C0 SCL options: GP1, GP5, GP9, GP13, GP17, GP21
+ * @{
+ ******************************************************************************/
+constexpr int PIN_DISPLAY_SDA = 16;  /**< I2C0 SDA for OLED display */
+constexpr int PIN_DISPLAY_SCL = 17;  /**< I2C0 SCL for OLED display */
+/** @} */
+
+
 /* Debug/Status --------------------------------------------------------------*/
 
 /*******************************************************************************
