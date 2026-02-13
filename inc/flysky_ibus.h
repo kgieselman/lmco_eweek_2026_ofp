@@ -80,6 +80,19 @@ public:
     CHAN_COUNT        = 10  /**< Number of supported channels */
   };
 
+
+  /*****************************************************************************
+   * @brief Read channel option enumeration
+   * 
+   * Standard options to adjust IBus channel data
+   ****************************************************************************/
+  enum ReadChannelMode_e {
+    READ_CHAN_RAW,      /**< Read value as is from IBus [1000..2000]    */
+    READ_CHAN_NORM,     /**< Read value shifted to start at 0 [0..1000] */
+    READ_CHAN_CENTER_0, /**< Read value centered on 0 [-500..500]       */
+  };
+
+
   /* Public Constants --------------------------------------------------------*/
 
   /** @brief Minimum valid channel value */
@@ -90,6 +103,10 @@ public:
 
   /** @brief Center channel value */
   static constexpr int CHANNEL_VALUE_CENTER = 1500;
+
+  static constexpr int CHANNEL_NORMALIZED_VALUE_MIN = -500;
+  static constexpr int CHANNEL_NORMALIZED_VALUE_MAX = 500;
+  static constexpr int CHANNEL_NORMALIZED_VALUE_CENTER = 0;
 
 
   /* Public Function Declarations --------------------------------------------*/
@@ -125,23 +142,13 @@ public:
 
   /*****************************************************************************
    * @brief Read current value of a channel
-   *
-   * Returns the most recent value received for the specified channel.
-   *
-   * @param channel Channel to read
-   * @return Channel value (1000-2000), or 1500 if invalid channel
+   * 
+   * @param channel - The IBus channel to read
+   * @param mode    - The read mode
+   * 
+   * @return Current channel value
    ****************************************************************************/
-  int readChannel(Channel_e channel) const;
-
-  /*****************************************************************************
-   * @brief Read channel value normalized to -500 to +500 range
-   *
-   * Convenience method that subtracts the center value.
-   *
-   * @param channel Channel to read
-   * @return Normalized value (-500 to +500), or 0 if invalid channel
-   ****************************************************************************/
-  int readChannelNormalized(Channel_e channel) const;
+  int readChannel(Channel_e channel, ReadChannelMode_e mode = READ_CHAN_RAW) const;
 
   /*****************************************************************************
    * @brief Check if RC signal is currently valid

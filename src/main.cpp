@@ -200,6 +200,12 @@ static bool system_init(void)
  * @brief Process RC inputs and update drive train
  *
  * Called when new RC data is available.
+ * 
+ * Control Mapping
+ * Right Stick Verical   - Throttle
+ * Left Stick Horizontal - Turn
+ * VRA                   - Forward steering trim
+ * VRB                   - Steering multiplier
  ******************************************************************************/
 static void process_rc_input(void)
 {
@@ -208,47 +214,24 @@ static void process_rc_input(void)
     return;
   }
 
-  /* Read normalized channel values [-500..500] */
-  int speed = g_pIBus->readChannelNormalized(FlySkyIBus::CHAN_RSTICK_VERT);
-  int turn  = g_pIBus->readChannelNormalized(FlySkyIBus::CHAN_RSTICK_HORIZ);
+  /* Read updated channel values */
+  int speed     = g_pIBus->readChannel(FlySkyIBus::CHAN_RSTICK_VERT,  FlySkyIBus::READ_CHAN_CENTER_0); // [-500..500]
+  int steer     = g_pIBus->readChannel(FlySkyIBus::CHAN_LSTICK_HORIZ, FlySkyIBus::READ_CHAN_CENTER_0); // [-500..500]
+  int steerTrim = g_pIBus->readChannel(FlySkyIBus::CHAN_VRA,          FlySkyIBus::READ_CHAN_RAW);      // [1000..2000]
+  int steerRate = g_pIBus->readChannel(FlySkyIBus::CHAN_VRB,          FlySkyIBus::READ_CHAN_NORM);     // [0..1000]
+  //TODO Collect mech - update to scoopMech 
+  //TODO Launcher mech  
 
-  g_pDriveTrain->setSpeed(speed);
+  /* Update modules with the new values */
+  g_pDriveTrain->setSpeed(speed); // TODO: 2S governer
 
-  // Use SWC to determine what divider to apply to steering
-  if (g_pIBus->readChannelNormalized(FlySkyIBus::CHAN_SWC) < 250)
-  {
-    // Switch is in UP position, do nothing to steering
-  }
-  else if (g_pIBus->readChannelNormalized(FlySkyIBus::CHAN_SWC) > 250)
-  {
-    // Switch is in DOWN position, Max attenuation of steering
-    float newTurn = static_cast<float>(turn) / 3.0f;
-    turn = static_cast<int>(newTurn);
-  }
-  else
-  {
-    // Switch is in middle position, Use medium attenuation
-    float newTurn = static_cast<float>(turn) / 2.0f;
-    turn = static_cast<int>(newTurn);
-  }
-  g_pDriveTrain->setTurn(turn);
+  float steerMultipler = static_cast<float>(steerRate) / static_cast<float>(1000.0); 
+  int steerAdjusted = static_cast<int>(static_cast<float>(steer) * steerMultipler);
+  g_pDriveTrain->setTurn(steerAdjusted);
 
-  // Use manual trim by default, use SWA to select auto trim...eventually
-  if (g_pIBus->readChannel(FlySkyIBus::CHAN_SWA) < FlySkyIBus::CHANNEL_VALUE_CENTER)
-  {
-    /* Read VRA/VRB for manual trim adjustment (raw values 1000-2000) */
-    int vraValue = g_pIBus->readChannel(FlySkyIBus::CHAN_VRA);
-    int vrbValue = g_pIBus->readChannel(FlySkyIBus::CHAN_VRB);
-
-    g_pDriveTrain->setForwardTrimFromChannel(vraValue);
-    g_pDriveTrain->setReverseTrimFromChannel(vrbValue);
-    g_pDriveTrain->setManualTrimMode(true);
-  }
-  else
-  {
-    /* Switch is Down, use automatic trim from calibration */
-    g_pDriveTrain->setManualTrimMode(false);
-  }
+  g_pDriveTrain->setForwardTrimFromChannel(steerTrim);
+  g_pDriveTrain->setReverseTrimFromChannel(steerTrim);
+  g_pDriveTrain->setManualTrimMode(true);
 
   g_pDriveTrain->update();
 }
