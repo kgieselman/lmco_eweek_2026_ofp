@@ -214,17 +214,27 @@ static void process_rc_input(void)
 
   g_pDriveTrain->setSpeed(speed);
 
-  // If SWB is UP, divide turn value by 2
-  if (g_pIBus->readChannelNormalized(FlySkyIBus::CHAN_SWB) > 0)
+  // Use SWC to determine what divider to apply to steering
+  if (g_pIBus->readChannelNormalized(FlySkyIBus::CHAN_SWC) < 250)
   {
+    // Switch is in UP position, do nothing to steering
+  }
+  else if (g_pIBus->readChannelNormalized(FlySkyIBus::CHAN_SWC) > 250)
+  {
+    // Switch is in DOWN position, Max attenuation of steering
+    float newTurn = static_cast<float>(turn) / 3.0f;
+    turn = static_cast<int>(newTurn);
+  }
+  else
+  {
+    // Switch is in middle position, Use medium attenuation
     float newTurn = static_cast<float>(turn) / 2.0f;
     turn = static_cast<int>(newTurn);
   }
   g_pDriveTrain->setTurn(turn);
 
-  /* Check if user wants to use manual trim (SWA in DOWN position) */
-  /* note: Up is 1000, Down is 2000 */
-  if (g_pIBus->readChannel(FlySkyIBus::CHAN_SWA) > FlySkyIBus::CHANNEL_VALUE_CENTER)
+  // Use manual trim by default, use SWA to select auto trim...eventually
+  if (g_pIBus->readChannel(FlySkyIBus::CHAN_SWA) < FlySkyIBus::CHANNEL_VALUE_CENTER)
   {
     /* Read VRA/VRB for manual trim adjustment (raw values 1000-2000) */
     int vraValue = g_pIBus->readChannel(FlySkyIBus::CHAN_VRA);
@@ -236,7 +246,7 @@ static void process_rc_input(void)
   }
   else
   {
-    /* Switch is Up, use default trim (Calibrated) */
+    /* Switch is Down, use automatic trim from calibration */
     g_pDriveTrain->setManualTrimMode(false);
   }
 
