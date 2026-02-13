@@ -153,7 +153,6 @@ message(STATUS "")
 set(SOURCES
   src/main.cpp
   src/error_handler.cpp
-  src/ring_buffer.cpp
   src/flysky_ibus.cpp
   src/drive_train_differential.cpp
   src/motor_driver.cpp
