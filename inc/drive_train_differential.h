@@ -250,6 +250,48 @@ public:
    ****************************************************************************/
   bool isManualTrimMode(void) const;
 
+  /*****************************************************************************
+   * @brief Get the last computed motor output value (after mixing, before trim)
+   *
+   * Returns the mixed speed+turn value that was last applied to the specified
+   * motor. This value includes scaling to prevent clipping but does NOT
+   * include trim. Range is [-500, +500].
+   *
+   * @param motor Motor to query (MOTOR_LEFT or MOTOR_RIGHT)
+   * @return Last computed motor value, or 0 if motor is invalid
+   ****************************************************************************/
+  int getMotorOutput(MotorId_e motor) const;
+
+  /*****************************************************************************
+   * @brief Get the last computed motor output as a percentage
+   *
+   * Converts the motor output value to a percentage of full scale.
+   * Range is [-100, +100].
+   *
+   * @param motor Motor to query (MOTOR_LEFT or MOTOR_RIGHT)
+   * @return Motor output as a percentage
+   ****************************************************************************/
+  int getMotorOutputPct(MotorId_e motor) const;
+
+  /*****************************************************************************
+   * @brief Get the active forward trim as a signed offset
+   *
+   * Converts the internal trim floats (0.5-1.0) into a single signed
+   * integer representing the left/right bias. Positive means the right
+   * motor is trimmed down (turning right), negative means left is trimmed.
+   *
+   * @return Trim offset in range [-50, +50] (0 = no trim)
+   ****************************************************************************/
+  int getForwardTrimOffset(void) const;
+
+  /*****************************************************************************
+   * @brief Get the active reverse trim as a signed offset
+   *
+   * @return Trim offset in range [-50, +50] (0 = no trim)
+   * @see getForwardTrimOffset() for sign convention
+   ****************************************************************************/
+  int getReverseTrimOffset(void) const;
+
 
 private:
   /* Private Types -----------------------------------------------------------*/
@@ -295,6 +337,7 @@ private:
   int m_speed;                           /**< Current speed setpoint */
   int m_turn;                            /**< Current turn setpoint */
   bool m_useManualTrim;                  /**< true = manual trim, false = calibrated trim */
+  int m_lastMotorOutput[MOTOR_COUNT];    /**< Last computed motor values (after mixing, pre-trim) */
 
 
   /* Private Function Declarations -------------------------------------------*/

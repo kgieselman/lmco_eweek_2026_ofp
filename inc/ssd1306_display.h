@@ -231,8 +231,8 @@ public:
    * @brief Pixel color / draw mode
    ****************************************************************************/
   enum Color_e {
-    COLOR_BLACK  = 0, /**< Pixel off  */
-    COLOR_WHITE  = 1, /**< Pixel on   */
+    COLOR_BLACK = 0,  /**< Pixel off  */
+    COLOR_WHITE = 1,  /**< Pixel on   */
     COLOR_INVERT = 2  /**< Toggle pixel state */
   };
 
@@ -247,9 +247,7 @@ public:
    * @param pinSCL    GPIO pin number for I2C SCL
    * @param addr      7-bit I2C slave address (default 0x3C)
    ****************************************************************************/
-  SSD1306Display(i2c_inst_t* i2cInst,
-                 uint pinSDA,
-                 uint pinSCL,
+  SSD1306Display(i2c_inst_t* i2cInst, uint pinSDA, uint pinSCL,
                  uint8_t addr = SSD1306_I2C_ADDR);
 
   /*****************************************************************************

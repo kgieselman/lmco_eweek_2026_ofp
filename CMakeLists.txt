@@ -160,6 +160,7 @@ set(SOURCES
   src/mech_deposit.cpp
   src/mech_launcher.cpp
   src/ssd1306_display.cpp
+  src/display_view.cpp
 )
 
 # Create executable
@@ -189,6 +190,7 @@ target_link_libraries(${PROJECT_NAME}
   hardware_clocks
   hardware_watchdog
   hardware_i2c
+  hardware_sync
 )
 
 # Compiler warnings

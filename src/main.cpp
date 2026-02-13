@@ -10,11 +10,13 @@
  * - Drive Train: Differential (tank) drive
  * - Mechanisms: Collection, Deposit, Launch
  * - Safety: Watchdog timer, signal loss detection
+ * - Display: SSD1306 OLED on core 1 (I2C0)
  ******************************************************************************/
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdio.h>
 #include "pico/stdlib.h"
+#include "pico/multicore.h"
 #include "hardware/watchdog.h"
 
 // Project headers
@@ -27,6 +29,10 @@
 #include "mech_collect.h"
 #include "mech_deposit.h"
 #include "mech_launcher.h"
+
+#if ENABLE_DISPLAY
+#include "display_view.h"
+#endif
 
 
 /* Globals -------------------------------------------------------------------*/
@@ -45,6 +51,53 @@ static MechDeposit*  g_pDeposit = nullptr;
 
 /** @brief Launcher mechanism */
 static MechLauncher* g_pLauncher = nullptr;
+
+#if ENABLE_DISPLAY
+/** @brief Display view (owned here, runs on core 1) */
+static DisplayView* g_pDisplayView = nullptr;
+
+/** @brief Flag to track if last boot was from watchdog (captured before init) */
+static bool g_watchdogRebooted = false;
+#endif
+
+
+/* Core 1 Entry (Display) ---------------------------------------------------*/
+
+#if ENABLE_DISPLAY
+/*******************************************************************************
+ * @brief Core 1 entry point — display update loop
+ *
+ * Initializes the display hardware and runs the refresh loop. This function
+ * never returns. Data from core 0 arrives via DisplayView::pushData().
+ ******************************************************************************/
+static void core1_display_entry(void)
+{
+  if (g_pDisplayView == nullptr)
+  {
+    return;
+  }
+
+  if (!g_pDisplayView->init())
+  {
+#if ENABLE_DEBUG
+    /* Note: printf from core 1 is safe with pico_stdlib's mutex-protected stdio */
+    printf("[Display] OLED initialization failed on core 1\n");
+#endif
+    return;
+  }
+
+#if ENABLE_DEBUG
+  printf("[Display] OLED initialized on core 1\n");
+#endif
+
+  /* Display refresh loop (never returns) */
+  while (true)
+  {
+    g_pDisplayView->update();
+    sleep_ms(TIMING_DISPLAY_REFRESH_MS);
+  }
+}
+#endif /* ENABLE_DISPLAY */
 
 
 /* Private Function Definitions ----------------------------------------------*/
@@ -114,6 +167,9 @@ static bool system_init(void)
   if (watchdog_caused_reboot())
   {
     ERROR_REPORT(ERROR_HW_WATCHDOG);
+#if ENABLE_DISPLAY
+    g_watchdogRebooted = true;
+#endif
 #if ENABLE_DEBUG
     printf("[WARN] System rebooted by watchdog!\n");
 #endif
@@ -173,6 +229,28 @@ static bool system_init(void)
   {
     g_pLauncher->init();
   }
+
+  /* Initialize display view (constructed here, runs on core 1) */
+#if ENABLE_DISPLAY
+#if ENABLE_DEBUG
+  printf("[Init] Constructing display view...\n");
+#endif
+  g_pDisplayView = new DisplayView(i2c0, PIN_DISPLAY_SDA, PIN_DISPLAY_SCL);
+  if (g_pDisplayView == nullptr)
+  {
+#if ENABLE_DEBUG
+    printf("[WARN] Display allocation failed\n");
+#endif
+  }
+  else
+  {
+    /* Launch core 1 for display */
+    multicore_launch_core1(core1_display_entry);
+#if ENABLE_DEBUG
+    printf("[Init] Core 1 launched for display\n");
+#endif
+  }
+#endif /* ENABLE_DISPLAY */
 
   /* Enable watchdog */
 #if ENABLE_WATCHDOG
@@ -261,6 +339,84 @@ static void handle_signal_loss(void)
 #endif /* ENABLE_SIGNAL_LOSS_CUTOFF */
 }
 
+#if ENABLE_DISPLAY
+/*******************************************************************************
+ * @brief Helper to convert mechanism init state to display enum
+ *
+ * Since the mechanism classes are skeleton implementations with only an
+ * initialized flag, we map that to IDLE or NOT_INIT. As mechanisms are
+ * fleshed out with active/fault states, this function should be updated.
+ *
+ * @param initialized true if the mechanism has been initialized
+ * @return Corresponding MechState_e value
+ ******************************************************************************/
+static DisplayView::MechState_e mechInitToState(bool initialized)
+{
+  return initialized ? DisplayView::MECH_IDLE : DisplayView::MECH_NOT_INIT;
+}
+
+/*******************************************************************************
+ * @brief Populate and push display data to core 1
+ *
+ * Gathers telemetry from all subsystems and publishes it to the display
+ * view via the thread-safe pushData() interface.
+ ******************************************************************************/
+static void update_display(void)
+{
+  if (g_pDisplayView == nullptr)
+  {
+    return;
+  }
+
+  DisplayView::DisplayData_t data = {};
+
+  /* RC link status */
+  if (g_pIBus != nullptr)
+  {
+    data.rcSignalValid  = g_pIBus->isSignalValid();
+    data.rcTimeSinceMsg = g_pIBus->getTimeSinceLastMessage();
+  }
+  else
+  {
+    data.rcSignalValid  = false;
+    data.rcTimeSinceMsg = 9999;
+  }
+
+  /* Drive train telemetry */
+  if (g_pDriveTrain != nullptr)
+  {
+    data.speed         = static_cast<int16_t>(g_pDriveTrain->getSpeed());
+    data.turn          = static_cast<int16_t>(g_pDriveTrain->getTurn());
+    data.motorLeftPct  = static_cast<int16_t>(
+      g_pDriveTrain->getMotorOutputPct(DriveTrainDifferential::MOTOR_LEFT));
+    data.motorRightPct = static_cast<int16_t>(
+      g_pDriveTrain->getMotorOutputPct(DriveTrainDifferential::MOTOR_RIGHT));
+    data.trimFwd       = static_cast<int8_t>(g_pDriveTrain->getForwardTrimOffset());
+    data.trimRev       = static_cast<int8_t>(g_pDriveTrain->getReverseTrimOffset());
+  }
+
+  /* Mechanism states */
+  data.collectState  = (g_pCollect != nullptr)
+    ? mechInitToState(g_pCollect->isInitialized())
+    : DisplayView::MECH_NOT_INIT;
+
+  data.depositState  = (g_pDeposit != nullptr)
+    ? mechInitToState(g_pDeposit->isInitialized())
+    : DisplayView::MECH_NOT_INIT;
+
+  data.launcherState = (g_pLauncher != nullptr)
+    ? mechInitToState(g_pLauncher->isInitialized())
+    : DisplayView::MECH_NOT_INIT;
+
+  /* System health */
+  data.lastErrorCode  = static_cast<uint16_t>(error_get_last());
+  data.errorCount     = error_get_count();
+  data.watchdogReboot = g_watchdogRebooted;
+
+  g_pDisplayView->pushData(data);
+}
+#endif /* ENABLE_DISPLAY */
+
 /*******************************************************************************
  * @brief Application entry point
  *
@@ -346,6 +502,11 @@ int main(void)
     {
       g_pLauncher->update();
     }
+
+    /* Push telemetry to display (core 1) */
+#if ENABLE_DISPLAY
+    update_display();
+#endif
 
     /* Rate limiting */
 #if TIMING_MAIN_LOOP_PERIOD_MS > 0

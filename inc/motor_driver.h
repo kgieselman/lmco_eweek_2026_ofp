@@ -258,6 +258,17 @@ public:
    ****************************************************************************/
   StopMode_e getDefaultStopMode() const { return m_defaultStopMode; }
 
+  /*****************************************************************************
+   * @brief Get the current motor setpoint value (before trim)
+   *
+   * Returns the last value passed to setMotor()/setMotorWithTrim() for the
+   * specified channel. This is the pre-trim value in [-500, +500].
+   *
+   * @param channel Motor channel to query
+   * @return Current motor value, or 0 if channel is invalid
+   ****************************************************************************/
+  int getCurrentValue(MotorChannel_e channel) const;
+
 
 private:
   /* Private Types -----------------------------------------------------------*/

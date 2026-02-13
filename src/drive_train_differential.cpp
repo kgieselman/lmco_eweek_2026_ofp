@@ -67,6 +67,7 @@ DriveTrainDifferential::DriveTrainDifferential()
     m_motorState[i].trimRev      = DEFAULT_TRIM;
     m_motorState[i].calibTrimFwd = DEFAULT_TRIM;
     m_motorState[i].calibTrimRev = DEFAULT_TRIM;
+    m_lastMotorOutput[i]         = 0;
   }
 }
 
@@ -257,6 +258,10 @@ void DriveTrainDifferential::update(void)
     motorValues[MOTOR_RIGHT] = static_cast<int>(motorValues[MOTOR_RIGHT] * scale);
   }
 
+  /* Store computed values for external readback */
+  m_lastMotorOutput[MOTOR_LEFT]  = motorValues[MOTOR_LEFT];
+  m_lastMotorOutput[MOTOR_RIGHT] = motorValues[MOTOR_RIGHT];
+
   /* Apply trim and output to motors */
   for (int i = 0; i < MOTOR_COUNT; i++)
   {
@@ -275,7 +280,55 @@ void DriveTrainDifferential::stop(void)
   m_speed = 0;
   m_turn = 0;
 
+  m_lastMotorOutput[MOTOR_LEFT]  = 0;
+  m_lastMotorOutput[MOTOR_RIGHT] = 0;
+
   m_motorDriver.stopAll();
+}
+
+int DriveTrainDifferential::getMotorOutput(MotorId_e motor) const
+{
+  if (motor < MOTOR_LEFT || motor >= MOTOR_COUNT)
+  {
+    return 0;
+  }
+  return m_lastMotorOutput[motor];
+}
+
+int DriveTrainDifferential::getMotorOutputPct(MotorId_e motor) const
+{
+  if (motor < MOTOR_LEFT || motor >= MOTOR_COUNT)
+  {
+    return 0;
+  }
+
+  /* Convert [-500..+500] to [-100..+100] */
+  return (m_lastMotorOutput[motor] * 100) / USER_INPUT_MAX;
+}
+
+int DriveTrainDifferential::getForwardTrimOffset(void) const
+{
+  /*
+   * Trim floats are in range [0.5, 1.0] where 1.0 = no reduction.
+   * If left trim < right trim, left motor is reduced → robot veers left → positive offset.
+   * If right trim < left trim, right motor is reduced → robot veers right → negative offset.
+   *
+   * Offset = (rightReduction - leftReduction) * 100
+   * Where reduction = (1.0 - trim) in range [0.0, 0.5]
+   * This gives a range of [-50, +50].
+   */
+  float leftReduction  = DEFAULT_TRIM - m_motorState[MOTOR_LEFT].trimFwd;
+  float rightReduction = DEFAULT_TRIM - m_motorState[MOTOR_RIGHT].trimFwd;
+
+  return static_cast<int>((leftReduction - rightReduction) * 100.0f);
+}
+
+int DriveTrainDifferential::getReverseTrimOffset(void) const
+{
+  float leftReduction  = DEFAULT_TRIM - m_motorState[MOTOR_LEFT].trimRev;
+  float rightReduction = DEFAULT_TRIM - m_motorState[MOTOR_RIGHT].trimRev;
+
+  return static_cast<int>((leftReduction - rightReduction) * 100.0f);
 }
 
 void DriveTrainDifferential::calibrate(void)

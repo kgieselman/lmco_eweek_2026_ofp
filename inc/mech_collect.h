@@ -67,6 +67,13 @@ public:
    ****************************************************************************/
   void update(void);
 
+  /*****************************************************************************
+   * @brief Check if the mechanism has been initialized
+   *
+   * @return true if init() completed successfully
+   ****************************************************************************/
+  bool isInitialized(void) const { return m_initialized; }
+
 
 private:
   /* Private Variables -------------------------------------------------------*/
