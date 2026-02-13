@@ -92,8 +92,7 @@ bool DisplayView::init(void)
   defaults.motorRightPct  = 0;
   defaults.trimFwd        = 0;
   defaults.trimRev        = 0;
-  defaults.collectState   = MECH_NOT_INIT;
-  defaults.depositState   = MECH_NOT_INIT;
+  defaults.scoopState     = MECH_NOT_INIT;
   defaults.launcherState  = MECH_NOT_INIT;
   defaults.lastErrorCode  = 0x0000;
   defaults.errorCount     = 0;
@@ -276,9 +275,8 @@ void DisplayView::renderMechStatus(const DisplayData_t& data)
   char lineBuf[LINE_BUF_SIZE];
 
   /* Line 4: Collect + Deposit */
-  snprintf(lineBuf, LINE_BUF_SIZE, "COL:%s DEP:%s",
-           mechStateStr(data.collectState),
-           mechStateStr(data.depositState));
+  snprintf(lineBuf, LINE_BUF_SIZE, "SCP:%s",
+           mechStateStr(data.scoopState));
 
   m_display.drawText(0, LINE_Y[4], lineBuf);
 

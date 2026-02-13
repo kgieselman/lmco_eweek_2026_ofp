@@ -8,7 +8,7 @@
  * @par System Overview:
  * - RC Receiver: FlySky iBUS protocol on UART1
  * - Drive Train: Differential (tank) drive
- * - Mechanisms: Collection, Deposit, Launch
+ * - Mechanisms: Scoop and Launch
  * - Safety: Watchdog timer, signal loss detection
  * - Display: SSD1306 OLED on core 1 (I2C0)
  ******************************************************************************/
@@ -26,8 +26,7 @@
 #include "error_handler.h"
 #include "flysky_ibus.h"
 #include "drive_train_differential.h"
-#include "mech_collect.h"
-#include "mech_deposit.h"
+#include "mech_scoop.h"
 #include "mech_launcher.h"
 
 #if ENABLE_DISPLAY
@@ -43,11 +42,8 @@ static FlySkyIBus* g_pIBus = nullptr;
 /** @brief Drive train controller */
 static DriveTrainDifferential* g_pDriveTrain = nullptr;
 
-/** @brief Collection mechanism */
-static MechCollect*  g_pCollect = nullptr;
-
-/** @brief Deposit mechanism */
-static MechDeposit*  g_pDeposit = nullptr;
+/** @brief Scoop mechanism */
+static MechScoop* g_pScoop = nullptr;
 
 /** @brief Launcher mechanism */
 static MechLauncher* g_pLauncher = nullptr;
@@ -70,7 +66,7 @@ static bool g_watchdogRebooted = false;
  * Initializes the display hardware and runs the refresh loop. This function
  * never returns. Data from core 0 arrives via DisplayView::pushData().
  ******************************************************************************/
-static void core1_display_entry(void)
+static void core1_main(void)
 {
   if (g_pDisplayView == nullptr)
   {
@@ -204,21 +200,12 @@ static bool system_init(void)
 
   /* Initialize mechanisms */
 #if ENABLE_DEBUG
-  printf("[Init] Configuring collection mechanism...\n");
-#endif
-  g_pCollect = new MechCollect();
-  if (g_pCollect != nullptr)
+  printf("[Init] Configuring scoop mechanism...\n");
+#endif // ENABLE_DEBUG
+  g_pScoop = new MechScoop();
+  if (g_pScoop != nullptr)
   {
-    g_pCollect->init();
-  }
-
-#if ENABLE_DEBUG
-  printf("[Init] Configuring deposit mechanism...\n");
-#endif
-  g_pDeposit = new MechDeposit();
-  if (g_pDeposit != nullptr)
-  {
-    g_pDeposit->init();
+    g_pScoop->init();
   }
 
 #if ENABLE_DEBUG
@@ -245,7 +232,7 @@ static bool system_init(void)
   else
   {
     /* Launch core 1 for display */
-    multicore_launch_core1(core1_display_entry);
+    multicore_launch_core1(core1_main);
 #if ENABLE_DEBUG
     printf("[Init] Core 1 launched for display\n");
 #endif
@@ -297,8 +284,6 @@ static void process_rc_input(void)
   int steer     = g_pIBus->readChannel(FlySkyIBus::CHAN_LSTICK_HORIZ, FlySkyIBus::READ_CHAN_CENTER_0); // [-500..500]
   int steerTrim = g_pIBus->readChannel(FlySkyIBus::CHAN_VRA,          FlySkyIBus::READ_CHAN_RAW);      // [1000..2000]
   int steerRate = g_pIBus->readChannel(FlySkyIBus::CHAN_VRB,          FlySkyIBus::READ_CHAN_NORM);     // [0..1000]
-  //TODO Collect mech - update to scoopMech 
-  //TODO Launcher mech  
 
   /* Update modules with the new values */
   g_pDriveTrain->setSpeed(speed); // TODO: 2S governer
@@ -393,20 +378,17 @@ static void update_display(void)
       g_pDriveTrain->getMotorOutputPct(DriveTrainDifferential::MOTOR_RIGHT));
     data.trimFwd       = static_cast<int8_t>(g_pDriveTrain->getForwardTrimOffset());
     data.trimRev       = static_cast<int8_t>(g_pDriveTrain->getReverseTrimOffset());
+    // TODO: Steering rate...
   }
 
   /* Mechanism states */
-  data.collectState  = (g_pCollect != nullptr)
-    ? mechInitToState(g_pCollect->isInitialized())
-    : DisplayView::MECH_NOT_INIT;
+  data.scoopState = (g_pScoop != nullptr) ?
+                     mechInitToState(g_pScoop->isInitialized()) :
+                     DisplayView::MECH_NOT_INIT;
 
-  data.depositState  = (g_pDeposit != nullptr)
-    ? mechInitToState(g_pDeposit->isInitialized())
-    : DisplayView::MECH_NOT_INIT;
-
-  data.launcherState = (g_pLauncher != nullptr)
-    ? mechInitToState(g_pLauncher->isInitialized())
-    : DisplayView::MECH_NOT_INIT;
+  data.launcherState = (g_pLauncher != nullptr) ?
+                        mechInitToState(g_pLauncher->isInitialized()) :
+                        DisplayView::MECH_NOT_INIT;
 
   /* System health */
   data.lastErrorCode  = static_cast<uint16_t>(error_get_last());
@@ -488,14 +470,9 @@ int main(void)
     }
 
     /* Update mechanisms */
-    if (g_pCollect != nullptr)
+    if (g_pScoop != nullptr)
     {
-      g_pCollect->update();
-    }
-
-    if (g_pDeposit != nullptr)
-    {
-      g_pDeposit->update();
+      g_pScoop->update();
     }
 
     if (g_pLauncher != nullptr)

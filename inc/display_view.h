@@ -128,8 +128,7 @@ public:
     int8_t   trimRev;               /**< Reverse trim offset [-50..+50]         */
 
     /* Mechanism states */
-    MechState_e collectState;       /**< Collection mechanism state             */
-    MechState_e depositState;       /**< Deposit mechanism state                */
+    MechState_e scoopState;         /**< Scoop mechanism state                  */
     MechState_e launcherState;      /**< Launcher mechanism state               */
 
     /* System health */
