@@ -14,6 +14,8 @@
 
 #include <string.h>
 
+#include <stdio.h>
+
 
 /* Constructor / Destructor --------------------------------------------------*/
 
@@ -103,6 +105,7 @@ bool SSD1306Display::init(void)
 
   if (!sendCommands(initSequence, sizeof(initSequence)))
   {
+    printf("[SSD1306] Init - Failed to send commands\n");
     return false;
   }
 
@@ -444,17 +447,26 @@ bool SSD1306Display::sendCommand(uint8_t cmd)
 
 /*******************************************************************************
  * @brief Send a sequence of command bytes to the SSD1306
+ *
+ * Sends the entire command sequence in a single I2C transaction with one
+ * control byte (0x00) prefix. When Co=0, the SSD1306 treats all subsequent
+ * bytes in the transaction as a continuous command stream, correctly pairing
+ * multi-byte commands (e.g. CMD_SET_CONTRAST followed by its argument) with
+ * their parameters.
+ *
+ * The previous implementation sent each byte as an individual I2C transaction,
+ * which caused argument bytes (e.g. 0x3F for multiplex ratio) to be
+ * misinterpreted as standalone commands, corrupting the display controller
+ * state and preventing initialization.
  ******************************************************************************/
 bool SSD1306Display::sendCommands(const uint8_t* cmds, uint16_t count)
 {
-  for (uint16_t i = 0; i < count; i++)
-  {
-    if (!sendCommand(cmds[i]))
-    {
-      return false;
-    }
-  }
-  return true;
+  uint8_t txBuf[1 + count];
+  txBuf[0] = 0x00; /* Control byte: Co=0, D/C#=0 (command mode) */
+  memcpy(&txBuf[1], cmds, count);
+
+  int ret = i2c_write_blocking(m_i2c, m_addr, txBuf, 1 + count, false);
+  return (ret != PICO_ERROR_GENERIC);
 }
 
 

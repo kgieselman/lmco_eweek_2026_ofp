@@ -156,8 +156,7 @@ set(SOURCES
   src/flysky_ibus.cpp
   src/drive_train_differential.cpp
   src/motor_driver.cpp
-  src/mech_collect.cpp
-  src/mech_deposit.cpp
+  src/mech_scoop.cpp
   src/mech_launcher.cpp
   src/ssd1306_display.cpp
   src/display_view.cpp

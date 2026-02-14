@@ -59,6 +59,7 @@ bool DisplayView::init(void)
 {
   if (m_initialized)
   {
+    printf("[Display] ERROR - Already Initialized!\n");
     return true;
   }
 
@@ -68,16 +69,19 @@ bool DisplayView::init(void)
   {
     return false;
   }
+
   m_spinlockNum = static_cast<uint>(lockNum);
   m_spinlock = spin_lock_init(m_spinlockNum);
 
   /* Initialize the SSD1306 display */
+  printf("[Display] Init SSD1306\n");
   if (!m_display.init())
   {
     spin_lock_unclaim(m_spinlockNum);
     m_spinlock = nullptr;
     return false;
   }
+  printf("[Display] SSD1306 initialized\n");
 
   /* Record boot time for uptime calculation */
   m_bootTimeMs = to_ms_since_boot(get_absolute_time());
