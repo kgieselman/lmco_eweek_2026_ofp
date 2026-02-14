@@ -153,6 +153,23 @@ public:
   bool setTurn(int turn);
 
   /*****************************************************************************
+   * @brief Set the steering rate (multiplier)
+   *
+   * The steer rate scales the turn value before motor mixing. A value of
+   * 1000 means full steering authority, 0 means no steering.
+   *
+   * @param rate Steer rate in range [0, 1000]
+   ****************************************************************************/
+  void setSteerRate(int rate);
+
+  /*****************************************************************************
+   * @brief Get the current steering rate
+   *
+   * @return Current steer rate value [0, 1000]
+   ****************************************************************************/
+  int getSteerRate(void) const { return m_steerRate; }
+
+  /*****************************************************************************
    * @brief Get current speed setpoint
    *
    * @return Current speed value
@@ -329,6 +346,9 @@ private:
   /** @brief IBus channel center value (no trim) */
   static constexpr int IBUS_CHANNEL_CENTER = 1500;
 
+  /** @brief Maximum steer rate value (full steering authority) */
+  static constexpr int STEER_RATE_MAX = 1000;
+
 
   /* Private Variables -------------------------------------------------------*/
 
@@ -336,6 +356,7 @@ private:
   MotorState m_motorState[MOTOR_COUNT];  /**< Motor state tracking */
   int m_speed;                           /**< Current speed setpoint */
   int m_turn;                            /**< Current turn setpoint */
+  int m_steerRate;                       /**< Steering rate multiplier [0..1000] */
   bool m_useManualTrim;                  /**< true = manual trim, false = calibrated trim */
   int m_lastMotorOutput[MOTOR_COUNT];    /**< Last computed motor values (after mixing, pre-trim) */
 

@@ -307,9 +307,8 @@ static void process_rc_input(void)
   /* Update modules with the new values */
   g_pDriveTrain->setSpeed(speed); // TODO: 2S governer
 
-  float steerMultipler = static_cast<float>(steerRate) / static_cast<float>(1000.0); 
-  int steerAdjusted = static_cast<int>(static_cast<float>(steer) * steerMultipler);
-  g_pDriveTrain->setTurn(steerAdjusted);
+  g_pDriveTrain->setTurn(steer);
+  g_pDriveTrain->setSteerRate(steerRate);
 
   g_pDriveTrain->setForwardTrimFromChannel(steerTrim);
   g_pDriveTrain->setReverseTrimFromChannel(steerTrim);
@@ -397,7 +396,7 @@ static void update_display(void)
       g_pDriveTrain->getMotorOutputPct(DriveTrainDifferential::MOTOR_RIGHT));
     data.trimFwd       = static_cast<int8_t>(g_pDriveTrain->getForwardTrimOffset());
     data.trimRev       = static_cast<int8_t>(g_pDriveTrain->getReverseTrimOffset());
-    // TODO: Steering rate...
+    data.steerRate     = static_cast<int16_t>(g_pDriveTrain->getSteerRate());
   }
 
   /* Mechanism states */
