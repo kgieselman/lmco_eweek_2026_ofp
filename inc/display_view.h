@@ -126,7 +126,7 @@ public:
     int16_t  motorRightPct;         /**< Right motor output  [-100..+100] %     */
     int8_t   trimFwd;               /**< Forward trim offset [-50..+50]         */
     int8_t   trimRev;               /**< Reverse trim offset [-50..+50]         */
-    int16_t  steerRate;             /**< Steering rate       [0..1000]          */
+    int16_t  turnRate;              /**< Turn rate           [0..1000]          */
 
     /* Mechanism states */
     MechState_e scoopState;         /**< Scoop mechanism state                  */
@@ -264,7 +264,7 @@ private:
    *
    * @param data  Current telemetry snapshot
    ****************************************************************************/
-  void renderSpeedSteer(const DisplayData_t& data);
+  void renderSpeedTurn(const DisplayData_t& data);
 
   /*****************************************************************************
    * @brief Render the motor output line (line 2)

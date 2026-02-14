@@ -163,7 +163,7 @@ void DisplayView::update(void)
   m_display.clear();
 
   renderRcStatus(data);
-  renderSpeedSteer(data);
+  renderSpeedTurn(data);
   renderMotorOutput(data);
   renderTrim(data);
   // TODO: Look into mech status, anything valuable to show?
@@ -210,7 +210,7 @@ void DisplayView::renderRcStatus(const DisplayData_t& data)
 /*******************************************************************************
  * @brief Render the speed and steering line (line 1)
  ******************************************************************************/
-void DisplayView::renderSpeedSteer(const DisplayData_t& data)
+void DisplayView::renderSpeedTurn(const DisplayData_t& data)
 {
   char lineBuf[LINE_BUF_SIZE];
 
