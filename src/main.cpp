@@ -68,17 +68,29 @@ static bool g_watchdogRebooted = false;
  ******************************************************************************/
 static void core1_main(void)
 {
-  if (g_pDisplayView == nullptr)
+  /*
+   * Construct AND initialize the display entirely on core 1.
+   * The RP2040's I2C peripheral must be initialized on the same core
+   * that will use it — constructing on core 0 and calling init() on
+   * core 1 can cause the I2C peripheral to be inaccessible from core 1.
+   */
+  DisplayView* pDisplay = new DisplayView(i2c0, PIN_DISPLAY_SDA, PIN_DISPLAY_SCL);
+  if (pDisplay == nullptr)
   {
+    /* Signal core 0 that construction failed (send null) */
+    multicore_fifo_push_blocking(0);
     return;
   }
 
-  if (!g_pDisplayView->init())
+  if (!pDisplay->init())
   {
 #if ENABLE_DEBUG
     /* Note: printf from core 1 is safe with pico_stdlib's mutex-protected stdio */
     printf("[Display] OLED initialization failed on core 1\n");
 #endif
+    /* Signal core 0 that init failed (send null) */
+    multicore_fifo_push_blocking(0);
+    delete pDisplay;
     return;
   }
 
@@ -86,10 +98,13 @@ static void core1_main(void)
   printf("[Display] OLED initialized on core 1\n");
 #endif
 
+  /* Pass the pointer back to core 0 so it can call pushData() */
+  multicore_fifo_push_blocking(reinterpret_cast<uint32_t>(pDisplay));
+
   /* Display refresh loop (never returns) */
   while (true)
   {
-    g_pDisplayView->update();
+    pDisplay->update();
     sleep_ms(TIMING_DISPLAY_REFRESH_MS);
   }
 }
@@ -217,24 +232,28 @@ static bool system_init(void)
     g_pLauncher->init();
   }
 
-  /* Initialize display view (constructed here, runs on core 1) */
+  /* Initialize display view (constructed and initialized on core 1) */
 #if ENABLE_DISPLAY
 #if ENABLE_DEBUG
-  printf("[Init] Constructing display view...\n");
+  printf("[Init] Launching core 1 for display...\n");
 #endif
-  g_pDisplayView = new DisplayView(i2c0, PIN_DISPLAY_SDA, PIN_DISPLAY_SCL);
+  /* Launch core 1 — it will construct and init the DisplayView */
+  multicore_launch_core1(core1_main);
+
+  /* Wait for core 1 to send back the DisplayView pointer (or null on failure) */
+  uint32_t displayPtr = multicore_fifo_pop_blocking();
+  g_pDisplayView = reinterpret_cast<DisplayView*>(displayPtr);
+
   if (g_pDisplayView == nullptr)
   {
 #if ENABLE_DEBUG
-    printf("[WARN] Display allocation failed\n");
+    printf("[WARN] Display initialization failed on core 1\n");
 #endif
   }
   else
   {
-    /* Launch core 1 for display */
-    multicore_launch_core1(core1_main);
 #if ENABLE_DEBUG
-    printf("[Init] Core 1 launched for display\n");
+    printf("[Init] Display ready on core 1\n");
 #endif
   }
 #endif /* ENABLE_DISPLAY */

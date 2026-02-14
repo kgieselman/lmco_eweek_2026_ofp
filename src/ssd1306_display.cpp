@@ -17,6 +17,17 @@
 #include <stdio.h>
 
 
+/* Private Constants ---------------------------------------------------------*/
+
+/*******************************************************************************
+ * @brief Maximum number of command bytes that can be sent in a single
+ *        I2C transaction via sendCommands().
+ *
+ * The SSD1306 init sequence is ~26 bytes. 64 provides comfortable headroom.
+ ******************************************************************************/
+static constexpr uint16_t MAX_CMD_BATCH = 64;
+
+
 /* Constructor / Destructor --------------------------------------------------*/
 
 /*******************************************************************************
@@ -50,6 +61,42 @@ SSD1306Display::~SSD1306Display()
 /* Initialization ------------------------------------------------------------*/
 
 /*******************************************************************************
+ * @brief Scan the I2C bus for any responding devices (diagnostic)
+ *
+ * Attempts a zero-length write to each address. If the device ACKs the
+ * address byte, it is present on the bus.
+ ******************************************************************************/
+static void i2c_bus_scan(i2c_inst_t* i2c)
+{
+  printf("[SSD1306] I2C bus scan (inst=%s):\n",
+         (i2c == i2c0) ? "i2c0" : "i2c1");
+
+  bool found = false;
+
+  for (uint8_t addr = 0x08; addr < 0x78; addr++)
+  {
+    /*
+     * A zero-length write will send just the address byte.
+     * If the device ACKs, i2c_write_blocking returns 0 (bytes written).
+     * If no device, it returns PICO_ERROR_GENERIC (-1).
+     */
+    uint8_t dummy;
+    int ret = i2c_read_blocking(i2c, addr, &dummy, 1, false);
+
+    if (ret >= 0)
+    {
+      printf("[SSD1306]   Found device at 0x%02X\n", addr);
+      found = true;
+    }
+  }
+
+  if (!found)
+  {
+    printf("[SSD1306]   No devices found!\n");
+  }
+}
+
+/*******************************************************************************
  * @brief Initialize the I2C bus and SSD1306 display controller
  ******************************************************************************/
 bool SSD1306Display::init(void)
@@ -59,14 +106,24 @@ bool SSD1306Display::init(void)
     return true;
   }
 
-  /* Initialize I2C at 400 kHz (fast mode) */
-  i2c_init(m_i2c, SSD1306_I2C_FREQ);
+  printf("[SSD1306] Initializing I2C: SDA=GP%d, SCL=GP%d, addr=0x%02X\n",
+         m_pinSDA, m_pinSCL, m_addr);
+
+  /* Initialize I2C at 100 kHz (standard mode — more forgiving than 400 kHz) */
+  uint actualBaud = i2c_init(m_i2c, 100000);
+  printf("[SSD1306] I2C baud: requested 100000, actual %u\n", actualBaud);
 
   /* Configure GPIO pins for I2C function */
   gpio_set_function(m_pinSDA, GPIO_FUNC_I2C);
   gpio_set_function(m_pinSCL, GPIO_FUNC_I2C);
   gpio_pull_up(m_pinSDA);
   gpio_pull_up(m_pinSCL);
+
+  /* Allow the I2C bus and SSD1306 to settle after power-on / pin config */
+  sleep_ms(100);
+
+  /* Diagnostic: scan the bus to see what's actually responding */
+  i2c_bus_scan(m_i2c);
 
   /*
    * SSD1306 initialization sequence for 128x64 display.
@@ -105,7 +162,7 @@ bool SSD1306Display::init(void)
 
   if (!sendCommands(initSequence, sizeof(initSequence)))
   {
-    printf("[SSD1306] Init - Failed to send commands\n");
+    printf("[SSD1306] Init - Failed to send init commands\n");
     return false;
   }
 
@@ -114,6 +171,8 @@ bool SSD1306Display::init(void)
   /* Clear screen on startup */
   clear();
   refresh();
+
+  printf("[SSD1306] Display initialized successfully\n");
 
   return true;
 }
@@ -448,25 +507,45 @@ bool SSD1306Display::sendCommand(uint8_t cmd)
 /*******************************************************************************
  * @brief Send a sequence of command bytes to the SSD1306
  *
- * Sends the entire command sequence in a single I2C transaction with one
- * control byte (0x00) prefix. When Co=0, the SSD1306 treats all subsequent
+ * Sends the entire command sequence in a single I2C transaction prefixed by
+ * one control byte (0x00, Co=0, D/C#=0). The SSD1306 treats all subsequent
  * bytes in the transaction as a continuous command stream, correctly pairing
- * multi-byte commands (e.g. CMD_SET_CONTRAST followed by its argument) with
- * their parameters.
+ * multi-byte commands with their parameters.
  *
- * The previous implementation sent each byte as an individual I2C transaction,
- * which caused argument bytes (e.g. 0x3F for multiplex ratio) to be
- * misinterpreted as standalone commands, corrupting the display controller
- * state and preventing initialization.
+ * A fixed-size buffer is used instead of a VLA, which is not valid in C++17.
+ *
+ * @param cmds  Pointer to command byte array
+ * @param count Number of command bytes (must be <= MAX_CMD_BATCH)
+ *
+ * @return true if the I2C write succeeded
  ******************************************************************************/
 bool SSD1306Display::sendCommands(const uint8_t* cmds, uint16_t count)
 {
-  uint8_t txBuf[1 + count];
+  /*
+   * Fixed-size transmit buffer: 1 control byte + up to MAX_CMD_BATCH
+   * command bytes. Avoids VLA which is not part of the C++ standard.
+   */
+  uint8_t txBuf[1 + MAX_CMD_BATCH];
+
+  if (count > MAX_CMD_BATCH)
+  {
+    printf("[SSD1306] sendCommands: count %u exceeds MAX_CMD_BATCH %u\n",
+           count, MAX_CMD_BATCH);
+    return false;
+  }
+
   txBuf[0] = 0x00; /* Control byte: Co=0, D/C#=0 (command mode) */
   memcpy(&txBuf[1], cmds, count);
 
   int ret = i2c_write_blocking(m_i2c, m_addr, txBuf, 1 + count, false);
-  return (ret != PICO_ERROR_GENERIC);
+
+  if (ret < 0)
+  {
+    printf("[SSD1306] sendCommands: i2c_write_blocking returned %d "
+           "(addr=0x%02X, len=%u)\n", ret, m_addr, 1 + count);
+  }
+
+  return (ret >= 0);
 }
 
 

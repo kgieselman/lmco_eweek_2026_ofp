@@ -135,8 +135,8 @@ constexpr int PIN_LAUNCHER_TILT_SERVO    = PIN_INVALID;  /**< Angle adjustment s
  *       I2C0 SCL options: GP1, GP5, GP9, GP13, GP17, GP21
  * @{
  ******************************************************************************/
-constexpr int PIN_DISPLAY_SDA = 16;  /**< I2C0 SDA for OLED display */
-constexpr int PIN_DISPLAY_SCL = 17;  /**< I2C0 SCL for OLED display */
+constexpr int PIN_DISPLAY_SDA = 8;  /**< I2C0 SDA for OLED display */
+constexpr int PIN_DISPLAY_SCL = 9;  /**< I2C0 SCL for OLED display */
 /** @} */
 
 

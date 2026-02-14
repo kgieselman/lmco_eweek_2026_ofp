@@ -166,7 +166,8 @@ void DisplayView::update(void)
   renderSpeedSteer(data);
   renderMotorOutput(data);
   renderTrim(data);
-  renderMechStatus(data);
+  // TODO: Look into mech status, anything valuable to show?
+  //renderMechStatus(data);
   renderErrorUptime(data);
   renderFirmwareId();
 
@@ -196,37 +197,14 @@ void DisplayView::renderRcStatus(const DisplayData_t& data)
 
   if (data.rcSignalValid)
   {
-    snprintf(lineBuf, LINE_BUF_SIZE, "RC:OK");
+    snprintf(lineBuf, LINE_BUF_SIZE, "RECEIVER: OK");
   }
   else
   {
-    snprintf(lineBuf, LINE_BUF_SIZE, "RC:LOST");
+    snprintf(lineBuf, LINE_BUF_SIZE, "RECEIVER: LOST");
   }
 
   m_display.drawText(0, LINE_Y[0], lineBuf);
-
-  /* Draw signal strength bar */
-  uint8_t fillPct = 0;
-  if (data.rcSignalValid)
-  {
-    if (data.rcTimeSinceMsg <= RC_BAR_FULL_MS)
-    {
-      fillPct = 100;
-    }
-    else if (data.rcTimeSinceMsg >= RC_BAR_EMPTY_MS)
-    {
-      fillPct = 0;
-    }
-    else
-    {
-      /* Linear interpolation between full and empty thresholds */
-      fillPct = static_cast<uint8_t>(
-        100 - (data.rcTimeSinceMsg * 100) / RC_BAR_EMPTY_MS
-      );
-    }
-  }
-
-  drawBar(RC_BAR_X, LINE_Y[0], RC_BAR_WIDTH, fillPct);
 }
 
 /*******************************************************************************
@@ -264,7 +242,7 @@ void DisplayView::renderTrim(const DisplayData_t& data)
 {
   char lineBuf[LINE_BUF_SIZE];
 
-  snprintf(lineBuf, LINE_BUF_SIZE, "TRM F:%+03d R:%+03d",
+  snprintf(lineBuf, LINE_BUF_SIZE, "TRIM F:%+03d R:%+03d",
            static_cast<int>(data.trimFwd),
            static_cast<int>(data.trimRev));
 
@@ -279,13 +257,13 @@ void DisplayView::renderMechStatus(const DisplayData_t& data)
   char lineBuf[LINE_BUF_SIZE];
 
   /* Line 4: Collect + Deposit */
-  snprintf(lineBuf, LINE_BUF_SIZE, "SCP:%s",
+  snprintf(lineBuf, LINE_BUF_SIZE, "SCOOP:%s",
            mechStateStr(data.scoopState));
 
   m_display.drawText(0, LINE_Y[4], lineBuf);
 
   /* Line 5: Launcher */
-  snprintf(lineBuf, LINE_BUF_SIZE, "LCH:%s",
+  snprintf(lineBuf, LINE_BUF_SIZE, "LAUNCHER:%s",
            mechStateStr(data.launcherState));
 
   m_display.drawText(0, LINE_Y[5], lineBuf);

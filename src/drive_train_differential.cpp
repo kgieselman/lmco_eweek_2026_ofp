@@ -588,23 +588,8 @@ void DriveTrainDifferential::setForwardTrimFromChannel(int channelValue)
   float rightTrim = DEFAULT_TRIM;
   channelToTrim(channelValue, &leftTrim, &rightTrim);
 
-#if ENABLE_DEBUG
-  /* Only print if trim values actually changed (avoid flooding console) */
-  static constexpr float TRIM_CHANGE_THRESHOLD = 0.01f;
-  bool changed = (std::abs(leftTrim - m_motorState[MOTOR_LEFT].trimFwd) > TRIM_CHANGE_THRESHOLD) ||
-                 (std::abs(rightTrim - m_motorState[MOTOR_RIGHT].trimFwd) > TRIM_CHANGE_THRESHOLD);
-#endif
-
   m_motorState[MOTOR_LEFT].trimFwd = leftTrim;
   m_motorState[MOTOR_RIGHT].trimFwd = rightTrim;
-
-#if ENABLE_DEBUG
-  if (changed)
-  {
-    printf("[DriveTrain] Forward trim set: L=%.3f R=%.3f (channel=%d)\n",
-           leftTrim, rightTrim, channelValue);
-  }
-#endif
 }
 
 void DriveTrainDifferential::setReverseTrimFromChannel(int channelValue)
@@ -618,23 +603,8 @@ void DriveTrainDifferential::setReverseTrimFromChannel(int channelValue)
   float leftTrim, rightTrim;
   channelToTrim(channelValue, &leftTrim, &rightTrim);
 
-#if ENABLE_DEBUG
-  /* Only print if trim values actually changed (avoid flooding console) */
-  static constexpr float TRIM_CHANGE_THRESHOLD = 0.01f;
-  bool changed = (std::abs(leftTrim - m_motorState[MOTOR_LEFT].trimRev) > TRIM_CHANGE_THRESHOLD) ||
-                 (std::abs(rightTrim - m_motorState[MOTOR_RIGHT].trimRev) > TRIM_CHANGE_THRESHOLD);
-#endif
-
   m_motorState[MOTOR_LEFT].trimRev = leftTrim;
   m_motorState[MOTOR_RIGHT].trimRev = rightTrim;
-
-#if ENABLE_DEBUG
-  if (changed)
-  {
-    printf("[DriveTrain] Reverse trim set: L=%.3f R=%.3f (channel=%d)\n",
-           leftTrim, rightTrim, channelValue);
-  }
-#endif
 }
 
 void DriveTrainDifferential::getForwardTrim(float* pLeftTrim, float* pRightTrim) const
