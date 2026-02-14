@@ -288,8 +288,8 @@ static bool system_init(void)
  * Control Mapping
  * Right Stick Verical   - Throttle
  * Left Stick Horizontal - Turn
- * VRA                   - Forward steering trim
- * VRB                   - Steering multiplier
+ * VRA                   - Forward turn trim
+ * VRB                   - Turn rate multiplier
  ******************************************************************************/
 static void process_rc_input(void)
 {
@@ -299,20 +299,19 @@ static void process_rc_input(void)
   }
 
   /* Read updated channel values */
-  int speed     = g_pIBus->readChannel(FlySkyIBus::CHAN_RSTICK_VERT,  FlySkyIBus::READ_CHAN_CENTER_0); // [-500..500]
-  int steer     = g_pIBus->readChannel(FlySkyIBus::CHAN_LSTICK_HORIZ, FlySkyIBus::READ_CHAN_CENTER_0); // [-500..500]
-  int steerTrim = g_pIBus->readChannel(FlySkyIBus::CHAN_VRA,          FlySkyIBus::READ_CHAN_RAW);      // [1000..2000]
-  int steerRate = g_pIBus->readChannel(FlySkyIBus::CHAN_VRB,          FlySkyIBus::READ_CHAN_NORM);     // [0..1000]
+  int speed    = g_pIBus->readChannel(FlySkyIBus::CHAN_RSTICK_VERT,  FlySkyIBus::READ_CHAN_CENTER_0); // [-500..500]
+  int turn     = g_pIBus->readChannel(FlySkyIBus::CHAN_LSTICK_HORIZ, FlySkyIBus::READ_CHAN_CENTER_0); // [-500..500]
+  int turnTrim = g_pIBus->readChannel(FlySkyIBus::CHAN_VRA,          FlySkyIBus::READ_CHAN_RAW);      // [1000..2000]
+  int turnRate = g_pIBus->readChannel(FlySkyIBus::CHAN_VRB,          FlySkyIBus::READ_CHAN_NORM);     // [0..1000]
 
   /* Update modules with the new values */
   g_pDriveTrain->setSpeed(speed); // TODO: 2S governer
 
-  float steerMultipler = static_cast<float>(steerRate) / static_cast<float>(1000.0); 
-  int steerAdjusted = static_cast<int>(static_cast<float>(steer) * steerMultipler);
-  g_pDriveTrain->setTurn(steerAdjusted);
+  g_pDriveTrain->setTurn(turn);
+  g_pDriveTrain->setTurnRate(turnRate);
 
-  g_pDriveTrain->setForwardTrimFromChannel(steerTrim);
-  g_pDriveTrain->setReverseTrimFromChannel(steerTrim);
+  g_pDriveTrain->setForwardTrimFromChannel(turnTrim);
+  g_pDriveTrain->setReverseTrimFromChannel(turnTrim);
   g_pDriveTrain->setManualTrimMode(true);
 
   g_pDriveTrain->update();
@@ -344,21 +343,6 @@ static void handle_signal_loss(void)
 }
 
 #if ENABLE_DISPLAY
-/*******************************************************************************
- * @brief Helper to convert mechanism init state to display enum
- *
- * Since the mechanism classes are skeleton implementations with only an
- * initialized flag, we map that to IDLE or NOT_INIT. As mechanisms are
- * fleshed out with active/fault states, this function should be updated.
- *
- * @param initialized true if the mechanism has been initialized
- * @return Corresponding MechState_e value
- ******************************************************************************/
-static DisplayView::MechState_e mechInitToState(bool initialized)
-{
-  return initialized ? DisplayView::MECH_IDLE : DisplayView::MECH_NOT_INIT;
-}
-
 /*******************************************************************************
  * @brief Populate and push display data to core 1
  *
@@ -397,17 +381,8 @@ static void update_display(void)
       g_pDriveTrain->getMotorOutputPct(DriveTrainDifferential::MOTOR_RIGHT));
     data.trimFwd       = static_cast<int8_t>(g_pDriveTrain->getForwardTrimOffset());
     data.trimRev       = static_cast<int8_t>(g_pDriveTrain->getReverseTrimOffset());
-    // TODO: Steering rate...
+    data.turnRate      = static_cast<int16_t>(g_pDriveTrain->getTurnRate());
   }
-
-  /* Mechanism states */
-  data.scoopState = (g_pScoop != nullptr) ?
-                     mechInitToState(g_pScoop->isInitialized()) :
-                     DisplayView::MECH_NOT_INIT;
-
-  data.launcherState = (g_pLauncher != nullptr) ?
-                        mechInitToState(g_pLauncher->isInitialized()) :
-                        DisplayView::MECH_NOT_INIT;
 
   /* System health */
   data.lastErrorCode  = static_cast<uint16_t>(error_get_last());

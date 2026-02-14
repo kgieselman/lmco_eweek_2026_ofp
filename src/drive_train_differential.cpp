@@ -56,6 +56,7 @@ DriveTrainDifferential::DriveTrainDifferential()
   : m_motorDriver(MOTOR_DRIVER_MODE)
   , m_speed(0)
   , m_turn(0)
+  , m_turnRate(TURN_RATE_MAX)
   , m_useManualTrim(true)  /* Default to manual trim mode */
 {
   /* Initialize motor state */
@@ -233,6 +234,20 @@ bool DriveTrainDifferential::setTurn(int turn)
   return true;
 }
 
+void DriveTrainDifferential::setTurnRate(int rate)
+{
+  if (rate < 0)
+  {
+    rate = 0;
+  }
+  else if (rate > TURN_RATE_MAX)
+  {
+    rate = TURN_RATE_MAX;
+  }
+
+  m_turnRate = rate;
+}
+
 void DriveTrainDifferential::update(void)
 {
   /* Verify all motors are initialized */
@@ -242,10 +257,14 @@ void DriveTrainDifferential::update(void)
     return;
   }
 
+  /* Apply turn rate to turn value */
+  float turnMultiplier = static_cast<float>(m_turnRate) / static_cast<float>(TURN_RATE_MAX);
+  int adjustedTurn = static_cast<int>(static_cast<float>(m_turn) * turnMultiplier);
+
   /* Calculate raw motor values */
   int motorValues[MOTOR_COUNT];
-  motorValues[MOTOR_LEFT]  = m_speed + m_turn;
-  motorValues[MOTOR_RIGHT] = m_speed - m_turn;
+  motorValues[MOTOR_LEFT]  = m_speed + adjustedTurn;
+  motorValues[MOTOR_RIGHT] = m_speed - adjustedTurn;
 
   /* Scale to prevent clipping while maintaining direction ratio */
   int maxAbs = std::max(std::abs(motorValues[MOTOR_LEFT]),

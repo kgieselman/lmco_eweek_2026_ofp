@@ -96,8 +96,7 @@ bool DisplayView::init(void)
   defaults.motorRightPct  = 0;
   defaults.trimFwd        = 0;
   defaults.trimRev        = 0;
-  defaults.scoopState     = MECH_NOT_INIT;
-  defaults.launcherState  = MECH_NOT_INIT;
+  defaults.turnRate       = 0;
   defaults.lastErrorCode  = 0x0000;
   defaults.errorCount     = 0;
   defaults.watchdogReboot = false;
@@ -163,11 +162,10 @@ void DisplayView::update(void)
   m_display.clear();
 
   renderRcStatus(data);
-  renderSpeedSteer(data);
+  renderSpeedTurn(data);
   renderMotorOutput(data);
   renderTrim(data);
-  // TODO: Look into mech status, anything valuable to show?
-  //renderMechStatus(data);
+  renderTurnRate(data);
   renderErrorUptime(data);
   renderFirmwareId();
 
@@ -210,11 +208,11 @@ void DisplayView::renderRcStatus(const DisplayData_t& data)
 /*******************************************************************************
  * @brief Render the speed and steering line (line 1)
  ******************************************************************************/
-void DisplayView::renderSpeedSteer(const DisplayData_t& data)
+void DisplayView::renderSpeedTurn(const DisplayData_t& data)
 {
   char lineBuf[LINE_BUF_SIZE];
 
-  snprintf(lineBuf, LINE_BUF_SIZE, "SPD:%+04d STR:%+04d",
+  snprintf(lineBuf, LINE_BUF_SIZE, "SPD:%-+4d STR:%-+4d",
            static_cast<int>(data.speed),
            static_cast<int>(data.turn));
 
@@ -228,7 +226,7 @@ void DisplayView::renderMotorOutput(const DisplayData_t& data)
 {
   char lineBuf[LINE_BUF_SIZE];
 
-  snprintf(lineBuf, LINE_BUF_SIZE, "L:%+04d%%  R:%+04d%%",
+  snprintf(lineBuf, LINE_BUF_SIZE, "L:%+4d%%  R:%+4d%%",
            static_cast<int>(data.motorLeftPct),
            static_cast<int>(data.motorRightPct));
 
@@ -242,7 +240,7 @@ void DisplayView::renderTrim(const DisplayData_t& data)
 {
   char lineBuf[LINE_BUF_SIZE];
 
-  snprintf(lineBuf, LINE_BUF_SIZE, "TRIM F:%+03d R:%+03d",
+  snprintf(lineBuf, LINE_BUF_SIZE, "TRIM F:%-+3d R:%-+3d",
            static_cast<int>(data.trimFwd),
            static_cast<int>(data.trimRev));
 
@@ -250,23 +248,18 @@ void DisplayView::renderTrim(const DisplayData_t& data)
 }
 
 /*******************************************************************************
- * @brief Render the mechanism status lines (lines 4-5)
+ * @brief Render the turn rate line (line 4)
  ******************************************************************************/
-void DisplayView::renderMechStatus(const DisplayData_t& data)
+void DisplayView::renderTurnRate(const DisplayData_t& data)
 {
   char lineBuf[LINE_BUF_SIZE];
 
-  /* Line 4: Collect + Deposit */
-  snprintf(lineBuf, LINE_BUF_SIZE, "SCOOP:%s",
-           mechStateStr(data.scoopState));
+  /* Convert turn rate [0..1000] to percentage [0..100] */
+  int turnRatePct = (static_cast<int>(data.turnRate) * 100) / 1000;
+
+  snprintf(lineBuf, LINE_BUF_SIZE, "TURN RATE: %-3d%%", turnRatePct);
 
   m_display.drawText(0, LINE_Y[4], lineBuf);
-
-  /* Line 5: Launcher */
-  snprintf(lineBuf, LINE_BUF_SIZE, "LAUNCHER:%s",
-           mechStateStr(data.launcherState));
-
-  m_display.drawText(0, LINE_Y[5], lineBuf);
 }
 
 /*******************************************************************************
@@ -324,21 +317,6 @@ void DisplayView::renderFirmwareId(void)
 #endif
 
   m_display.drawText(0, LINE_Y[7], lineBuf);
-}
-
-/*******************************************************************************
- * @brief Convert a mechanism state enum to a short display string
- ******************************************************************************/
-const char* DisplayView::mechStateStr(MechState_e state)
-{
-  switch (state)
-  {
-    case MECH_NOT_INIT: return "NINI";
-    case MECH_IDLE:     return "IDLE";
-    case MECH_ACTIVE:   return "ACTV";
-    case MECH_FAULT:    return "FALT";
-    default:            return "????";
-  }
 }
 
 /*******************************************************************************

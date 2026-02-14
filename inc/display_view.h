@@ -10,11 +10,11 @@
  * @par Display Layout (128x64, 21 chars x 8 lines @ 6px wide font):
  * @code
  *   Line 0: RC:OK  ||||||||..   (RC link status + signal bar)
- *   Line 1: SPD:+072  STR:-015  (Throttle + steering input)
+ *   Line 1: SPD:+072  TRN:-015  (Throttle + turn input)
  *   Line 2: L:+068%   R:+076%   (Left/right motor output %)
  *   Line 3: TRM F:+03  R:+00    (Forward/reverse trim offset)
- *   Line 4: COL:IDLE  DEP:IDLE  (Mechanism states)
- *   Line 5: LCH:IDLE            (Launcher state)
+ *   Line 4: TURN RATE: 75%      (Turn rate percentage)
+ *   Line 5:                      (Reserved)
  *   Line 6: ERR:0000   UP:0:42  (Last error + uptime)
  *   Line 7: eweek2026 v1.0 abc  (Firmware ID)
  * @endcode
@@ -93,19 +93,6 @@ public:
   /* Public Types ------------------------------------------------------------*/
 
   /*****************************************************************************
-   * @brief Mechanism state enumeration
-   *
-   * Generic state for any mechanism (collect, deposit, launcher).
-   * Extend as mechanisms are fleshed out.
-   ****************************************************************************/
-  enum MechState_e : uint8_t {
-    MECH_NOT_INIT = 0,  /**< Mechanism not initialized   */
-    MECH_IDLE,          /**< Initialized, not active     */
-    MECH_ACTIVE,        /**< Currently running           */
-    MECH_FAULT,         /**< Error / fault detected      */
-  };
-
-  /*****************************************************************************
    * @brief Shared data structure passed from core 0 to core 1
    *
    * Core 0 fills this struct and calls pushData(). Core 1 reads a snapshot
@@ -126,10 +113,7 @@ public:
     int16_t  motorRightPct;         /**< Right motor output  [-100..+100] %     */
     int8_t   trimFwd;               /**< Forward trim offset [-50..+50]         */
     int8_t   trimRev;               /**< Reverse trim offset [-50..+50]         */
-
-    /* Mechanism states */
-    MechState_e scoopState;         /**< Scoop mechanism state                  */
-    MechState_e launcherState;      /**< Launcher mechanism state               */
+    int16_t  turnRate;              /**< Turn rate           [0..1000]          */
 
     /* System health */
     uint16_t lastErrorCode;         /**< Most recent ErrorCode_t value          */
@@ -263,7 +247,7 @@ private:
    *
    * @param data  Current telemetry snapshot
    ****************************************************************************/
-  void renderSpeedSteer(const DisplayData_t& data);
+  void renderSpeedTurn(const DisplayData_t& data);
 
   /*****************************************************************************
    * @brief Render the motor output line (line 2)
@@ -284,14 +268,13 @@ private:
   void renderTrim(const DisplayData_t& data);
 
   /*****************************************************************************
-   * @brief Render the mechanism status lines (lines 4-5)
+   * @brief Render the turn rate line (line 4)
    *
-   * Format: "COL:IDLE  DEP:IDLE"
-   *         "LCH:IDLE"
+   * Format: "TURN RATE: 75%"
    *
    * @param data  Current telemetry snapshot
    ****************************************************************************/
-  void renderMechStatus(const DisplayData_t& data);
+  void renderTurnRate(const DisplayData_t& data);
 
   /*****************************************************************************
    * @brief Render the error and uptime line (line 6)
@@ -308,15 +291,6 @@ private:
    * Format: "eweek2026 v1.0 abc"
    ****************************************************************************/
   void renderFirmwareId(void);
-
-  /*****************************************************************************
-   * @brief Convert a mechanism state enum to a short display string
-   *
-   * @param state  Mechanism state value
-   *
-   * @return Pointer to a static 4-character string (e.g. "IDLE", "ACTV")
-   ****************************************************************************/
-  static const char* mechStateStr(MechState_e state);
 
   /*****************************************************************************
    * @brief Draw a horizontal signal strength bar

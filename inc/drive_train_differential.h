@@ -153,6 +153,23 @@ public:
   bool setTurn(int turn);
 
   /*****************************************************************************
+   * @brief Set the turn rate (multiplier)
+   *
+   * The turn rate scales the turn value before motor mixing. A value of
+   * 1000 means full turn authority, 0 means no turning.
+   *
+   * @param rate Turn rate in range [0, 1000]
+   ****************************************************************************/
+  void setTurnRate(int rate);
+
+  /*****************************************************************************
+   * @brief Get the current turn rate
+   *
+   * @return Current turn rate value [0, 1000]
+   ****************************************************************************/
+  int getTurnRate(void) const { return m_turnRate; }
+
+  /*****************************************************************************
    * @brief Get current speed setpoint
    *
    * @return Current speed value
@@ -329,6 +346,9 @@ private:
   /** @brief IBus channel center value (no trim) */
   static constexpr int IBUS_CHANNEL_CENTER = 1500;
 
+  /** @brief Maximum turn rate value (full turn authority) */
+  static constexpr int TURN_RATE_MAX = 1000;
+
 
   /* Private Variables -------------------------------------------------------*/
 
@@ -336,6 +356,7 @@ private:
   MotorState m_motorState[MOTOR_COUNT];  /**< Motor state tracking */
   int m_speed;                           /**< Current speed setpoint */
   int m_turn;                            /**< Current turn setpoint */
+  int m_turnRate;                        /**< Turn rate multiplier [0..1000] */
   bool m_useManualTrim;                  /**< true = manual trim, false = calibrated trim */
   int m_lastMotorOutput[MOTOR_COUNT];    /**< Last computed motor values (after mixing, pre-trim) */
 
