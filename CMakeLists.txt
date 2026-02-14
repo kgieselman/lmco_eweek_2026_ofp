@@ -153,13 +153,13 @@ message(STATUS "")
 set(SOURCES
   src/main.cpp
   src/error_handler.cpp
-  src/ring_buffer.cpp
   src/flysky_ibus.cpp
   src/drive_train_differential.cpp
   src/motor_driver.cpp
-  src/mech_collect.cpp
-  src/mech_deposit.cpp
+  src/mech_scoop.cpp
   src/mech_launcher.cpp
+  src/ssd1306_display.cpp
+  src/display_view.cpp
 )
 
 # Create executable
@@ -183,10 +183,13 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 # Link required libraries
 target_link_libraries(${PROJECT_NAME}
   pico_stdlib
+  pico_multicore
   hardware_pwm
   hardware_timer
   hardware_clocks
   hardware_watchdog
+  hardware_i2c
+  hardware_sync
 )
 
 # Compiler warnings

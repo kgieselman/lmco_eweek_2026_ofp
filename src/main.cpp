@@ -8,13 +8,15 @@
  * @par System Overview:
  * - RC Receiver: FlySky iBUS protocol on UART1
  * - Drive Train: Differential (tank) drive
- * - Mechanisms: Collection, Deposit, Launch
+ * - Mechanisms: Scoop and Launch
  * - Safety: Watchdog timer, signal loss detection
+ * - Display: SSD1306 OLED on core 1 (I2C0)
  ******************************************************************************/
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdio.h>
 #include "pico/stdlib.h"
+#include "pico/multicore.h"
 #include "hardware/watchdog.h"
 
 // Project headers
@@ -24,9 +26,12 @@
 #include "error_handler.h"
 #include "flysky_ibus.h"
 #include "drive_train_differential.h"
-#include "mech_collect.h"
-#include "mech_deposit.h"
+#include "mech_scoop.h"
 #include "mech_launcher.h"
+
+#if ENABLE_DISPLAY
+#include "display_view.h"
+#endif
 
 
 /* Globals -------------------------------------------------------------------*/
@@ -37,14 +42,73 @@ static FlySkyIBus* g_pIBus = nullptr;
 /** @brief Drive train controller */
 static DriveTrainDifferential* g_pDriveTrain = nullptr;
 
-/** @brief Collection mechanism */
-static MechCollect*  g_pCollect = nullptr;
-
-/** @brief Deposit mechanism */
-static MechDeposit*  g_pDeposit = nullptr;
+/** @brief Scoop mechanism */
+static MechScoop* g_pScoop = nullptr;
 
 /** @brief Launcher mechanism */
 static MechLauncher* g_pLauncher = nullptr;
+
+#if ENABLE_DISPLAY
+/** @brief Display view (owned here, runs on core 1) */
+static DisplayView* g_pDisplayView = nullptr;
+
+/** @brief Flag to track if last boot was from watchdog (captured before init) */
+static bool g_watchdogRebooted = false;
+#endif
+
+
+/* Core 1 Entry (Display) ---------------------------------------------------*/
+
+#if ENABLE_DISPLAY
+/*******************************************************************************
+ * @brief Core 1 entry point — display update loop
+ *
+ * Initializes the display hardware and runs the refresh loop. This function
+ * never returns. Data from core 0 arrives via DisplayView::pushData().
+ ******************************************************************************/
+static void core1_main(void)
+{
+  /*
+   * Construct AND initialize the display entirely on core 1.
+   * The RP2040's I2C peripheral must be initialized on the same core
+   * that will use it — constructing on core 0 and calling init() on
+   * core 1 can cause the I2C peripheral to be inaccessible from core 1.
+   */
+  DisplayView* pDisplay = new DisplayView(i2c0, PIN_DISPLAY_SDA, PIN_DISPLAY_SCL);
+  if (pDisplay == nullptr)
+  {
+    /* Signal core 0 that construction failed (send null) */
+    multicore_fifo_push_blocking(0);
+    return;
+  }
+
+  if (!pDisplay->init())
+  {
+#if ENABLE_DEBUG
+    /* Note: printf from core 1 is safe with pico_stdlib's mutex-protected stdio */
+    printf("[Display] OLED initialization failed on core 1\n");
+#endif
+    /* Signal core 0 that init failed (send null) */
+    multicore_fifo_push_blocking(0);
+    delete pDisplay;
+    return;
+  }
+
+#if ENABLE_DEBUG
+  printf("[Display] OLED initialized on core 1\n");
+#endif
+
+  /* Pass the pointer back to core 0 so it can call pushData() */
+  multicore_fifo_push_blocking(reinterpret_cast<uint32_t>(pDisplay));
+
+  /* Display refresh loop (never returns) */
+  while (true)
+  {
+    pDisplay->update();
+    sleep_ms(TIMING_DISPLAY_REFRESH_MS);
+  }
+}
+#endif /* ENABLE_DISPLAY */
 
 
 /* Private Function Definitions ----------------------------------------------*/
@@ -114,6 +178,9 @@ static bool system_init(void)
   if (watchdog_caused_reboot())
   {
     ERROR_REPORT(ERROR_HW_WATCHDOG);
+#if ENABLE_DISPLAY
+    g_watchdogRebooted = true;
+#endif
 #if ENABLE_DEBUG
     printf("[WARN] System rebooted by watchdog!\n");
 #endif
@@ -148,21 +215,12 @@ static bool system_init(void)
 
   /* Initialize mechanisms */
 #if ENABLE_DEBUG
-  printf("[Init] Configuring collection mechanism...\n");
-#endif
-  g_pCollect = new MechCollect();
-  if (g_pCollect != nullptr)
+  printf("[Init] Configuring scoop mechanism...\n");
+#endif // ENABLE_DEBUG
+  g_pScoop = new MechScoop();
+  if (g_pScoop != nullptr)
   {
-    g_pCollect->init();
-  }
-
-#if ENABLE_DEBUG
-  printf("[Init] Configuring deposit mechanism...\n");
-#endif
-  g_pDeposit = new MechDeposit();
-  if (g_pDeposit != nullptr)
-  {
-    g_pDeposit->init();
+    g_pScoop->init();
   }
 
 #if ENABLE_DEBUG
@@ -173,6 +231,32 @@ static bool system_init(void)
   {
     g_pLauncher->init();
   }
+
+  /* Initialize display view (constructed and initialized on core 1) */
+#if ENABLE_DISPLAY
+#if ENABLE_DEBUG
+  printf("[Init] Launching core 1 for display...\n");
+#endif
+  /* Launch core 1 — it will construct and init the DisplayView */
+  multicore_launch_core1(core1_main);
+
+  /* Wait for core 1 to send back the DisplayView pointer (or null on failure) */
+  uint32_t displayPtr = multicore_fifo_pop_blocking();
+  g_pDisplayView = reinterpret_cast<DisplayView*>(displayPtr);
+
+  if (g_pDisplayView == nullptr)
+  {
+#if ENABLE_DEBUG
+    printf("[WARN] Display initialization failed on core 1\n");
+#endif
+  }
+  else
+  {
+#if ENABLE_DEBUG
+    printf("[Init] Display ready on core 1\n");
+#endif
+  }
+#endif /* ENABLE_DISPLAY */
 
   /* Enable watchdog */
 #if ENABLE_WATCHDOG
@@ -200,6 +284,12 @@ static bool system_init(void)
  * @brief Process RC inputs and update drive train
  *
  * Called when new RC data is available.
+ * 
+ * Control Mapping
+ * Right Stick Verical   - Throttle
+ * Left Stick Horizontal - Turn
+ * VRA                   - Forward steering trim
+ * VRB                   - Steering multiplier
  ******************************************************************************/
 static void process_rc_input(void)
 {
@@ -208,47 +298,22 @@ static void process_rc_input(void)
     return;
   }
 
-  /* Read normalized channel values [-500..500] */
-  int speed = g_pIBus->readChannelNormalized(FlySkyIBus::CHAN_RSTICK_VERT);
-  int turn  = g_pIBus->readChannelNormalized(FlySkyIBus::CHAN_RSTICK_HORIZ);
+  /* Read updated channel values */
+  int speed     = g_pIBus->readChannel(FlySkyIBus::CHAN_RSTICK_VERT,  FlySkyIBus::READ_CHAN_CENTER_0); // [-500..500]
+  int steer     = g_pIBus->readChannel(FlySkyIBus::CHAN_LSTICK_HORIZ, FlySkyIBus::READ_CHAN_CENTER_0); // [-500..500]
+  int steerTrim = g_pIBus->readChannel(FlySkyIBus::CHAN_VRA,          FlySkyIBus::READ_CHAN_RAW);      // [1000..2000]
+  int steerRate = g_pIBus->readChannel(FlySkyIBus::CHAN_VRB,          FlySkyIBus::READ_CHAN_NORM);     // [0..1000]
 
-  g_pDriveTrain->setSpeed(speed);
+  /* Update modules with the new values */
+  g_pDriveTrain->setSpeed(speed); // TODO: 2S governer
 
-  // Use SWC to determine what divider to apply to steering
-  if (g_pIBus->readChannelNormalized(FlySkyIBus::CHAN_SWC) < 250)
-  {
-    // Switch is in UP position, do nothing to steering
-  }
-  else if (g_pIBus->readChannelNormalized(FlySkyIBus::CHAN_SWC) > 250)
-  {
-    // Switch is in DOWN position, Max attenuation of steering
-    float newTurn = static_cast<float>(turn) / 3.0f;
-    turn = static_cast<int>(newTurn);
-  }
-  else
-  {
-    // Switch is in middle position, Use medium attenuation
-    float newTurn = static_cast<float>(turn) / 2.0f;
-    turn = static_cast<int>(newTurn);
-  }
-  g_pDriveTrain->setTurn(turn);
+  float steerMultipler = static_cast<float>(steerRate) / static_cast<float>(1000.0); 
+  int steerAdjusted = static_cast<int>(static_cast<float>(steer) * steerMultipler);
+  g_pDriveTrain->setTurn(steerAdjusted);
 
-  // Use manual trim by default, use SWA to select auto trim...eventually
-  if (g_pIBus->readChannel(FlySkyIBus::CHAN_SWA) < FlySkyIBus::CHANNEL_VALUE_CENTER)
-  {
-    /* Read VRA/VRB for manual trim adjustment (raw values 1000-2000) */
-    int vraValue = g_pIBus->readChannel(FlySkyIBus::CHAN_VRA);
-    int vrbValue = g_pIBus->readChannel(FlySkyIBus::CHAN_VRB);
-
-    g_pDriveTrain->setForwardTrimFromChannel(vraValue);
-    g_pDriveTrain->setReverseTrimFromChannel(vrbValue);
-    g_pDriveTrain->setManualTrimMode(true);
-  }
-  else
-  {
-    /* Switch is Down, use automatic trim from calibration */
-    g_pDriveTrain->setManualTrimMode(false);
-  }
+  g_pDriveTrain->setForwardTrimFromChannel(steerTrim);
+  g_pDriveTrain->setReverseTrimFromChannel(steerTrim);
+  g_pDriveTrain->setManualTrimMode(true);
 
   g_pDriveTrain->update();
 }
@@ -277,6 +342,81 @@ static void handle_signal_loss(void)
 #endif
 #endif /* ENABLE_SIGNAL_LOSS_CUTOFF */
 }
+
+#if ENABLE_DISPLAY
+/*******************************************************************************
+ * @brief Helper to convert mechanism init state to display enum
+ *
+ * Since the mechanism classes are skeleton implementations with only an
+ * initialized flag, we map that to IDLE or NOT_INIT. As mechanisms are
+ * fleshed out with active/fault states, this function should be updated.
+ *
+ * @param initialized true if the mechanism has been initialized
+ * @return Corresponding MechState_e value
+ ******************************************************************************/
+static DisplayView::MechState_e mechInitToState(bool initialized)
+{
+  return initialized ? DisplayView::MECH_IDLE : DisplayView::MECH_NOT_INIT;
+}
+
+/*******************************************************************************
+ * @brief Populate and push display data to core 1
+ *
+ * Gathers telemetry from all subsystems and publishes it to the display
+ * view via the thread-safe pushData() interface.
+ ******************************************************************************/
+static void update_display(void)
+{
+  if (g_pDisplayView == nullptr)
+  {
+    return;
+  }
+
+  DisplayView::DisplayData_t data = {};
+
+  /* RC link status */
+  if (g_pIBus != nullptr)
+  {
+    data.rcSignalValid  = g_pIBus->isSignalValid();
+    data.rcTimeSinceMsg = g_pIBus->getTimeSinceLastMessage();
+  }
+  else
+  {
+    data.rcSignalValid  = false;
+    data.rcTimeSinceMsg = 9999;
+  }
+
+  /* Drive train telemetry */
+  if (g_pDriveTrain != nullptr)
+  {
+    data.speed         = static_cast<int16_t>(g_pDriveTrain->getSpeed());
+    data.turn          = static_cast<int16_t>(g_pDriveTrain->getTurn());
+    data.motorLeftPct  = static_cast<int16_t>(
+      g_pDriveTrain->getMotorOutputPct(DriveTrainDifferential::MOTOR_LEFT));
+    data.motorRightPct = static_cast<int16_t>(
+      g_pDriveTrain->getMotorOutputPct(DriveTrainDifferential::MOTOR_RIGHT));
+    data.trimFwd       = static_cast<int8_t>(g_pDriveTrain->getForwardTrimOffset());
+    data.trimRev       = static_cast<int8_t>(g_pDriveTrain->getReverseTrimOffset());
+    // TODO: Steering rate...
+  }
+
+  /* Mechanism states */
+  data.scoopState = (g_pScoop != nullptr) ?
+                     mechInitToState(g_pScoop->isInitialized()) :
+                     DisplayView::MECH_NOT_INIT;
+
+  data.launcherState = (g_pLauncher != nullptr) ?
+                        mechInitToState(g_pLauncher->isInitialized()) :
+                        DisplayView::MECH_NOT_INIT;
+
+  /* System health */
+  data.lastErrorCode  = static_cast<uint16_t>(error_get_last());
+  data.errorCount     = error_get_count();
+  data.watchdogReboot = g_watchdogRebooted;
+
+  g_pDisplayView->pushData(data);
+}
+#endif /* ENABLE_DISPLAY */
 
 /*******************************************************************************
  * @brief Application entry point
@@ -349,20 +489,20 @@ int main(void)
     }
 
     /* Update mechanisms */
-    if (g_pCollect != nullptr)
+    if (g_pScoop != nullptr)
     {
-      g_pCollect->update();
-    }
-
-    if (g_pDeposit != nullptr)
-    {
-      g_pDeposit->update();
+      g_pScoop->update();
     }
 
     if (g_pLauncher != nullptr)
     {
       g_pLauncher->update();
     }
+
+    /* Push telemetry to display (core 1) */
+#if ENABLE_DISPLAY
+    update_display();
+#endif
 
     /* Rate limiting */
 #if TIMING_MAIN_LOOP_PERIOD_MS > 0

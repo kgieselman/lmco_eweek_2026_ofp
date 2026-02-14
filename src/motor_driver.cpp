@@ -323,6 +323,15 @@ int MotorDriver::getEncoderPin(MotorChannel_e channel) const
   return m_motors[channel].pinEncoder;
 }
 
+int MotorDriver::getCurrentValue(MotorChannel_e channel) const
+{
+  if (channel >= MOTOR_COUNT)
+  {
+    return 0;
+  }
+  return m_motors[channel].currentValue;
+}
+
 bool MotorDriver::validatePin(int pin) const
 {
   return (pin >= GPIO_PIN_MIN) && (pin <= GPIO_PIN_MAX);

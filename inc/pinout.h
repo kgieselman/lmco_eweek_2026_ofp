@@ -70,9 +70,9 @@ constexpr int PIN_IBUS_RX = 5;
  * - MODE_1PWM_2DIR: ENABLE = PWM, DIR_FWD = digital, DIR_REV = digital
  * @{
  ******************************************************************************/
-constexpr int PIN_DIFF_MOTOR_LEFT_ENABLE  = 9;  /**< PWM enable (Slice 4 Chan B) */
-constexpr int PIN_DIFF_MOTOR_LEFT_DIR_FWD = 10;  /**< Forward direction / IN1 */
-constexpr int PIN_DIFF_MOTOR_LEFT_DIR_REV = 11;  /**< Reverse direction / IN2 */
+constexpr int PIN_DIFF_MOTOR_LEFT_ENABLE  = 15; /**< PWM enable (Slice 4 Chan B) */
+constexpr int PIN_DIFF_MOTOR_LEFT_DIR_FWD = 17; /**< Forward direction / IN1 */
+constexpr int PIN_DIFF_MOTOR_LEFT_DIR_REV = 16; /**< Reverse direction / IN2 */
 constexpr int PIN_DIFF_MOTOR_LEFT_ENC     = PIN_INVALID; /**< Encoder (Optional) */
 /** @} */
 
@@ -84,32 +84,21 @@ constexpr int PIN_DIFF_MOTOR_LEFT_ENC     = PIN_INVALID; /**< Encoder (Optional)
  * - MODE_1PWM_2DIR: ENABLE = PWM, DIR_FWD = digital, DIR_REV = digital
  * @{
  ******************************************************************************/
-constexpr int PIN_DIFF_MOTOR_RIGHT_ENABLE  = 8;   /**< PWM enable (Slice 4 Chan A) */
-constexpr int PIN_DIFF_MOTOR_RIGHT_DIR_FWD = 7;   /**< Forward direction / IN1 */
-constexpr int PIN_DIFF_MOTOR_RIGHT_DIR_REV = 6;   /**< Reverse direction / IN2 */
+constexpr int PIN_DIFF_MOTOR_RIGHT_ENABLE  = 18; /**< PWM enable (Slice 4 Chan A) */
+constexpr int PIN_DIFF_MOTOR_RIGHT_DIR_FWD = 20; /**< Forward direction / IN1 */
+constexpr int PIN_DIFF_MOTOR_RIGHT_DIR_REV = 19; /**< Reverse direction / IN2 */
 constexpr int PIN_DIFF_MOTOR_RIGHT_ENC     = PIN_INVALID; /**< Encoder (Optional) */
 /** @} */
 
 
-/* Collection Mechanism ------------------------------------------------------*/
+/* Scoop Mechanism ------------------------------------------------------*/
 
 /*******************************************************************************
- * @name Collection Mechanism Pins
+ * @name Scoop Mechanism Pins
  * @note Assign pins based on hardware design
  * @{
  ******************************************************************************/
-constexpr int PIN_COLLECT_MOTOR_PWM = PIN_INVALID;  /**< Collector motor PWM */
-/** @} */
-
-
-/* Deposit Mechanism ---------------------------------------------------------*/
-
-/*******************************************************************************
- * @name Deposit Mechanism Pins
- * @note Assign pins based on hardware design
- * @{
- ******************************************************************************/
-constexpr int PIN_DEPOSIT_SERVO     = PIN_INVALID;  /**< Deposit gate servo */
+constexpr int PIN_SCOOP_SERVO = PIN_INVALID;  /**< Scoop servo PWM */
 /** @} */
 
 
@@ -123,6 +112,20 @@ constexpr int PIN_DEPOSIT_SERVO     = PIN_INVALID;  /**< Deposit gate servo */
 constexpr int PIN_LAUNCHER_MOTOR_PWM     = PIN_INVALID;  /**< Launcher motor PWM */
 constexpr int PIN_LAUNCHER_FEED_SERVO    = PIN_INVALID;  /**< Ball feed servo */
 constexpr int PIN_LAUNCHER_TILT_SERVO    = PIN_INVALID;  /**< Angle adjustment servo */
+/** @} */
+
+
+/* I2C Display (SSD1306 OLED) ------------------------------------------------*/
+
+/*******************************************************************************
+ * @name SSD1306 OLED Display Pins
+ * @note Using I2C0 on core 1. Choose pins that map to the desired I2C instance.
+ *       I2C0 SDA options: GP0, GP4, GP8, GP12, GP16, GP20
+ *       I2C0 SCL options: GP1, GP5, GP9, GP13, GP17, GP21
+ * @{
+ ******************************************************************************/
+constexpr int PIN_DISPLAY_SDA = 8;  /**< I2C0 SDA for OLED display */
+constexpr int PIN_DISPLAY_SCL = 9;  /**< I2C0 SCL for OLED display */
 /** @} */
 
 

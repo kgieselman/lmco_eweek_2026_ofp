@@ -1,12 +1,11 @@
 /*******************************************************************************
- * @file mech_deposit.cpp
- * @brief Implementation of deposit mechanism controller
- *
- * @note This is a skeleton implementation. Complete based on hardware design.
+ * @file mech_scoop.cpp
+ * 
+ * Implementation of the scoop mechanism
  ******************************************************************************/
 
 /* Includes ------------------------------------------------------------------*/
-#include "mech_deposit.h"
+#include "mech_scoop.h"
 #include "config.h"
 #include "pinout.h"
 #include "error_handler.h"
@@ -17,29 +16,30 @@
 #endif
 
 
-/* Method Definitions --------------------------------------------------------*/
-MechDeposit::MechDeposit()
-  : m_initialized(false)
-  , m_lastUpdateMs(0)
+/* Public Method Defintions --------------------------------------------------*/
+MechScoop::MechScoop() : m_initialized(false)
+                        ,m_lastUpdateMs(0)
 {
 }
 
-MechDeposit::~MechDeposit()
+
+MechScoop::~MechScoop()
 {
+  //stop(); // set to default position
 }
 
-bool MechDeposit::init(void)
+bool MechScoop::init(void)
 {
   m_initialized = true;
 
 #if ENABLE_DEBUG
-  printf("[Deposit] Mechanism initialized\n");
+  printf("[Scoop] Mechanism initialized\n");
 #endif
 
   return true;
 }
 
-void MechDeposit::update(void)
+void MechScoop::update(void)
 {
   if (!m_initialized)
   {
@@ -49,6 +49,5 @@ void MechDeposit::update(void)
   uint32_t now = to_ms_since_boot(get_absolute_time());
   m_lastUpdateMs = now;
 }
-
 
 /* EOF -----------------------------------------------------------------------*/

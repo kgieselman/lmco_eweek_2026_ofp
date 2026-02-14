@@ -103,6 +103,17 @@
  ******************************************************************************/
 #define ENABLE_STDIO_USB          (1)
 
+/*******************************************************************************
+ * @brief OLED display on core 1
+ *
+ * When enabled, launches the SSD1306 display driver on core 1 to show
+ * real-time robot telemetry (RC status, motor outputs, mechanism states,
+ * error codes, and uptime).
+ *
+ * Requires I2C display wired to PIN_DISPLAY_SDA / PIN_DISPLAY_SCL.
+ ******************************************************************************/
+#define ENABLE_DISPLAY            (1)
+
 /** @} */ /* End of features */
 
 
@@ -185,6 +196,16 @@
  * Full blink cycle = 2 * this value.
  ******************************************************************************/
 #define TIMING_ERROR_LED_BLINK_MS       (250)
+
+/* Display Timing ----------------------------------------------------------- */
+
+/*******************************************************************************
+ * @brief Display refresh period (ms)
+ *
+ * Minimum time between display refresh cycles on core 1.
+ * 50 ms = ~20 FPS, which is responsive without wasting I2C bandwidth.
+ ******************************************************************************/
+#define TIMING_DISPLAY_REFRESH_MS       (50)
 
 /** @} */ /* End of timing */
 
