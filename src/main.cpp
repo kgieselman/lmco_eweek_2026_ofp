@@ -344,21 +344,6 @@ static void handle_signal_loss(void)
 
 #if ENABLE_DISPLAY
 /*******************************************************************************
- * @brief Helper to convert mechanism init state to display enum
- *
- * Since the mechanism classes are skeleton implementations with only an
- * initialized flag, we map that to IDLE or NOT_INIT. As mechanisms are
- * fleshed out with active/fault states, this function should be updated.
- *
- * @param initialized true if the mechanism has been initialized
- * @return Corresponding MechState_e value
- ******************************************************************************/
-static DisplayView::MechState_e mechInitToState(bool initialized)
-{
-  return initialized ? DisplayView::MECH_IDLE : DisplayView::MECH_NOT_INIT;
-}
-
-/*******************************************************************************
  * @brief Populate and push display data to core 1
  *
  * Gathers telemetry from all subsystems and publishes it to the display
@@ -398,15 +383,6 @@ static void update_display(void)
     data.trimRev       = static_cast<int8_t>(g_pDriveTrain->getReverseTrimOffset());
     data.turnRate      = static_cast<int16_t>(g_pDriveTrain->getTurnRate());
   }
-
-  /* Mechanism states */
-  data.scoopState = (g_pScoop != nullptr) ?
-                     mechInitToState(g_pScoop->isInitialized()) :
-                     DisplayView::MECH_NOT_INIT;
-
-  data.launcherState = (g_pLauncher != nullptr) ?
-                        mechInitToState(g_pLauncher->isInitialized()) :
-                        DisplayView::MECH_NOT_INIT;
 
   /* System health */
   data.lastErrorCode  = static_cast<uint16_t>(error_get_last());
