@@ -98,7 +98,7 @@ constexpr int PIN_DIFF_MOTOR_RIGHT_ENC     = PIN_INVALID; /**< Encoder (Optional
  * @note Assign pins based on hardware design
  * @{
  ******************************************************************************/
-constexpr int PIN_SCOOP_SERVO = 2;  /**< Scoop servo PWM (Slice 1 Chan A) */
+constexpr int PIN_SCOOP_SERVO = 26;  /**< Scoop servo PWM (Slice 5 Chan A) */
 /** @} */
 
 
