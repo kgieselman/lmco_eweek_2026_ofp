@@ -109,11 +109,11 @@ class MechScoop
     void writePulseUs(uint16_t pulseUs);
 
   /* Private Variables -------------------------------------------------------*/
-    bool     m_initialized;      /**< Initialization status                  */
-    int      m_position;         /**< Current position [-500 … +500]         */
-    uint     m_pwmSlice;         /**< RP2040 PWM slice number                */
-    uint     m_pwmChannel;       /**< RP2040 PWM channel (A=0, B=1)         */
-    uint16_t m_pwmWrap;          /**< PWM counter wrap value                 */
+    bool     m_initialized;      /**< Initialization status          */
+    int      m_position;         /**< Current position [-500 … +500] */
+    uint8_t  m_pwmSlice;         /**< RP2040 PWM slice number        */
+    uint8_t  m_pwmChannel;       /**< RP2040 PWM channel (A=0, B=1)  */
+    uint16_t m_pwmWrap;          /**< PWM counter wrap value         */
 };
 
 
