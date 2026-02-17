@@ -115,6 +115,9 @@ public:
     int8_t   trimRev;               /**< Reverse trim offset [-50..+50]         */
     int16_t  turnRate;              /**< Turn rate           [0..1000]          */
 
+    /* Mechanisms */
+    int16_t  scoopPosition;          /**< Scoop servo pos     [-500..+500]       */
+
     /* System health */
     uint16_t lastErrorCode;         /**< Most recent ErrorCode_t value          */
     uint32_t errorCount;            /**< Total errors since boot                */
@@ -275,6 +278,13 @@ private:
    * @param data  Current telemetry snapshot
    ****************************************************************************/
   void renderTurnRate(const DisplayData_t& data);
+
+  /*****************************************************************************
+   * @brief Render the scoop position line
+   *
+   * @param data  Current telemetry snapshot
+   ****************************************************************************/
+  void renderScoop(const DisplayData_t& data);
 
   /*****************************************************************************
    * @brief Render the error and uptime line (line 6)

@@ -166,6 +166,7 @@ void DisplayView::update(void)
   renderMotorOutput(data);
   renderTrim(data);
   renderTurnRate(data);
+  renderScoop(data);
   renderErrorUptime(data);
   renderFirmwareId();
 
@@ -260,6 +261,21 @@ void DisplayView::renderTurnRate(const DisplayData_t& data)
   snprintf(lineBuf, LINE_BUF_SIZE, "TURN RATE: %-3d%%", turnRatePct);
 
   m_display.drawText(0, LINE_Y[4], lineBuf);
+}
+
+/*******************************************************************************
+ * @brief Render the scoop position line (line 5)
+ ******************************************************************************/
+void DisplayView::renderScoop(const DisplayData_t& data)
+{
+  char lineBuf[LINE_BUF_SIZE];
+
+  /* Convert position [-500..+500] to percentage [-100..+100] */
+  int scoopPct = (static_cast<int>(data.scoopPosition) * 100) / 500;
+
+  snprintf(lineBuf, LINE_BUF_SIZE, "SCOOP: %+4d%%", scoopPct);
+
+  m_display.drawText(0, LINE_Y[5], lineBuf);
 }
 
 /*******************************************************************************

@@ -286,14 +286,18 @@ static bool system_init(void)
  * Called when new RC data is available.
  * 
  * Control Mapping
- * Right Stick Verical   - Throttle
- * Left Stick Horizontal - Turn
- * VRA                   - Forward turn trim
- * VRB                   - Turn rate multiplier
+ * Right Stick Vertical   - Throttle
+ * Right Stick Horizontal - (unused)
+ * Left Stick Vertical    - Scoop position
+ * Left Stick Horizontal  - Turn
+ * VRA                    - Forward turn trim
+ * VRB                    - Turn rate multiplier
  ******************************************************************************/
 static void process_rc_input(void)
 {
-  if ((g_pIBus == nullptr) || (g_pDriveTrain == nullptr))
+  if ((g_pIBus == nullptr) ||
+      (g_pDriveTrain == nullptr) ||
+      (g_pScoop == nullptr)) 
   {
     return;
   }
@@ -301,10 +305,11 @@ static void process_rc_input(void)
   /* Read updated channel values */
   int speed    = g_pIBus->readChannel(FlySkyIBus::CHAN_RSTICK_VERT,  FlySkyIBus::READ_CHAN_CENTER_0); // [-500..500]
   int turn     = g_pIBus->readChannel(FlySkyIBus::CHAN_LSTICK_HORIZ, FlySkyIBus::READ_CHAN_CENTER_0); // [-500..500]
+  int scoop    = g_pIBus->readChannel(FlySkyIBus::CHAN_LSTICK_VERT,  FlySkyIBus::READ_CHAN_CENTER_0); // [-500..500]
   int turnTrim = g_pIBus->readChannel(FlySkyIBus::CHAN_VRA,          FlySkyIBus::READ_CHAN_RAW);      // [1000..2000]
   int turnRate = g_pIBus->readChannel(FlySkyIBus::CHAN_VRB,          FlySkyIBus::READ_CHAN_NORM);     // [0..1000]
 
-  /* Update modules with the new values */
+  /* Update drive train */
   g_pDriveTrain->setSpeed(speed); // TODO: 2S governer
 
   g_pDriveTrain->setTurn(turn);
@@ -315,6 +320,9 @@ static void process_rc_input(void)
   g_pDriveTrain->setManualTrimMode(true);
 
   g_pDriveTrain->update();
+
+  /* Update scoop servo position */
+  g_pScoop->setPosition(scoop);
 }
 
 /*******************************************************************************
@@ -328,6 +336,12 @@ static void handle_signal_loss(void)
   if (g_pDriveTrain != nullptr)
   {
     g_pDriveTrain->stop();
+  }
+
+  /* Return scoop to center on signal loss */
+  if (g_pScoop != nullptr)
+  {
+    g_pScoop->setPosition(0);
   }
 
 #if ENABLE_DEBUG
@@ -382,6 +396,12 @@ static void update_display(void)
     data.trimFwd       = static_cast<int8_t>(g_pDriveTrain->getForwardTrimOffset());
     data.trimRev       = static_cast<int8_t>(g_pDriveTrain->getReverseTrimOffset());
     data.turnRate      = static_cast<int16_t>(g_pDriveTrain->getTurnRate());
+  }
+
+  /* Mechanism telemetry */
+  if ((g_pScoop != nullptr) && g_pScoop->isInitialized())
+  {
+    data.scoopPosition = static_cast<int16_t>(g_pScoop->getPosition());
   }
 
   /* System health */
