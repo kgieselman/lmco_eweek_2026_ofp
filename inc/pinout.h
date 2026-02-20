@@ -102,16 +102,18 @@ constexpr int PIN_SCOOP_SERVO = 26;  /**< Scoop servo PWM (Slice 5 Chan A) */
 /** @} */
 
 
-/* Launcher Mechanism --------------------------------------------------------*/
+/* Launcher Mechanism (DRV8825 Stepper) --------------------------------------*/
 
 /*******************************************************************************
- * @name Launcher Mechanism Pins
- * @note Assign pins based on hardware design
+ * @name Launcher Stepper Motor Pins (NEMA 17 via DRV8825)
+ *
+ * The DRV8825 requires a STEP pulse train and a DIR level.
+ * STEP uses hardware PWM so the pulse train runs autonomously.
+ *
  * @{
  ******************************************************************************/
-constexpr int PIN_LAUNCHER_MOTOR_PWM     = PIN_INVALID;  /**< Launcher motor PWM */
-constexpr int PIN_LAUNCHER_FEED_SERVO    = PIN_INVALID;  /**< Ball feed servo */
-constexpr int PIN_LAUNCHER_TILT_SERVO    = PIN_INVALID;  /**< Angle adjustment servo */
+constexpr int PIN_LAUNCHER_STEP = 14;  /**< DRV8825 STEP input (PWM Slice 7 Chan A) */
+constexpr int PIN_LAUNCHER_DIR  = 13;  /**< DRV8825 DIR  input (digital)            */
 /** @} */
 
 
