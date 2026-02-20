@@ -127,17 +127,17 @@ void MechScoop::setPosition(int position)
     return;
   }
 
-  /* Clamp to valid stick range */
-  position = clamp(position, -500, 500);
+  /* Clamp to valid permil range */
+  position = clamp(position, -1000, 1000);
   m_position = position;
 
   /*
-   * Map  [-500 … +500]  →  [PULSE_MIN … PULSE_MAX]
+   * Map  [-1000 … +1000]  →  [PULSE_MIN … PULSE_MAX]
    *
-   *   pulseUs = center + (position * half_range / 500)
+   *   pulseUs = center + (position * half_range / 1000)
    */
   const int halfRangeUs = (SCOOP_SERVO_PULSE_MAX_US - SCOOP_SERVO_PULSE_MIN_US) / 2;
-  int pulseUs = SCOOP_SERVO_PULSE_CTR_US + (position * halfRangeUs / 500);
+  int pulseUs = SCOOP_SERVO_PULSE_CTR_US + (position * halfRangeUs / 1000);
   pulseUs = clamp(pulseUs, SCOOP_SERVO_PULSE_MIN_US, SCOOP_SERVO_PULSE_MAX_US);
 
   writePulseUs(static_cast<uint16_t>(pulseUs));

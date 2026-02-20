@@ -192,38 +192,28 @@ bool FlySkyIBus::hasNewMessage(void)
   return true;
 }
 
-int FlySkyIBus::readChannel(Channel_e channel, ReadChannelMode_e mode) const
+int FlySkyIBus::readChannelRaw(Channel_e channel) const
 {
-  int chanData = CHANNEL_VALUE_CENTER; // TODO: Select and invalid value to return so user can ignore it
   if (channel < CHAN_COUNT)
   {
-    // Use snapshot to grab channel data if a valid channel was passed in
-    chanData = m_messageSnapshot.channels[channel];
+    return m_messageSnapshot.channels[channel];
   }
 
-  switch (mode)
-  {
-    case READ_CHAN_NORM:
-    {
-      // Shift data so it starts at 0
-      chanData -= CHANNEL_VALUE_MIN;
-      break;
-    }
-    case READ_CHAN_CENTER_0:
-    {
-      // Shift data so center value is 0
-      chanData -= CHANNEL_VALUE_CENTER;
-      break;
-    }
-    case READ_CHAN_RAW:
-    default:
-    {
-      // Leave data as is from the snapshot
-      break;
-    }
-  }
+  return CHANNEL_VALUE_CENTER;
+}
 
-  return chanData;
+int FlySkyIBus::readChannelCentered(Channel_e channel) const
+{
+  /* Map raw [1000..2000] to centered permil [-1000..1000] */
+  int raw = readChannelRaw(channel);
+  return ((raw - CHANNEL_VALUE_CENTER) * 2 * PERMIL_MAX) / CHANNEL_VALUE_RANGE;
+}
+
+int FlySkyIBus::readChannelUnsigned(Channel_e channel) const
+{
+  /* Map raw [1000..2000] to unsigned permil [0..1000] */
+  int raw = readChannelRaw(channel);
+  return ((raw - CHANNEL_VALUE_MIN) * PERMIL_MAX) / CHANNEL_VALUE_RANGE;
 }
 
 bool FlySkyIBus::isSignalValid(void) const
@@ -254,16 +244,16 @@ void FlySkyIBus::debugPrint(void) const
 {
 #if ENABLE_DEBUG
   printf("RStick(%4d,%4d) LStick(%4d,%4d) VR(%4d,%4d) SW(%4d,%4d,%4d,%4d)\n",
-         readChannel(CHAN_RSTICK_HORIZ, READ_CHAN_RAW),
-         readChannel(CHAN_RSTICK_VERT,  READ_CHAN_RAW),
-         readChannel(CHAN_LSTICK_HORIZ, READ_CHAN_RAW),
-         readChannel(CHAN_LSTICK_VERT,  READ_CHAN_RAW),
-         readChannel(CHAN_VRA,          READ_CHAN_RAW),
-         readChannel(CHAN_VRB,          READ_CHAN_RAW),
-         readChannel(CHAN_SWA,          READ_CHAN_RAW),
-         readChannel(CHAN_SWB,          READ_CHAN_RAW),
-         readChannel(CHAN_SWC,          READ_CHAN_RAW),
-         readChannel(CHAN_SWD,          READ_CHAN_RAW));
+         readChannelRaw(CHAN_RSTICK_HORIZ),
+         readChannelRaw(CHAN_RSTICK_VERT),
+         readChannelRaw(CHAN_LSTICK_HORIZ),
+         readChannelRaw(CHAN_LSTICK_VERT),
+         readChannelRaw(CHAN_VRA),
+         readChannelRaw(CHAN_VRB),
+         readChannelRaw(CHAN_SWA),
+         readChannelRaw(CHAN_SWB),
+         readChannelRaw(CHAN_SWC),
+         readChannelRaw(CHAN_SWD));
 #endif
 }
 

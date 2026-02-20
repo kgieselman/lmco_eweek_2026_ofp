@@ -5,8 +5,8 @@
  *
  * The scoop is driven by a single hobby servo, controlled via hardware PWM
  * on the RP2040.  The public interface accepts a signed position value
- * (matching the FlySkyIBus CENTER_0 read mode, i.e. -500 … +500) so that
- * the caller can wire the RC stick directly to setPosition().
+ * in the range -1000 … +1000 (permil) so that the caller can map any
+ * input source directly to setPosition().
  ******************************************************************************/
 #pragma once
 
@@ -70,23 +70,23 @@ class MechScoop
     void update(void);
 
     /***************************************************************************
-     * @brief Set the scoop position from an RC channel value
+     * @brief Set the scoop position
      *
-     * Maps the input range [-500 … +500] (FlySkyIBus CENTER_0 mode)
-     * to the full servo travel.
+     * Maps the input range [-1000 … +1000] (permil) to the full servo
+     * travel.
      *
-     *   -500  →  SCOOP_SERVO_PULSE_MIN_US  (fully retracted)
-     *      0  →  SCOOP_SERVO_PULSE_CTR_US  (center)
-     *   +500  →  SCOOP_SERVO_PULSE_MAX_US  (fully extended)
+     *   -1000  →  SCOOP_SERVO_PULSE_MIN_US  (fully retracted)
+     *       0  →  SCOOP_SERVO_PULSE_CTR_US  (center)
+     *   +1000  →  SCOOP_SERVO_PULSE_MAX_US  (fully extended)
      *
-     * @param position Signed stick value [-500 … +500]
+     * @param position Signed position value [-1000 … +1000]
      **************************************************************************/
     void setPosition(int position);
 
     /***************************************************************************
      * @brief Get the current scoop position
      *
-     * @return Current position in the range [-500 … +500]
+     * @return Current position in the range [-1000 … +1000]
      **************************************************************************/
     int getPosition(void) const { return m_position; }
 
@@ -110,7 +110,7 @@ class MechScoop
 
   /* Private Variables -------------------------------------------------------*/
     bool     m_initialized;      /**< Initialization status          */
-    int      m_position;         /**< Current position [-500 … +500] */
+    int      m_position;         /**< Current position [-1000 … +1000] */
     uint8_t  m_pwmSlice;         /**< RP2040 PWM slice number        */
     uint8_t  m_pwmChannel;       /**< RP2040 PWM channel (A=0, B=1)  */
     uint16_t m_pwmWrap;          /**< PWM counter wrap value         */
