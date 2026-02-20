@@ -102,16 +102,17 @@ constexpr int PIN_SCOOP_SERVO = 26;  /**< Scoop servo PWM (Slice 5 Chan A) */
 /** @} */
 
 
-/* Launcher Mechanism --------------------------------------------------------*/
+/* Launcher Mechanism (Continuous Rotation Servo) ----------------------------*/
 
 /*******************************************************************************
- * @name Launcher Mechanism Pins
- * @note Assign pins based on hardware design
+ * @name Launcher Servo Pin
+ *
+ * A continuous rotation servo is used to feed balls into the launcher.
+ * Standard 50 Hz PWM signal:  1500 µs = stopped, 1000/2000 µs = full speed.
+ *
  * @{
  ******************************************************************************/
-constexpr int PIN_LAUNCHER_MOTOR_PWM     = PIN_INVALID;  /**< Launcher motor PWM */
-constexpr int PIN_LAUNCHER_FEED_SERVO    = PIN_INVALID;  /**< Ball feed servo */
-constexpr int PIN_LAUNCHER_TILT_SERVO    = PIN_INVALID;  /**< Angle adjustment servo */
+constexpr int PIN_LAUNCHER_SERVO = 14;  /**< Launcher servo PWM (Slice 7 Chan A) */
 /** @} */
 
 

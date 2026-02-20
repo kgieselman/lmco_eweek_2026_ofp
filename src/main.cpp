@@ -292,6 +292,7 @@ static bool system_init(void)
  * Left Stick Horizontal  - Turn
  * VRA                    - Forward turn trim
  * VRB                    - Turn rate multiplier
+ * SWD                    - Launcher servo enable
  ******************************************************************************/
 static void process_rc_input(void)
 {
@@ -308,6 +309,7 @@ static void process_rc_input(void)
   int scoop    = g_pIBus->readChannelCentered(FlySkyIBus::CHAN_LSTICK_VERT);  // [-1000..1000]
   int turnTrim = g_pIBus->readChannelCentered(FlySkyIBus::CHAN_VRA);          // [-1000..1000]
   int turnRate = g_pIBus->readChannelUnsigned(FlySkyIBus::CHAN_VRB);          // [0..1000]
+  int launchSw = g_pIBus->readChannelUnsigned(FlySkyIBus::CHAN_SWD);          // [0..1000]
 
   /* Update drive train */
   g_pDriveTrain->setSpeed(speed); // TODO: 2S governer
@@ -323,6 +325,12 @@ static void process_rc_input(void)
 
   /* Update scoop servo position */
   g_pScoop->setPosition(scoop);
+
+  /* SWD controls the launcher servo: HIGH (>500) = run, LOW = stop */
+  if (g_pLauncher != nullptr)
+  {
+    g_pLauncher->setEnabled(launchSw > 500);
+  }
 }
 
 /*******************************************************************************
@@ -342,6 +350,12 @@ static void handle_signal_loss(void)
   if (g_pScoop != nullptr)
   {
     g_pScoop->setPosition(0);
+  }
+
+  /* Stop launcher servo on signal loss */
+  if (g_pLauncher != nullptr)
+  {
+    g_pLauncher->setEnabled(false);
   }
 
 #if ENABLE_DEBUG
@@ -402,6 +416,11 @@ static void update_display(void)
   if ((g_pScoop != nullptr) && g_pScoop->isInitialized())
   {
     data.scoopPosition = static_cast<int16_t>(g_pScoop->getPosition());
+  }
+
+  if ((g_pLauncher != nullptr) && g_pLauncher->isInitialized())
+  {
+    data.launcherRunning = g_pLauncher->isEnabled();
   }
 
   /* System health */

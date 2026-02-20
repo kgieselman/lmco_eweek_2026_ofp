@@ -117,6 +117,7 @@ public:
 
     /* Mechanisms */
     int16_t  scoopPosition;          /**< Scoop servo pos     [-1000..+1000]     */
+    bool     launcherRunning;        /**< true if launcher stepper is active     */
 
     /* System health */
     uint16_t lastErrorCode;         /**< Most recent ErrorCode_t value          */
