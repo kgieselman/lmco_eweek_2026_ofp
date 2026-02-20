@@ -321,7 +321,7 @@ int DriveTrainDifferential::getMotorOutputPct(MotorId_e motor) const
     return 0;
   }
 
-  /* Convert [-500..+500] to [-100..+100] */
+  /* Convert [-1000..+1000] to [-100..+100] */
   return (m_lastMotorOutput[motor] * 100) / USER_INPUT_MAX;
 }
 
@@ -542,50 +542,48 @@ void DriveTrainDifferential::measureMotorPulses(bool forward, int motorValue, in
 #endif /* ENABLE_ENCODER_CALIBRATION */
 }
 
-void DriveTrainDifferential::channelToTrim(int channelValue,
-                                           float* pLeftTrim,
-                                           float* pRightTrim) const
+void DriveTrainDifferential::valueToTrim(int trimValue,
+                                         float* pLeftTrim,
+                                         float* pRightTrim) const
 {
   if ((pLeftTrim == nullptr) || (pRightTrim == nullptr))
   {
     return;
   }
 
-  /* Clamp channel value to valid range */
-  if (channelValue < IBUS_CHANNEL_MIN)
+  /* Clamp trim value to valid range */
+  if (trimValue < USER_INPUT_MIN)
   {
-    channelValue = IBUS_CHANNEL_MIN;
+    trimValue = USER_INPUT_MIN;
   }
-  else if (channelValue > IBUS_CHANNEL_MAX)
+  else if (trimValue > USER_INPUT_MAX)
   {
-    channelValue = IBUS_CHANNEL_MAX;
+    trimValue = USER_INPUT_MAX;
   }
 
-  /* Calculate offset from center (-500 to +500) */
-  int offset = channelValue - IBUS_CHANNEL_CENTER;
-
-  /* Convert offset to trim value
-   * - Positive offset (>1500): reduce left motor power (right is weaker)
-   * - Negative offset (<1500): reduce right motor power (left is weaker)
-   * - Zero offset (1500): no trim applied
+  /* Convert value to trim
+   * - Positive value: reduce left motor power
+   * - Negative value: reduce right motor power
+   * - Zero: no trim applied
    *
    * Trim range is MIN_TRIM to DEFAULT_TRIM (0.5 to 1.0)
-   * At max offset (500), the reduced motor gets MIN_TRIM
+   * At max value (1000), the reduced motor gets MIN_TRIM
    */
   float trimRange = DEFAULT_TRIM - MIN_TRIM;  /* 0.5 */
-  float offsetNormalized = static_cast<float>(std::abs(offset)) / 500.0f;
+  float normalized = static_cast<float>(std::abs(trimValue)) /
+                     static_cast<float>(USER_INPUT_MAX);
 
-  if (offset > 0)
+  if (trimValue > 0)
   {
-    /* Reduce left motor (right is weaker, so left needs to slow down) */
-    *pLeftTrim = DEFAULT_TRIM - (trimRange * offsetNormalized);
+    /* Reduce left motor */
+    *pLeftTrim = DEFAULT_TRIM - (trimRange * normalized);
     *pRightTrim = DEFAULT_TRIM;
   }
-  else if (offset < 0)
+  else if (trimValue < 0)
   {
-    /* Reduce right motor (left is weaker, so right needs to slow down) */
+    /* Reduce right motor */
     *pLeftTrim = DEFAULT_TRIM;
-    *pRightTrim = DEFAULT_TRIM - (trimRange * offsetNormalized);
+    *pRightTrim = DEFAULT_TRIM - (trimRange * normalized);
   }
   else
   {
@@ -595,7 +593,7 @@ void DriveTrainDifferential::channelToTrim(int channelValue,
   }
 }
 
-void DriveTrainDifferential::setForwardTrimFromChannel(int channelValue)
+void DriveTrainDifferential::setForwardTrim(int trimValue)
 {
   /* Only apply manual trim when in manual mode */
   if (!m_useManualTrim)
@@ -605,13 +603,13 @@ void DriveTrainDifferential::setForwardTrimFromChannel(int channelValue)
 
   float leftTrim  = DEFAULT_TRIM;
   float rightTrim = DEFAULT_TRIM;
-  channelToTrim(channelValue, &leftTrim, &rightTrim);
+  valueToTrim(trimValue, &leftTrim, &rightTrim);
 
   m_motorState[MOTOR_LEFT].trimFwd = leftTrim;
   m_motorState[MOTOR_RIGHT].trimFwd = rightTrim;
 }
 
-void DriveTrainDifferential::setReverseTrimFromChannel(int channelValue)
+void DriveTrainDifferential::setReverseTrim(int trimValue)
 {
   /* Only apply manual trim when in manual mode */
   if (!m_useManualTrim)
@@ -620,7 +618,7 @@ void DriveTrainDifferential::setReverseTrimFromChannel(int channelValue)
   }
 
   float leftTrim, rightTrim;
-  channelToTrim(channelValue, &leftTrim, &rightTrim);
+  valueToTrim(trimValue, &leftTrim, &rightTrim);
 
   m_motorState[MOTOR_LEFT].trimRev = leftTrim;
   m_motorState[MOTOR_RIGHT].trimRev = rightTrim;
@@ -683,7 +681,7 @@ void DriveTrainDifferential::setManualTrimMode(bool useManual)
     printf("[DriveTrain] Switched to MANUAL trim mode\n");
 #endif
     /* When switching to manual mode, keep current trim values until
-     * explicitly changed by setForwardTrimFromChannel/setReverseTrimFromChannel */
+     * explicitly changed by setForwardTrim/setReverseTrim */
   }
 }
 

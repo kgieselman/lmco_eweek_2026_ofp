@@ -20,8 +20,8 @@
  * drive.addMotor(DriveTrainDifferential::MOTOR_LEFT, 27, 26);
  * drive.addMotor(DriveTrainDifferential::MOTOR_RIGHT, 7, 6);
  *
- * drive.setSpeed(250);   // 50% forward
- * drive.setTurn(100);    // Slight right turn
+ * drive.setSpeed(500);   // 50% forward
+ * drive.setTurn(200);    // Slight right turn
  * drive.update();
  * @endcode
  *
@@ -31,8 +31,8 @@
  * drive.addMotor(DriveTrainDifferential::MOTOR_LEFT, 21, 27, 26);
  * drive.addMotor(DriveTrainDifferential::MOTOR_RIGHT, 8, 7, 6);
  *
- * drive.setSpeed(250);   // 50% forward
- * drive.setTurn(100);    // Slight right turn
+ * drive.setSpeed(500);   // 50% forward
+ * drive.setTurn(200);    // Slight right turn
  * drive.update();
  * @endcode
  ******************************************************************************/
@@ -76,11 +76,11 @@ public:
 
   /* Public Constants --------------------------------------------------------*/
 
-  /** @brief Minimum user input value */
-  static constexpr int USER_INPUT_MIN = -500;
+  /** @brief Minimum user input value (permil) */
+  static constexpr int USER_INPUT_MIN = -1000;
 
-  /** @brief Maximum user input value */
-  static constexpr int USER_INPUT_MAX = 500;
+  /** @brief Maximum user input value (permil) */
+  static constexpr int USER_INPUT_MAX = 1000;
 
 
   /* Public Function Declarations --------------------------------------------*/
@@ -137,7 +137,7 @@ public:
   /*****************************************************************************
    * @brief Set desired speed
    *
-   * @param speed Speed value in range [-500, +500]
+   * @param speed Speed value in range [-1000, +1000] (permil)
    *              Positive = forward, negative = reverse
    * @return true if value is valid and accepted
    ****************************************************************************/
@@ -146,7 +146,7 @@ public:
   /*****************************************************************************
    * @brief Set desired turn rate
    *
-   * @param turn Turn value in range [-500, +500]
+   * @param turn Turn value in range [-1000, +1000] (permil)
    *             Positive = right, negative = left
    * @return true if value is valid and accepted
    ****************************************************************************/
@@ -158,14 +158,14 @@ public:
    * The turn rate scales the turn value before motor mixing. A value of
    * 1000 means full turn authority, 0 means no turning.
    *
-   * @param rate Turn rate in range [0, 1000]
+   * @param rate Turn rate in range [0, 1000] (permil)
    ****************************************************************************/
   void setTurnRate(int rate);
 
   /*****************************************************************************
    * @brief Get the current turn rate
    *
-   * @return Current turn rate value [0, 1000]
+   * @return Current turn rate value [0, 1000] (permil)
    ****************************************************************************/
   int getTurnRate(void) const { return m_turnRate; }
 
@@ -215,27 +215,27 @@ public:
   bool isInitialized(void) const;
 
   /*****************************************************************************
-   * @brief Set forward trim manually from IBus channel value
+   * @brief Set forward trim manually
    *
-   * Allows the user to set motor trim via the VRA potentiometer channel.
-   * The trim value adjusts the relative strength of the left vs right motor
-   * to compensate for motor/wheel differences.
+   * Adjusts the relative strength of the left vs right motor to compensate
+   * for motor/wheel differences when driving forward.
    *
-   * @param channelValue Raw IBus channel value (1000-2000)
-   *                     - 1500 = no trim (both motors at equal power)
-   *                     - 2000 = max trim on left motor (right is weaker)
-   *                     - 1000 = max trim on right motor (left is weaker)
+   * @param trimValue Normalized trim value in range [-1000, +1000] (permil)
+   *                  -    0 = no trim (both motors at equal power)
+   *                  - +1000 = max trim on left motor (left reduced)
+   *                  - -1000 = max trim on right motor (right reduced)
    ****************************************************************************/
-  void setForwardTrimFromChannel(int channelValue);
+  void setForwardTrim(int trimValue);
 
   /*****************************************************************************
-   * @brief Set reverse trim manually from IBus channel value
+   * @brief Set reverse trim manually
    *
-   * Allows the user to set motor trim via the VRB potentiometer channel.
+   * Adjusts the relative strength of the left vs right motor to compensate
+   * for motor/wheel differences when driving in reverse.
    *
-   * @param channelValue Raw IBus channel value (1000-2000)
+   * @param trimValue Normalized trim value in range [-1000, +1000] (permil)
    ****************************************************************************/
-  void setReverseTrimFromChannel(int channelValue);
+  void setReverseTrim(int trimValue);
 
   /*****************************************************************************
    * @brief Get current forward trim values
@@ -272,7 +272,7 @@ public:
    *
    * Returns the mixed speed+turn value that was last applied to the specified
    * motor. This value includes scaling to prevent clipping but does NOT
-   * include trim. Range is [-500, +500].
+   * include trim. Range is [-1000, +1000].
    *
    * @param motor Motor to query (MOTOR_LEFT or MOTOR_RIGHT)
    * @return Last computed motor value, or 0 if motor is invalid
@@ -337,16 +337,7 @@ private:
   /** @brief Minimum trim value (maximum reduction) */
   static constexpr float MIN_TRIM = 0.5f;
 
-  /** @brief IBus channel minimum value */
-  static constexpr int IBUS_CHANNEL_MIN = 1000;
-
-  /** @brief IBus channel maximum value */
-  static constexpr int IBUS_CHANNEL_MAX = 2000;
-
-  /** @brief IBus channel center value (no trim) */
-  static constexpr int IBUS_CHANNEL_CENTER = 1500;
-
-  /** @brief Maximum turn rate value (full turn authority) */
+  /** @brief Maximum turn rate value (full turn authority, permil) */
   static constexpr int TURN_RATE_MAX = 1000;
 
 
@@ -367,7 +358,7 @@ private:
    * @brief Validate user input value is in range
    *
    * @param value Value to validate
-   * @return true if value is in [-500, +500] range
+   * @return true if value is in [-1000, +1000] range
    ****************************************************************************/
   bool validateUserInput(int value) const;
 
@@ -398,13 +389,13 @@ private:
   void measureMotorPulses(bool forward, int motorValue, int* pPulses);
 
   /*****************************************************************************
-   * @brief Convert IBus channel value to motor trim values
+   * @brief Convert a normalized trim value to left/right motor trim floats
    *
-   * @param channelValue Raw IBus channel value (1000-2000)
+   * @param trimValue Normalized trim value in range [-1000, +1000]
    * @param pLeftTrim Pointer to store left motor trim (0.5-1.0)
    * @param pRightTrim Pointer to store right motor trim (0.5-1.0)
    ****************************************************************************/
-  void channelToTrim(int channelValue, float* pLeftTrim, float* pRightTrim) const;
+  void valueToTrim(int trimValue, float* pLeftTrim, float* pRightTrim) const;
 };
 
 

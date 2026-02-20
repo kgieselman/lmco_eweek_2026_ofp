@@ -107,8 +107,8 @@ public:
     uint32_t rcTimeSinceMsg;        /**< ms since last valid RC message         */
 
     /* Drive train */
-    int16_t  speed;                 /**< Speed setpoint      [-500..+500]       */
-    int16_t  turn;                  /**< Turn setpoint       [-500..+500]       */
+    int16_t  speed;                 /**< Speed setpoint      [-1000..+1000]     */
+    int16_t  turn;                  /**< Turn setpoint       [-1000..+1000]     */
     int16_t  motorLeftPct;          /**< Left motor output   [-100..+100] %     */
     int16_t  motorRightPct;         /**< Right motor output  [-100..+100] %     */
     int8_t   trimFwd;               /**< Forward trim offset [-50..+50]         */
@@ -116,7 +116,7 @@ public:
     int16_t  turnRate;              /**< Turn rate           [0..1000]          */
 
     /* Mechanisms */
-    int16_t  scoopPosition;          /**< Scoop servo pos     [-500..+500]       */
+    int16_t  scoopPosition;          /**< Scoop servo pos     [-1000..+1000]     */
 
     /* System health */
     uint16_t lastErrorCode;         /**< Most recent ErrorCode_t value          */

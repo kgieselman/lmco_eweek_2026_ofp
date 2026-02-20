@@ -50,8 +50,8 @@
  * while (true) {
  *   if (ibus.hasNewMessage())
  *   {
- *     int throttle = ibus.readChannel(FlySkyIBus::CHAN_LSTICK_VERT);
- *     // Use throttle value (1000-2000)
+ *     int throttle = ibus.readChannelCentered(FlySkyIBus::CHAN_RSTICK_VERT);
+ *     // Use throttle value (-1000 to 1000, permil)
  *   }
  * }
  * @endcode
@@ -79,34 +79,6 @@ public:
     CHAN_SWD          = 9,  /**< SWD switch */
     CHAN_COUNT        = 10  /**< Number of supported channels */
   };
-
-
-  /*****************************************************************************
-   * @brief Read channel option enumeration
-   * 
-   * Standard options to adjust IBus channel data
-   ****************************************************************************/
-  enum ReadChannelMode_e {
-    READ_CHAN_RAW,      /**< Read value as is from IBus [1000..2000]    */
-    READ_CHAN_NORM,     /**< Read value shifted to start at 0 [0..1000] */
-    READ_CHAN_CENTER_0, /**< Read value centered on 0 [-500..500]       */
-  };
-
-
-  /* Public Constants --------------------------------------------------------*/
-
-  /** @brief Minimum valid channel value */
-  static constexpr int CHANNEL_VALUE_MIN = 1000;
-
-  /** @brief Maximum valid channel value */
-  static constexpr int CHANNEL_VALUE_MAX = 2000;
-
-  /** @brief Center channel value */
-  static constexpr int CHANNEL_VALUE_CENTER = 1500;
-
-  static constexpr int CHANNEL_NORMALIZED_VALUE_MIN = -500;
-  static constexpr int CHANNEL_NORMALIZED_VALUE_MAX = 500;
-  static constexpr int CHANNEL_NORMALIZED_VALUE_CENTER = 0;
 
 
   /* Public Function Declarations --------------------------------------------*/
@@ -141,14 +113,38 @@ public:
   bool hasNewMessage(void);
 
   /*****************************************************************************
-   * @brief Read current value of a channel
-   * 
-   * @param channel - The IBus channel to read
-   * @param mode    - The read mode
-   * 
-   * @return Current channel value
+   * @brief Read channel value centered on zero (permil)
+   *
+   * Returns the channel value mapped to [-1000, +1000] where 0 represents
+   * the center position. Intended for bipolar inputs like sticks and trim.
+   *
+   * @param channel The channel to read
+   * @return Channel value in range [-1000, +1000]
    ****************************************************************************/
-  int readChannel(Channel_e channel, ReadChannelMode_e mode = READ_CHAN_RAW) const;
+  int readChannelCentered(Channel_e channel) const;
+
+  /*****************************************************************************
+   * @brief Read channel value as unsigned permil
+   *
+   * Returns the channel value mapped to [0, 1000] where 0 represents the
+   * minimum position. Intended for unipolar inputs like potentiometers
+   * and switches.
+   *
+   * @param channel The channel to read
+   * @return Channel value in range [0, 1000]
+   ****************************************************************************/
+  int readChannelUnsigned(Channel_e channel) const;
+
+  /*****************************************************************************
+   * @brief Read raw protocol channel value
+   *
+   * Returns the channel value as received from the iBUS protocol with no
+   * conversion applied. Intended for diagnostics and debugging.
+   *
+   * @param channel The channel to read
+   * @return Raw channel value in range [1000, 2000]
+   ****************************************************************************/
+  int readChannelRaw(Channel_e channel) const;
 
   /*****************************************************************************
    * @brief Check if RC signal is currently valid
@@ -186,6 +182,22 @@ private:
 
  
   /* Private Constants -------------------------------------------------------*/
+
+  /** @brief Minimum raw channel value from protocol */
+  static constexpr int CHANNEL_VALUE_MIN = 1000;
+
+  /** @brief Maximum raw channel value from protocol */
+  static constexpr int CHANNEL_VALUE_MAX = 2000;
+
+  /** @brief Center raw channel value from protocol */
+  static constexpr int CHANNEL_VALUE_CENTER = 1500;
+
+  /** @brief Raw channel range (max - min) */
+  static constexpr int CHANNEL_VALUE_RANGE = CHANNEL_VALUE_MAX - CHANNEL_VALUE_MIN;
+
+  /** @brief Permil full scale value */
+  static constexpr int PERMIL_MAX = 1000;
+
   static constexpr int IBUS_BAUD_RATE         = 115200;
   static constexpr int IBUS_DATA_BITS         = 8;
   static constexpr int IBUS_STOP_BITS         = 1;

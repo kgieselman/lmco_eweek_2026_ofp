@@ -23,14 +23,14 @@
  * @code
  * MotorDriver driver(MotorDriver::MODE_2PWM);
  * driver.configureMotor(MotorDriver::MOTOR_A, 8, 9);
- * driver.setMotor(MotorDriver::MOTOR_A, 375);  // 75% forward
+ * driver.setMotor(MotorDriver::MOTOR_A, 750);  // 75% forward
  * @endcode
  *
  * @par Example Usage (1-PWM + 2-DIR mode):
  * @code
  * MotorDriver driver(MotorDriver::MODE_1PWM_2DIR);
  * driver.configureMotor(MotorDriver::MOTOR_A, 8, 9, 10);
- * driver.setMotor(MotorDriver::MOTOR_A, -250); // 50% reverse
+ * driver.setMotor(MotorDriver::MOTOR_A, -500); // 50% reverse
  * @endcode
  ******************************************************************************/
 #pragma once
@@ -88,11 +88,11 @@ public:
 
   /* Public Constants --------------------------------------------------------*/
 
-  /** @brief Minimum motor value (full reverse) */
-  static constexpr int MOTOR_VALUE_MIN = -500;
+  /** @brief Minimum motor value (full reverse, permil) */
+  static constexpr int MOTOR_VALUE_MIN = -1000;
 
-  /** @brief Maximum motor value (full forward) */
-  static constexpr int MOTOR_VALUE_MAX = 500;
+  /** @brief Maximum motor value (full forward, permil) */
+  static constexpr int MOTOR_VALUE_MAX = 1000;
 
   /** @brief Default PWM frequency in Hz */
   static constexpr int DEFAULT_PWM_FREQ_HZ = 20000;
@@ -159,13 +159,13 @@ public:
    * @brief Set motor speed and direction
    *
    * Sets the motor output to the specified value. The value is in the range
-   * [-500, +500] where:
-   *   - +500 = full speed forward
-   *   - 0    = stopped (coast mode)
-   *   - -500 = full speed reverse
+   * [-1000, +1000] (permil) where:
+   *   - +1000 = full speed forward
+   *   - 0     = stopped (coast mode)
+   *   - -1000 = full speed reverse
    *
    * @param channel Motor channel to control
-   * @param value Motor value in range [-500, +500]
+   * @param value Motor value in range [-1000, +1000]
    * @return true if value applied successfully
    *
    * @note Values outside the valid range will be clamped.
@@ -179,7 +179,7 @@ public:
    * The trim value scales the output to compensate for motor variations.
    *
    * @param channel Motor channel to control
-   * @param value Motor value in range [-500, +500]
+   * @param value Motor value in range [-1000, +1000]
    * @param trim Trim multiplier (0.0 to 1.0, where 1.0 = no trim)
    * @return true if value applied successfully
    ****************************************************************************/
@@ -262,7 +262,7 @@ public:
    * @brief Get the current motor setpoint value (before trim)
    *
    * Returns the last value passed to setMotor()/setMotorWithTrim() for the
-   * specified channel. This is the pre-trim value in [-500, +500].
+   * specified channel. This is the pre-trim value in [-1000, +1000].
    *
    * @param channel Motor channel to query
    * @return Current motor value, or 0 if channel is invalid

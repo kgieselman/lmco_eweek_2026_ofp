@@ -303,11 +303,11 @@ static void process_rc_input(void)
   }
 
   /* Read updated channel values */
-  int speed    = g_pIBus->readChannel(FlySkyIBus::CHAN_RSTICK_VERT,  FlySkyIBus::READ_CHAN_CENTER_0); // [-500..500]
-  int turn     = g_pIBus->readChannel(FlySkyIBus::CHAN_LSTICK_HORIZ, FlySkyIBus::READ_CHAN_CENTER_0); // [-500..500]
-  int scoop    = g_pIBus->readChannel(FlySkyIBus::CHAN_LSTICK_VERT,  FlySkyIBus::READ_CHAN_CENTER_0); // [-500..500]
-  int turnTrim = g_pIBus->readChannel(FlySkyIBus::CHAN_VRA,          FlySkyIBus::READ_CHAN_RAW);      // [1000..2000]
-  int turnRate = g_pIBus->readChannel(FlySkyIBus::CHAN_VRB,          FlySkyIBus::READ_CHAN_NORM);     // [0..1000]
+  int speed    = g_pIBus->readChannelCentered(FlySkyIBus::CHAN_RSTICK_VERT);  // [-1000..1000]
+  int turn     = g_pIBus->readChannelCentered(FlySkyIBus::CHAN_LSTICK_HORIZ); // [-1000..1000]
+  int scoop    = g_pIBus->readChannelCentered(FlySkyIBus::CHAN_LSTICK_VERT);  // [-1000..1000]
+  int turnTrim = g_pIBus->readChannelCentered(FlySkyIBus::CHAN_VRA);          // [-1000..1000]
+  int turnRate = g_pIBus->readChannelUnsigned(FlySkyIBus::CHAN_VRB);          // [0..1000]
 
   /* Update drive train */
   g_pDriveTrain->setSpeed(speed); // TODO: 2S governer
@@ -315,8 +315,8 @@ static void process_rc_input(void)
   g_pDriveTrain->setTurn(turn);
   g_pDriveTrain->setTurnRate(turnRate);
 
-  g_pDriveTrain->setForwardTrimFromChannel(turnTrim);
-  g_pDriveTrain->setReverseTrimFromChannel(turnTrim);
+  g_pDriveTrain->setForwardTrim(turnTrim);
+  g_pDriveTrain->setReverseTrim(turnTrim);
   g_pDriveTrain->setManualTrimMode(true);
 
   g_pDriveTrain->update();

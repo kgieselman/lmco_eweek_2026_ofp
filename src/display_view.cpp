@@ -270,8 +270,8 @@ void DisplayView::renderScoop(const DisplayData_t& data)
 {
   char lineBuf[LINE_BUF_SIZE];
 
-  /* Convert position [-500..+500] to percentage [-100..+100] */
-  int scoopPct = (static_cast<int>(data.scoopPosition) * 100) / 500;
+  /* Convert position [-1000..+1000] to percentage [-100..+100] */
+  int scoopPct = (static_cast<int>(data.scoopPosition) * 100) / 1000;
 
   snprintf(lineBuf, LINE_BUF_SIZE, "SCOOP: %+4d%%", scoopPct);
 
