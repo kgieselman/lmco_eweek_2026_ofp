@@ -326,7 +326,7 @@ void DisplayView::renderFirmwareId(void)
    * If version.h macros aren't available, fall back to a static string.
    */
 #if defined(BUILD_VERSION) && defined(GIT_COMMIT_HASH)
-  snprintf(lineBuf, LINE_BUF_SIZE, "eweek v%s %.7s",
+  snprintf(lineBuf, LINE_BUF_SIZE, "eweek v%-6s %.7s",
            BUILD_VERSION, GIT_COMMIT_HASH);
 #else
   snprintf(lineBuf, LINE_BUF_SIZE, "eweek2026");

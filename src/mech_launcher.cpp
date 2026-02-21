@@ -1,8 +1,8 @@
 /*******************************************************************************
  * @file mech_launcher.cpp
- * @brief Implementation of launcher mechanism controller (NEMA 17 / DRV8825)
+ * @brief Implementation of launcher mechanism controller (stepper + flywheels)
  *
- * The DRV8825 driver accepts:
+ * The DRV8825 stepper driver accepts:
  *   STEP   – rising-edge triggered, one step per pulse
  *   DIR    – HIGH/LOW sets rotation direction (latched on STEP rising edge)
  *   nSLEEP – active-low sleep input; LOW = sleep (outputs Hi-Z, charge pump
@@ -13,10 +13,16 @@
  * A 50 % duty cycle is used — the DRV8825 minimum STEP high/low times are
  * 1.9 µs, which is easily satisfied at a few-hundred-Hz step rate.
  *
+ * The two flywheel motors are driven through the MotorDriver class using the
+ * same wiring mode as the drive train (selected in config.h).  When the
+ * launcher is enabled, both flywheels spin up to LAUNCHER_FLYWHEEL_SPEED_PERMIL.
+ * After the spin-up delay, the stepper feeder engages.  When disabled,
+ * everything stops and the stepper driver sleeps.
+ *
  * Sleep management:
- *   - On disable: stop PWM, force STEP low, assert nSLEEP LOW.
- *   - On enable:  de-assert nSLEEP HIGH, wait LAUNCHER_WAKE_DELAY_MS for the
- *     internal charge pump to stabilise, then start PWM.
+ *   - On disable: stop PWM, force STEP low, assert nSLEEP LOW, stop flywheels.
+ *   - On enable:  start flywheels, wait spin-up delay, de-assert nSLEEP HIGH,
+ *     wait LAUNCHER_WAKE_DELAY_MS, then start PWM.
  ******************************************************************************/
 
 /* Includes ------------------------------------------------------------------*/
@@ -38,15 +44,20 @@
 MechLauncher::MechLauncher()
   : m_initialized(false)
   , m_running(false)
+  , m_flywheelsRunning(false)
+  , m_stepperRunning(false)
+  , m_state(STATE_IDLE)
+  , m_spinupStartMs(0)
   , m_pwmSlice(0)
   , m_pwmChannel(0)
   , m_pwmWrap(0)
+  , m_flywheelDriver(MOTOR_DRIVER_MODE)
 {
 }
 
 MechLauncher::~MechLauncher()
 {
-  /* Stop the stepper and sleep the driver on destruction */
+  /* Stop everything on destruction */
   if (m_initialized)
   {
     setEnabled(false);
@@ -106,6 +117,49 @@ bool MechLauncher::init(void)
   /* Make sure STEP is low while stopped */
   pwm_set_enabled(m_pwmSlice, false);
 
+  /* ---- Flywheel motors ------------------------------------------------- */
+  bool flywheelOk = true;
+
+#if MOTOR_DRIVER_MODE_2PWM
+  flywheelOk &= m_flywheelDriver.configureMotor(
+    MotorDriver::MOTOR_A,
+    PIN_LAUNCHER_LEFT_DIR_FWD,
+    PIN_LAUNCHER_LEFT_DIR_REV,
+    PIN_INVALID);
+
+  flywheelOk &= m_flywheelDriver.configureMotor(
+    MotorDriver::MOTOR_B,
+    PIN_LAUNCHER_RIGHT_DIR_FWD,
+    PIN_LAUNCHER_RIGHT_DIR_REV,
+    PIN_INVALID);
+
+#elif MOTOR_DRIVER_MODE_1PWM_2DIR
+  flywheelOk &= m_flywheelDriver.configureMotor(
+    MotorDriver::MOTOR_A,
+    PIN_LAUNCHER_LEFT_ENABLE,
+    PIN_LAUNCHER_LEFT_DIR_FWD,
+    PIN_LAUNCHER_LEFT_DIR_REV,
+    PIN_INVALID);
+
+  flywheelOk &= m_flywheelDriver.configureMotor(
+    MotorDriver::MOTOR_B,
+    PIN_LAUNCHER_RIGHT_ENABLE,
+    PIN_LAUNCHER_RIGHT_DIR_FWD,
+    PIN_LAUNCHER_RIGHT_DIR_REV,
+    PIN_INVALID);
+#endif
+
+  if (!flywheelOk)
+  {
+#if ENABLE_DEBUG
+    printf("[Launcher] Flywheel motor configuration FAILED\n");
+#endif
+    return false;
+  }
+
+  /* Ensure flywheels are stopped */
+  m_flywheelDriver.stopAll(MotorDriver::STOP_COAST);
+
   m_initialized = true;
 
 #if ENABLE_DEBUG
@@ -113,6 +167,9 @@ bool MechLauncher::init(void)
          "pwm_slice=%d  wrap=%u  div=%u  nSLEEP=GPIO%d (sleeping)\n",
          LAUNCHER_STEP_RATE_HZ, LAUNCHER_DIR_FORWARD,
          m_pwmSlice, m_pwmWrap, divInt, PIN_LAUNCHER_NSLEEP);
+  printf("[Launcher] Flywheels initialized  speed=%d permil  "
+         "spinup_delay=%d ms\n",
+         LAUNCHER_FLYWHEEL_SPEED_PERMIL, LAUNCHER_FLYWHEEL_SPINUP_MS);
 #endif
 
   return true;
@@ -120,7 +177,43 @@ bool MechLauncher::init(void)
 
 void MechLauncher::update(void)
 {
-  /* Nothing required — PWM hardware handles the pulse train autonomously. */
+  if (!m_initialized)
+  {
+    return;
+  }
+
+  switch (m_state)
+  {
+    case STATE_IDLE:
+    {
+      // Do nothing
+      break;
+    }
+    case STATE_SPINNING_UP:
+    {
+      uint32_t now = to_ms_since_boot(get_absolute_time());
+      if ((now - m_spinupStartMs) >= LAUNCHER_FLYWHEEL_SPINUP_MS)
+      {
+        // Flywheels should be up to speed, start loader
+        m_state   = STATE_RUNNING;
+
+#if ENABLE_DEBUG
+        printf("[Launcher] Spin-up complete — stepper STARTED\n");
+#endif
+      }
+      break;
+    }
+    case STATE_RUNNING:
+    {
+      // If stepper loader is not running, start it
+      if (!m_stepperRunning)
+      {
+        startStepper();
+        m_running = true;
+      }
+      break;
+    }
+  }
 }
 
 void MechLauncher::setEnabled(bool enable)
@@ -130,42 +223,79 @@ void MechLauncher::setEnabled(bool enable)
     return;
   }
 
-  if (enable && !m_running)
+  if (enable && (m_state == STATE_IDLE))
   {
-    /* Wake the DRV8825 and wait for charge pump stabilisation */
-    gpio_put(PIN_LAUNCHER_NSLEEP, 1);
-    sleep_ms(LAUNCHER_WAKE_DELAY_MS);
-
-    /* Start the STEP pulse train */
-    pwm_set_enabled(m_pwmSlice, true);
-    m_running = true;
+    /* Begin non-blocking spin-up sequence */
+    startFlywheels();
+    m_spinupStartMs = to_ms_since_boot(get_absolute_time());
+    m_state         = STATE_SPINNING_UP;
+    m_running       = true;    /* Report as running while spinning up */
 
 #if ENABLE_DEBUG
-    printf("[Launcher] Driver AWAKE — stepper STARTED\n");
+    printf("[Launcher] ENABLED — flywheels ON, spinning up (%d ms)...\n",
+           LAUNCHER_FLYWHEEL_SPINUP_MS);
 #endif
   }
-  else if (!enable && m_running)
+  else if (!enable && (m_state != STATE_IDLE))
   {
-    /* Stop the STEP pulse train and force output low */
-    pwm_set_enabled(m_pwmSlice, false);
+    /* Stop everything immediately regardless of current state */
+    if (m_state == STATE_RUNNING)
+    {
+      stopStepper();
+    }
+    stopFlywheels();
 
-    /* Drive STEP low so the DRV8825 doesn't see a stuck-high condition */
-    gpio_set_function(PIN_LAUNCHER_STEP, GPIO_FUNC_SIO);
-    gpio_set_dir(PIN_LAUNCHER_STEP, GPIO_OUT);
-    gpio_put(PIN_LAUNCHER_STEP, 0);
-
-    /* Re-assign to PWM for next enable */
-    gpio_set_function(PIN_LAUNCHER_STEP, GPIO_FUNC_PWM);
-
-    /* Put the driver to sleep */
-    gpio_put(PIN_LAUNCHER_NSLEEP, 0);
-
+    m_state   = STATE_IDLE;
     m_running = false;
 
 #if ENABLE_DEBUG
-    printf("[Launcher] Stepper STOPPED — driver SLEEPING\n");
+    printf("[Launcher] DISABLED — stepper STOPPED, flywheels OFF\n");
 #endif
   }
+}
+
+void MechLauncher::startFlywheels(void)
+{
+  m_flywheelDriver.setMotor(MotorDriver::MOTOR_A, LAUNCHER_FLYWHEEL_SPEED_PERMIL);
+  m_flywheelDriver.setMotor(MotorDriver::MOTOR_B, LAUNCHER_FLYWHEEL_SPEED_PERMIL);
+  m_flywheelsRunning = true;
+}
+
+void MechLauncher::stopFlywheels(void)
+{
+  m_flywheelDriver.stopAll(MotorDriver::STOP_COAST);
+  m_flywheelsRunning = false;
+}
+
+void MechLauncher::startStepper(void)
+{
+  /* Wake the DRV8825 and wait for charge pump stabilisation */
+  gpio_put(PIN_LAUNCHER_NSLEEP, 1);
+  sleep_ms(LAUNCHER_WAKE_DELAY_MS);
+
+  /* Start the STEP pulse train */
+  pwm_set_enabled(m_pwmSlice, true);
+
+  m_stepperRunning = true;
+}
+
+void MechLauncher::stopStepper(void)
+{
+  /* Stop the STEP pulse train and force output low */
+  pwm_set_enabled(m_pwmSlice, false);
+
+  /* Drive STEP low so the DRV8825 doesn't see a stuck-high condition */
+  gpio_set_function(PIN_LAUNCHER_STEP, GPIO_FUNC_SIO);
+  gpio_set_dir(PIN_LAUNCHER_STEP, GPIO_OUT);
+  gpio_put(PIN_LAUNCHER_STEP, 0);
+
+  /* Re-assign to PWM for next enable */
+  gpio_set_function(PIN_LAUNCHER_STEP, GPIO_FUNC_PWM);
+
+  /* Put the driver to sleep */
+  gpio_put(PIN_LAUNCHER_NSLEEP, 0);
+
+  m_stepperRunning = false;
 }
 
 

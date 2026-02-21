@@ -128,7 +128,7 @@ void MechScoop::setPosition(int position)
   }
 
   /* Clamp to valid permil range */
-  position = clamp(position, -1000, 1000);
+  position = clamp(position, SCOOP_SERVO_MIN_PERMIL, SCOOP_SERVO_MAX_PERMIL);
   m_position = position;
 
   /*
