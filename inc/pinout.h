@@ -70,9 +70,9 @@ constexpr int PIN_IBUS_RX = 5;
  * - MODE_1PWM_2DIR: ENABLE = PWM, DIR_FWD = digital, DIR_REV = digital
  * @{
  ******************************************************************************/
-constexpr int PIN_DIFF_MOTOR_LEFT_ENABLE  = 15; /**< PWM enable (Slice 4 Chan B) */
-constexpr int PIN_DIFF_MOTOR_LEFT_DIR_FWD = 17; /**< Forward direction / IN1 */
-constexpr int PIN_DIFF_MOTOR_LEFT_DIR_REV = 16; /**< Reverse direction / IN2 */
+constexpr int PIN_DIFF_MOTOR_LEFT_ENABLE  = 9; /**< PWM enable (Slice 4 Chan B) */
+constexpr int PIN_DIFF_MOTOR_LEFT_DIR_FWD = 7; /**< Forward direction / IN1 */
+constexpr int PIN_DIFF_MOTOR_LEFT_DIR_REV = 8; /**< Reverse direction / IN2 */
 constexpr int PIN_DIFF_MOTOR_LEFT_ENC     = PIN_INVALID; /**< Encoder (Optional) */
 /** @} */
 
@@ -84,9 +84,9 @@ constexpr int PIN_DIFF_MOTOR_LEFT_ENC     = PIN_INVALID; /**< Encoder (Optional)
  * - MODE_1PWM_2DIR: ENABLE = PWM, DIR_FWD = digital, DIR_REV = digital
  * @{
  ******************************************************************************/
-constexpr int PIN_DIFF_MOTOR_RIGHT_ENABLE  = 18; /**< PWM enable (Slice 4 Chan A) */
-constexpr int PIN_DIFF_MOTOR_RIGHT_DIR_FWD = 20; /**< Forward direction / IN1 */
-constexpr int PIN_DIFF_MOTOR_RIGHT_DIR_REV = 19; /**< Reverse direction / IN2 */
+constexpr int PIN_DIFF_MOTOR_RIGHT_ENABLE  = 2; /**< PWM enable (Slice 1 Chan A) */
+constexpr int PIN_DIFF_MOTOR_RIGHT_DIR_FWD = 6; /**< Forward direction / IN1 */
+constexpr int PIN_DIFF_MOTOR_RIGHT_DIR_REV = 3; /**< Reverse direction / IN2 */
 constexpr int PIN_DIFF_MOTOR_RIGHT_ENC     = PIN_INVALID; /**< Encoder (Optional) */
 /** @} */
 
@@ -98,7 +98,7 @@ constexpr int PIN_DIFF_MOTOR_RIGHT_ENC     = PIN_INVALID; /**< Encoder (Optional
  * @note Assign pins based on hardware design
  * @{
  ******************************************************************************/
-constexpr int PIN_SCOOP_SERVO = 26;  /**< Scoop servo PWM (Slice 5 Chan A) */
+constexpr int PIN_SCOOP_SERVO = 28;  /**< Scoop servo PWM (Slice 6 Chan A) */
 /** @} */
 
 
@@ -109,11 +109,22 @@ constexpr int PIN_SCOOP_SERVO = 26;  /**< Scoop servo PWM (Slice 5 Chan A) */
  *
  * The DRV8825 requires a STEP pulse train and a DIR level.
  * STEP uses hardware PWM so the pulse train runs autonomously.
+ * The nSLEEP pin is active-low: HIGH = awake, LOW = sleep (outputs disabled,
+ * minimal power draw).
  *
  * @{
  ******************************************************************************/
-constexpr int PIN_LAUNCHER_STEP = 14;  /**< DRV8825 STEP input (PWM Slice 7 Chan A) */
-constexpr int PIN_LAUNCHER_DIR  = 13;  /**< DRV8825 DIR  input (digital)            */
+constexpr int PIN_LAUNCHER_STEP   = 14;  /**< DRV8825 STEP   input (PWM Slice 7 Chan A) */
+constexpr int PIN_LAUNCHER_DIR    = 13;  /**< DRV8825 DIR    input (digital)             */
+constexpr int PIN_LAUNCHER_NSLEEP = 12;  /**< DRV8825 nSLEEP input (digital, active-low) */
+
+constexpr int PIN_LAUNCHER_LEFT_ENABLE  = 15; /**< PWM enable (Slice 7 Chan B) */
+constexpr int PIN_LAUNCHER_LEFT_DIR_FWD = 13; /**< Forward direction / IN1 */
+constexpr int PIN_LAUNCHER_LEFT_DIR_REV = 14; /**< Reverse direction / IN2 */
+
+constexpr int PIN_LAUNCHER_RIGHT_ENABLE = 10; /**< PWM enable (Slice 5 Chan A) */
+constexpr int PIN_LAUNCHER_RIGHT_DIR_FWD = 12; /**< Forward direction / IN1 */
+constexpr int PIN_LAUNCHER_RIGHT_DIR_REV = 11; /**< Reverse direction / IN2 */
 /** @} */
 
 

@@ -3,17 +3,20 @@
  * @brief Implementation of launcher mechanism controller (NEMA 17 / DRV8825)
  *
  * The DRV8825 driver accepts:
- *   STEP – rising-edge triggered, one step per pulse
- *   DIR  – HIGH/LOW sets rotation direction (latched on STEP rising edge)
+ *   STEP   – rising-edge triggered, one step per pulse
+ *   DIR    – HIGH/LOW sets rotation direction (latched on STEP rising edge)
+ *   nSLEEP – active-low sleep input; LOW = sleep (outputs Hi-Z, charge pump
+ *            off, minimal current draw), HIGH = awake
  *
  * This implementation uses RP2040 hardware PWM on the STEP pin so that the
  * pulse train runs at LAUNCHER_STEP_RATE_HZ with zero CPU overhead.
  * A 50 % duty cycle is used — the DRV8825 minimum STEP high/low times are
  * 1.9 µs, which is easily satisfied at a few-hundred-Hz step rate.
  *
- * Enabling / disabling is done by starting or stopping the PWM slice
- * and forcing the STEP output low when stopped (to avoid leaving the
- * driver in a half-step state).
+ * Sleep management:
+ *   - On disable: stop PWM, force STEP low, assert nSLEEP LOW.
+ *   - On enable:  de-assert nSLEEP HIGH, wait LAUNCHER_WAKE_DELAY_MS for the
+ *     internal charge pump to stabilise, then start PWM.
  ******************************************************************************/
 
 /* Includes ------------------------------------------------------------------*/
@@ -43,7 +46,7 @@ MechLauncher::MechLauncher()
 
 MechLauncher::~MechLauncher()
 {
-  /* Stop the stepper on destruction */
+  /* Stop the stepper and sleep the driver on destruction */
   if (m_initialized)
   {
     setEnabled(false);
@@ -52,6 +55,11 @@ MechLauncher::~MechLauncher()
 
 bool MechLauncher::init(void)
 {
+  /* ---- nSLEEP pin (digital output) ------------------------------------- */
+  gpio_init(PIN_LAUNCHER_NSLEEP);
+  gpio_set_dir(PIN_LAUNCHER_NSLEEP, GPIO_OUT);
+  gpio_put(PIN_LAUNCHER_NSLEEP, 0);            /* Start in sleep            */
+
   /* ---- DIR pin (digital output) ---------------------------------------- */
   gpio_init(PIN_LAUNCHER_DIR);
   gpio_set_dir(PIN_LAUNCHER_DIR, GPIO_OUT);
@@ -82,7 +90,7 @@ bool MechLauncher::init(void)
     divider = 1.0f;
   }
 
-  /* Clamp to DRV8825-friendly integer divider for clean edges */
+  /* Clamp to integer divider for clean edges */
   uint16_t divInt = (uint16_t)divider;
   if (divInt < 1) divInt = 1;
 
@@ -102,9 +110,9 @@ bool MechLauncher::init(void)
 
 #if ENABLE_DEBUG
   printf("[Launcher] Stepper initialized  step_rate=%d Hz  dir=%d  "
-         "pwm_slice=%d  wrap=%u  div=%u\n",
+         "pwm_slice=%d  wrap=%u  div=%u  nSLEEP=GPIO%d (sleeping)\n",
          LAUNCHER_STEP_RATE_HZ, LAUNCHER_DIR_FORWARD,
-         m_pwmSlice, m_pwmWrap, divInt);
+         m_pwmSlice, m_pwmWrap, divInt, PIN_LAUNCHER_NSLEEP);
 #endif
 
   return true;
@@ -124,12 +132,16 @@ void MechLauncher::setEnabled(bool enable)
 
   if (enable && !m_running)
   {
+    /* Wake the DRV8825 and wait for charge pump stabilisation */
+    gpio_put(PIN_LAUNCHER_NSLEEP, 1);
+    sleep_ms(LAUNCHER_WAKE_DELAY_MS);
+
     /* Start the STEP pulse train */
     pwm_set_enabled(m_pwmSlice, true);
     m_running = true;
 
 #if ENABLE_DEBUG
-    printf("[Launcher] Stepper STARTED\n");
+    printf("[Launcher] Driver AWAKE — stepper STARTED\n");
 #endif
   }
   else if (!enable && m_running)
@@ -145,10 +157,13 @@ void MechLauncher::setEnabled(bool enable)
     /* Re-assign to PWM for next enable */
     gpio_set_function(PIN_LAUNCHER_STEP, GPIO_FUNC_PWM);
 
+    /* Put the driver to sleep */
+    gpio_put(PIN_LAUNCHER_NSLEEP, 0);
+
     m_running = false;
 
 #if ENABLE_DEBUG
-    printf("[Launcher] Stepper STOPPED\n");
+    printf("[Launcher] Stepper STOPPED — driver SLEEPING\n");
 #endif
   }
 }

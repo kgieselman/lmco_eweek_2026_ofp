@@ -326,7 +326,7 @@ static void process_rc_input(void)
   /* Update scoop servo position */
   g_pScoop->setPosition(scoop);
 
-  /* SWD controls the launcher stepper: HIGH (>500) = run, LOW = stop */
+  /* SWD controls the launcher stepper: HIGH (>500) = run, LOW = stop/sleep */
   if (g_pLauncher != nullptr)
   {
     g_pLauncher->setEnabled(launchSw > 500);
@@ -352,7 +352,7 @@ static void handle_signal_loss(void)
     g_pScoop->setPosition(0);
   }
 
-  /* Stop launcher stepper on signal loss */
+  /* Stop launcher stepper and sleep driver on signal loss */
   if (g_pLauncher != nullptr)
   {
     g_pLauncher->setEnabled(false);

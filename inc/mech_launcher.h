@@ -7,15 +7,22 @@
  * hardware PWM so the pulse train runs autonomously once enabled.
  *
  * @par Hardware Wiring:
- * - PIN_LAUNCHER_STEP  → DRV8825 STEP  (PWM output)
- * - PIN_LAUNCHER_DIR   → DRV8825 DIR   (digital output)
- * - DRV8825 ENABLE pin should be tied LOW (always enabled) or controlled
- *   externally; this driver does not manage it.
+ * - PIN_LAUNCHER_STEP   → DRV8825 STEP   (PWM output)
+ * - PIN_LAUNCHER_DIR    → DRV8825 DIR    (digital output)
+ * - PIN_LAUNCHER_NSLEEP → DRV8825 nSLEEP (digital output, active-low)
+ *
+ * @par Sleep Behaviour:
+ * The DRV8825 nSLEEP pin is active-low.  When the launcher is disabled the
+ * driver is put to sleep (nSLEEP LOW) to cut quiescent current and prevent
+ * the motor from heating up at standstill.  On enable the driver is woken
+ * (nSLEEP HIGH) and a brief stabilisation delay is observed before the
+ * STEP pulse train starts, per the DRV8825 datasheet (sleep-to-step wake-up
+ * time t_SLEEP ≈ 1.7 ms typ).
  *
  * @par Control:
  * - SWD on the RC transmitter enables / disables the stepper.
- *   SWD HIGH (switch on)  → stepper running
- *   SWD LOW  (switch off)  → stepper stopped
+ *   SWD HIGH (switch on)  → driver wakes, stepper running
+ *   SWD LOW  (switch off)  → stepper stopped, driver sleeping
  ******************************************************************************/
 #pragma once
 
@@ -43,6 +50,15 @@
  ******************************************************************************/
 #define LAUNCHER_DIR_FORWARD      (1)
 
+/*******************************************************************************
+ * @brief DRV8825 wake-up delay (milliseconds)
+ *
+ * Minimum time between de-asserting nSLEEP and issuing the first STEP pulse.
+ * The DRV8825 datasheet specifies t_SLEEP ≈ 1.7 ms typical.  We round up
+ * for margin.
+ ******************************************************************************/
+#define LAUNCHER_WAKE_DELAY_MS    (2)
+
 
 /* Class Definition ----------------------------------------------------------*/
 
@@ -52,7 +68,8 @@
  *
  * Manages a NEMA 17 stepper motor via a DRV8825 driver.  The STEP signal is
  * produced by hardware PWM so there is zero CPU overhead while running.
- * Calling setEnabled(true) starts the pulse train; setEnabled(false) stops it.
+ * Calling setEnabled(true) wakes the driver and starts the pulse train;
+ * setEnabled(false) stops the pulse train and puts the driver to sleep.
  ******************************************************************************/
 class MechLauncher
 {
@@ -72,8 +89,8 @@ public:
   /*****************************************************************************
    * @brief Initialize the launcher mechanism
    *
-   * Configures STEP (PWM) and DIR (digital) GPIO pins and leaves the
-   * stepper in the stopped state.
+   * Configures STEP (PWM), DIR (digital), and nSLEEP (digital) GPIO pins.
+   * The stepper is left stopped and the driver is put to sleep.
    *
    * @return true if initialization successful
    ****************************************************************************/
@@ -89,8 +106,9 @@ public:
   /*****************************************************************************
    * @brief Enable or disable the stepper motor
    *
-   * When enabled the PWM pulse train runs at LAUNCHER_STEP_RATE_HZ.
-   * When disabled the STEP output is held low.
+   * When enabled the driver is woken from sleep and the PWM pulse train
+   * runs at LAUNCHER_STEP_RATE_HZ.  When disabled the pulse train is
+   * stopped and the driver is put to sleep.
    *
    * @param enable  true to start spinning, false to stop
    ****************************************************************************/
