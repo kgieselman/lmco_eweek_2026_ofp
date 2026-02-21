@@ -114,17 +114,17 @@ constexpr int PIN_SCOOP_SERVO = 28;  /**< Scoop servo PWM (Slice 6 Chan A) */
  *
  * @{
  ******************************************************************************/
-constexpr int PIN_LAUNCHER_STEP   = 14;  /**< DRV8825 STEP   input (PWM Slice 7 Chan A) */
-constexpr int PIN_LAUNCHER_DIR    = 13;  /**< DRV8825 DIR    input (digital)             */
-constexpr int PIN_LAUNCHER_NSLEEP = 12;  /**< DRV8825 nSLEEP input (digital, active-low) */
+constexpr int PIN_LAUNCHER_STEP   = 22;  /**< DRV8825 STEP   input (PWM Slice 3 Chan A)  */
+constexpr int PIN_LAUNCHER_DIR    = 21;  /**< DRV8825 DIR    input (digital)             */
+constexpr int PIN_LAUNCHER_NSLEEP = 20;  /**< DRV8825 nSLEEP input (digital, active-low) */
 
 constexpr int PIN_LAUNCHER_LEFT_ENABLE  = 15; /**< PWM enable (Slice 7 Chan B) */
 constexpr int PIN_LAUNCHER_LEFT_DIR_FWD = 13; /**< Forward direction / IN1 */
 constexpr int PIN_LAUNCHER_LEFT_DIR_REV = 14; /**< Reverse direction / IN2 */
 
-constexpr int PIN_LAUNCHER_RIGHT_ENABLE = 10; /**< PWM enable (Slice 5 Chan A) */
-constexpr int PIN_LAUNCHER_RIGHT_DIR_FWD = 12; /**< Forward direction / IN1 */
-constexpr int PIN_LAUNCHER_RIGHT_DIR_REV = 11; /**< Reverse direction / IN2 */
+constexpr int PIN_LAUNCHER_RIGHT_ENABLE  = 10; /**< PWM enable (Slice 5 Chan A) */
+constexpr int PIN_LAUNCHER_RIGHT_DIR_FWD = 11; /**< Forward direction / IN1 */
+constexpr int PIN_LAUNCHER_RIGHT_DIR_REV = 12; /**< Reverse direction / IN2 */
 /** @} */
 
 
@@ -137,8 +137,8 @@ constexpr int PIN_LAUNCHER_RIGHT_DIR_REV = 11; /**< Reverse direction / IN2 */
  *       I2C0 SCL options: GP1, GP5, GP9, GP13, GP17, GP21
  * @{
  ******************************************************************************/
-constexpr int PIN_DISPLAY_SDA = 8;  /**< I2C0 SDA for OLED display */
-constexpr int PIN_DISPLAY_SCL = 9;  /**< I2C0 SCL for OLED display */
+constexpr int PIN_DISPLAY_SDA = 16;  /**< I2C0 SDA for OLED display */
+constexpr int PIN_DISPLAY_SCL = 17;  /**< I2C0 SCL for OLED display */
 /** @} */
 
 
