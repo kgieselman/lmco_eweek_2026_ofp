@@ -70,9 +70,9 @@ constexpr int PIN_IBUS_RX = 5;
  * - MODE_1PWM_2DIR: ENABLE = PWM, DIR_FWD = digital, DIR_REV = digital
  * @{
  ******************************************************************************/
-constexpr int PIN_DIFF_MOTOR_LEFT_ENABLE  = 9; /**< PWM enable (Slice 4 Chan B) */
-constexpr int PIN_DIFF_MOTOR_LEFT_DIR_FWD = 7; /**< Forward direction / IN1 */
-constexpr int PIN_DIFF_MOTOR_LEFT_DIR_REV = 8; /**< Reverse direction / IN2 */
+constexpr int PIN_DIFF_MOTOR_LEFT_ENABLE  = 2; /**< PWM enable (Slice 1 Chan A) */
+constexpr int PIN_DIFF_MOTOR_LEFT_DIR_FWD = 6; /**< Forward direction / IN1 */
+constexpr int PIN_DIFF_MOTOR_LEFT_DIR_REV = 3; /**< Reverse direction / IN2 */
 constexpr int PIN_DIFF_MOTOR_LEFT_ENC     = PIN_INVALID; /**< Encoder (Optional) */
 /** @} */
 
@@ -84,9 +84,9 @@ constexpr int PIN_DIFF_MOTOR_LEFT_ENC     = PIN_INVALID; /**< Encoder (Optional)
  * - MODE_1PWM_2DIR: ENABLE = PWM, DIR_FWD = digital, DIR_REV = digital
  * @{
  ******************************************************************************/
-constexpr int PIN_DIFF_MOTOR_RIGHT_ENABLE  = 2; /**< PWM enable (Slice 1 Chan A) */
-constexpr int PIN_DIFF_MOTOR_RIGHT_DIR_FWD = 6; /**< Forward direction / IN1 */
-constexpr int PIN_DIFF_MOTOR_RIGHT_DIR_REV = 3; /**< Reverse direction / IN2 */
+constexpr int PIN_DIFF_MOTOR_RIGHT_ENABLE  = 9; /**< PWM enable (Slice 4 Chan B) */
+constexpr int PIN_DIFF_MOTOR_RIGHT_DIR_FWD = 8; /**< Forward direction / IN1 */
+constexpr int PIN_DIFF_MOTOR_RIGHT_DIR_REV = 7; /**< Reverse direction / IN2 */
 constexpr int PIN_DIFF_MOTOR_RIGHT_ENC     = PIN_INVALID; /**< Encoder (Optional) */
 /** @} */
 
@@ -123,8 +123,8 @@ constexpr int PIN_LAUNCHER_LEFT_DIR_FWD = 13; /**< Forward direction / IN1 */
 constexpr int PIN_LAUNCHER_LEFT_DIR_REV = 14; /**< Reverse direction / IN2 */
 
 constexpr int PIN_LAUNCHER_RIGHT_ENABLE  = 10; /**< PWM enable (Slice 5 Chan A) */
-constexpr int PIN_LAUNCHER_RIGHT_DIR_FWD = 11; /**< Forward direction / IN1 */
-constexpr int PIN_LAUNCHER_RIGHT_DIR_REV = 12; /**< Reverse direction / IN2 */
+constexpr int PIN_LAUNCHER_RIGHT_DIR_FWD = 12; /**< Forward direction / IN1 */
+constexpr int PIN_LAUNCHER_RIGHT_DIR_REV = 11; /**< Reverse direction / IN2 */
 /** @} */
 
 

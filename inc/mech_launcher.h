@@ -57,14 +57,14 @@
  * mode, 200 steps/s = 1 rev/s = 60 RPM.  Adjust for microstepping or
  * desired feed speed.
  ******************************************************************************/
-#define LAUNCHER_STEP_RATE_HZ     (100) // default was 200
+#define LAUNCHER_STEP_RATE_HZ     (500)
 
 /*******************************************************************************
  * @brief Stepper rotation direction
  *
  * Set to 0 or 1 to reverse the motor direction without re-wiring.
  ******************************************************************************/
-#define LAUNCHER_DIR_FORWARD      (0)
+#define LAUNCHER_DIR_FORWARD      (1)
 
 /*******************************************************************************
  * @brief DRV8825 wake-up delay (milliseconds)
@@ -81,7 +81,7 @@
  * Speed at which both flywheel motors run when the launcher is enabled.
  * Range: 0 to 1000 (0% to 100%).  Flywheels always run forward.
  ******************************************************************************/
-#define LAUNCHER_FLYWHEEL_SPEED_PERMIL  (800)
+#define LAUNCHER_FLYWHEEL_SPEED_PERMIL  (1000)
 
 /*******************************************************************************
  * @brief Flywheel spin-up delay (milliseconds)
