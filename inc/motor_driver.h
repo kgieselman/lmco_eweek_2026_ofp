@@ -1,34 +1,20 @@
 /*******************************************************************************
  * @file motor_driver.h
- * @brief Generic dual H-bridge motor driver interface
+ * @brief Dual H-bridge motor driver interface (1-PWM + 2-DIR wiring)
  *
- * Provides a single motor driver implementation that supports two common
- * wiring configurations, selected at construction time:
+ * Provides a motor driver implementation for H-bridge drivers wired with one
+ * PWM pin for speed control and two digital direction pins per channel
+ * (e.g. L298N, BTS7960).
  *
- * @par MODE_2PWM (e.g. DRV8833, TB6612FNG):
- * Two PWM signals per motor channel (IN1/IN2):
- *   - Forward:  IN1 = PWM duty cycle, IN2 = LOW (0% duty)
- *   - Reverse:  IN1 = LOW (0% duty),  IN2 = PWM duty cycle
- *   - Brake:    IN1 = HIGH,           IN2 = HIGH
- *   - Coast:    IN1 = LOW,            IN2 = LOW
+ * @par Wiring (per channel):
+ *   - Forward:  EN = PWM duty cycle, DIR_FWD = HIGH, DIR_REV = LOW
+ *   - Reverse:  EN = PWM duty cycle, DIR_FWD = LOW,  DIR_REV = HIGH
+ *   - Brake:    EN = HIGH,           DIR_FWD = HIGH, DIR_REV = HIGH
+ *   - Coast:    EN = LOW,            DIR_FWD = LOW,  DIR_REV = LOW
  *
- * @par MODE_1PWM_2DIR (e.g. L298N, BTS7960):
- * One PWM signal for speed, two digital pins for direction:
- *   - Forward:  EN = PWM duty cycle, IN1 = HIGH, IN2 = LOW
- *   - Reverse:  EN = PWM duty cycle, IN1 = LOW,  IN2 = HIGH
- *   - Brake:    EN = HIGH,           IN1 = HIGH, IN2 = HIGH
- *   - Coast:    EN = LOW,            IN1 = LOW,  IN2 = LOW
- *
- * @par Example Usage (2-PWM mode):
+ * @par Example Usage:
  * @code
- * MotorDriver driver(MotorDriver::MODE_2PWM);
- * driver.configureMotor(MotorDriver::MOTOR_A, 8, 9);
- * driver.setMotor(MotorDriver::MOTOR_A, 750);  // 75% forward
- * @endcode
- *
- * @par Example Usage (1-PWM + 2-DIR mode):
- * @code
- * MotorDriver driver(MotorDriver::MODE_1PWM_2DIR);
+ * MotorDriver driver;
  * driver.configureMotor(MotorDriver::MOTOR_A, 8, 9, 10);
  * driver.setMotor(MotorDriver::MOTOR_A, -500); // 50% reverse
  * @endcode
@@ -47,26 +33,15 @@
 
 /*******************************************************************************
  * @class MotorDriver
- * @brief Generic driver for dual H-bridge motor controllers
+ * @brief Driver for dual H-bridge motor controllers (1-PWM + 2-DIR wiring)
  *
- * This class provides a unified interface for controlling motors through
- * various H-bridge motor driver ICs. The wiring mode is selected at
- * construction time and applies to all channels on the driver instance.
+ * Controls motors through H-bridge driver ICs wired with one PWM enable pin
+ * and two digital direction pins per channel.
  ******************************************************************************/
 class MotorDriver
 {
 public:
   /* Public Types ------------------------------------------------------------*/
-
-  /*****************************************************************************
-   * @brief Wiring mode enumeration
-   *
-   * Determines how the motor driver IC is wired to the microcontroller.
-   ****************************************************************************/
-  enum Mode_e {
-    MODE_2PWM,       /**< Two PWM pins per channel (e.g. DRV8833) */
-    MODE_1PWM_2DIR   /**< One PWM + two direction pins per channel (e.g. L298N) */
-  };
 
   /*****************************************************************************
    * @brief Motor channel identifier
@@ -103,11 +78,9 @@ public:
   /*****************************************************************************
    * @brief Construct a motor driver instance
    *
-   * @param mode Wiring mode for all channels on this driver
    * @param pwmFreqHz PWM frequency in Hz (default 20kHz)
    ****************************************************************************/
-  explicit MotorDriver(Mode_e mode = MODE_2PWM,
-                       int    pwmFreqHz = DEFAULT_PWM_FREQ_HZ);
+  explicit MotorDriver(int pwmFreqHz = DEFAULT_PWM_FREQ_HZ);
 
   /*****************************************************************************
    * @brief Destructor - stops all motors
@@ -115,27 +88,7 @@ public:
   ~MotorDriver();
 
   /*****************************************************************************
-   * @brief Configure a motor channel (2-PWM mode)
-   *
-   * Initializes the PWM outputs for a motor channel. Both pins must be valid
-   * GPIO pins capable of PWM output.
-   *
-   * @param channel Motor channel to configure (MOTOR_A or MOTOR_B)
-   * @param pinIn1 PWM pin for forward direction
-   * @param pinIn2 PWM pin for reverse direction
-   * @param pinEncoder Optional encoder input pin
-   * @return true if configuration successful, false on error
-   *
-   * @note Only valid when driver is constructed with MODE_2PWM.
-   * @note If motor runs backwards, swap pinIn1 and pinIn2.
-   ****************************************************************************/
-  bool configureMotor(MotorChannel_e channel,
-                      int            pinIn1,
-                      int            pinIn2,
-                      int            pinEncoder = PIN_INVALID);
-
-  /*****************************************************************************
-   * @brief Configure a motor channel (1-PWM + 2-DIR mode)
+   * @brief Configure a motor channel
    *
    * Initializes the PWM and GPIO outputs for a motor channel.
    *
@@ -146,14 +99,13 @@ public:
    * @param pinEncoder Optional encoder input pin
    * @return true if configuration successful, false on error
    *
-   * @note Only valid when driver is constructed with MODE_1PWM_2DIR.
    * @note If motor runs backwards, swap pinDirFwd and pinDirRev.
    ****************************************************************************/
   bool configureMotor(MotorChannel_e channel,
                       int            pinPwm,
                       int            pinDirFwd,
                       int            pinDirRev,
-                      int            pinEncoder);
+                      int            pinEncoder = PIN_INVALID);
 
   /*****************************************************************************
    * @brief Set motor speed and direction
@@ -165,7 +117,7 @@ public:
    *   - -1000 = full speed reverse
    *
    * @param channel Motor channel to control
-   * @param value Motor value in range [-1000, +1000]
+   * @param value Motor value in range [-1000, +1000] (permil)
    * @return true if value applied successfully
    *
    * @note Values outside the valid range will be clamped.
@@ -174,9 +126,6 @@ public:
 
   /*****************************************************************************
    * @brief Set motor output with trim applied
-   *
-   * Sets the motor output with an additional trim multiplier for calibration.
-   * The trim value scales the output to compensate for motor variations.
    *
    * @param channel Motor channel to control
    * @param value Motor value in range [-1000, +1000]
@@ -238,13 +187,6 @@ public:
   int getEncoderPin(MotorChannel_e channel) const;
 
   /*****************************************************************************
-   * @brief Get the wiring mode
-   *
-   * @return Wiring mode set at construction
-   ****************************************************************************/
-  Mode_e getMode() const { return m_mode; }
-
-  /*****************************************************************************
    * @brief Set the default stop mode
    *
    * @param mode Default stop mode for setMotor(0) calls
@@ -276,15 +218,16 @@ private:
   /*****************************************************************************
    * @brief Motor channel configuration
    *
-   * Pin usage depends on the wiring mode:
-   * - MODE_2PWM:      pin1 = IN1 (fwd PWM), pin2 = IN2 (rev PWM), pin3 = unused
-   * - MODE_1PWM_2DIR: pin1 = PWM enable,    pin2 = DIR fwd,       pin3 = DIR rev
+   * Pin assignments:
+   *   pinPwm    = PWM enable pin
+   *   pinDirFwd = forward direction digital pin
+   *   pinDirRev = reverse direction digital pin
    ****************************************************************************/
   struct MotorConfig {
     bool configured;  /**< Channel is configured and ready */
-    int pin1;         /**< Primary pin (IN1 or PWM) */
-    int pin2;         /**< Secondary pin (IN2 or DIR_FWD) */
-    int pin3;         /**< Tertiary pin (unused or DIR_REV) */
+    int pinPwm;       /**< PWM enable pin */
+    int pinDirFwd;    /**< Forward direction pin */
+    int pinDirRev;    /**< Reverse direction pin */
     int pinEncoder;   /**< Encoder pin (PIN_INVALID if not used) */
     int currentValue; /**< Current motor value for state tracking */
   };
@@ -298,7 +241,6 @@ private:
 
   /* Private Variables -------------------------------------------------------*/
 
-  Mode_e     m_mode;                     /**< Wiring mode for all channels */
   MotorConfig m_motors[MOTOR_COUNT];     /**< Motor channel configurations */
   int         m_pwmFreqHz;               /**< Configured PWM frequency */
   float       m_pwmClkDiv;               /**< Calculated PWM clock divider */
@@ -348,22 +290,13 @@ private:
   void setDigitalOut(int pin, bool state);
 
   /*****************************************************************************
-   * @brief Apply motor output in 2-PWM mode
-   *
-   * @param motor Motor configuration
-   * @param dutyCycle Calculated duty cycle
-   * @param forward true if forward direction
-   ****************************************************************************/
-  void applyOutput2Pwm(const MotorConfig& motor, uint16_t dutyCycle, bool forward);
-
-  /*****************************************************************************
    * @brief Apply motor output in 1-PWM + 2-DIR mode
    *
    * @param motor Motor configuration
    * @param dutyCycle Calculated duty cycle
    * @param forward true if forward direction
    ****************************************************************************/
-  void applyOutput1Pwm2Dir(const MotorConfig& motor, uint16_t dutyCycle, bool forward);
+  void applyOutput(const MotorConfig& motor, uint16_t dutyCycle, bool forward);
 
   /*****************************************************************************
    * @brief Calculate clock divider for desired PWM frequency

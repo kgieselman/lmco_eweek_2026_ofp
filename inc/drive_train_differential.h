@@ -9,23 +9,10 @@
  * - Left motor  = speed + turn
  * - Right motor = speed - turn
  *
- * @par Motor Driver Mode:
- * The motor driver wiring mode is selected via config.h:
- * - MOTOR_DRIVER_MODE_2PWM:      Two PWM pins per motor (e.g. DRV8833)
- * - MOTOR_DRIVER_MODE_1PWM_2DIR: One PWM + two direction pins (e.g. L298N)
+ * @par Motor Driver:
+ * Uses one PWM + two direction pins per motor (e.g. L298N, BTS7960).
  *
- * @par Example Usage (2-PWM mode):
- * @code
- * DriveTrainDifferential drive;
- * drive.addMotor(DriveTrainDifferential::MOTOR_LEFT, 27, 26);
- * drive.addMotor(DriveTrainDifferential::MOTOR_RIGHT, 7, 6);
- *
- * drive.setSpeed(500);   // 50% forward
- * drive.setTurn(200);    // Slight right turn
- * drive.update();
- * @endcode
- *
- * @par Example Usage (1-PWM + 2-DIR mode):
+ * @par Example Usage:
  * @code
  * DriveTrainDifferential drive;
  * drive.addMotor(DriveTrainDifferential::MOTOR_LEFT, 21, 27, 26);
@@ -95,27 +82,8 @@ public:
    ****************************************************************************/
   ~DriveTrainDifferential();
 
-#if MOTOR_DRIVER_MODE_2PWM
   /*****************************************************************************
-   * @brief Add and configure a motor (2-PWM mode)
-   *
-   * @param motor Which motor to configure (MOTOR_LEFT or MOTOR_RIGHT)
-   * @param pinIn1 PWM pin for forward direction (IN1)
-   * @param pinIn2 PWM pin for reverse direction (IN2)
-   * @param pinEncoder Optional encoder input pin (PIN_INVALID if not used)
-   * @return true if configuration successful
-   *
-   * @note If a motor spins backwards, swap pinIn1 and pinIn2
-   *       rather than rewiring the motor.
-   ****************************************************************************/
-  bool addMotor(MotorId_e motor,
-                int       pinIn1,
-                int       pinIn2,
-                int       pinEncoder = PIN_INVALID);
-
-#elif MOTOR_DRIVER_MODE_1PWM_2DIR
-  /*****************************************************************************
-   * @brief Add and configure a motor (1-PWM + 2-DIR mode)
+   * @brief Add and configure a motor
    *
    * @param motor Which motor to configure (MOTOR_LEFT or MOTOR_RIGHT)
    * @param pinPwm PWM output pin for speed control
@@ -132,7 +100,6 @@ public:
                 int       pinDirFwd,
                 int       pinDirRev,
                 int       pinEncoder = PIN_INVALID);
-#endif
 
   /*****************************************************************************
    * @brief Set desired speed

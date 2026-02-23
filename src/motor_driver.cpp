@@ -1,6 +1,6 @@
 /*******************************************************************************
  * @file motor_driver.cpp
- * @brief Implementation of generic motor driver interface
+ * @brief Implementation of motor driver interface (1-PWM + 2-DIR wiring)
  ******************************************************************************/
 
 /* Includes ------------------------------------------------------------------*/
@@ -35,9 +35,8 @@ static inline void gpio_put(int p, bool v) { (void)p; (void)v; }
 
 /* Method Definitions --------------------------------------------------------*/
 
-MotorDriver::MotorDriver(Mode_e mode, int pwmFreqHz)
-  : m_mode(mode)
-  , m_pwmFreqHz(pwmFreqHz)
+MotorDriver::MotorDriver(int pwmFreqHz)
+  : m_pwmFreqHz(pwmFreqHz)
   , m_defaultStopMode(STOP_COAST)
 {
   /* Calculate clock divider for desired frequency */
@@ -47,9 +46,9 @@ MotorDriver::MotorDriver(Mode_e mode, int pwmFreqHz)
   for (int i = 0; i < MOTOR_COUNT; i++)
   {
     m_motors[i].configured   = false;
-    m_motors[i].pin1         = PIN_INVALID;
-    m_motors[i].pin2         = PIN_INVALID;
-    m_motors[i].pin3         = PIN_INVALID;
+    m_motors[i].pinPwm       = PIN_INVALID;
+    m_motors[i].pinDirFwd    = PIN_INVALID;
+    m_motors[i].pinDirRev    = PIN_INVALID;
     m_motors[i].pinEncoder   = PIN_INVALID;
     m_motors[i].currentValue = 0;
   }
@@ -62,68 +61,11 @@ MotorDriver::~MotorDriver()
 }
 
 bool MotorDriver::configureMotor(MotorChannel_e channel,
-                                 int            pinIn1,
-                                 int            pinIn2,
-                                 int            pinEncoder)
-{
-  /* This overload is only valid for MODE_2PWM */
-  if (m_mode != MODE_2PWM)
-  {
-    ERROR_REPORT(ERROR_INVALID_PARAM);
-    return false;
-  }
-
-  /* Validate channel */
-  if (channel >= MOTOR_COUNT)
-  {
-    ERROR_REPORT(ERROR_OUT_OF_RANGE);
-    return false;
-  }
-
-  /* Validate pins */
-  if (!validatePin(pinIn1) || !validatePin(pinIn2))
-  {
-    ERROR_REPORT(ERROR_DT_INVALID_PIN);
-    return false;
-  }
-
-  /* Validate encoder pin if specified */
-  if ((pinEncoder != PIN_INVALID) && !validatePin(pinEncoder))
-  {
-    ERROR_REPORT(ERROR_DT_INVALID_PIN);
-    return false;
-  }
-
-  /* Initialize PWM pins */
-  if (!initPwmPin(pinIn1) || !initPwmPin(pinIn2))
-  {
-    return false;
-  }
-
-  /* Store configuration */
-  m_motors[channel].pin1         = pinIn1;
-  m_motors[channel].pin2         = pinIn2;
-  m_motors[channel].pin3         = PIN_INVALID;
-  m_motors[channel].pinEncoder   = pinEncoder;
-  m_motors[channel].currentValue = 0;
-  m_motors[channel].configured   = true;
-
-  return true;
-}
-
-bool MotorDriver::configureMotor(MotorChannel_e channel,
                                  int            pinPwm,
                                  int            pinDirFwd,
                                  int            pinDirRev,
                                  int            pinEncoder)
 {
-  /* This overload is only valid for MODE_1PWM_2DIR */
-  if (m_mode != MODE_1PWM_2DIR)
-  {
-    ERROR_REPORT(ERROR_INVALID_PARAM);
-    return false;
-  }
-
   /* Validate channel */
   if (channel >= MOTOR_COUNT)
   {
@@ -158,9 +100,9 @@ bool MotorDriver::configureMotor(MotorChannel_e channel,
   }
 
   /* Store configuration */
-  m_motors[channel].pin1         = pinPwm;
-  m_motors[channel].pin2         = pinDirFwd;
-  m_motors[channel].pin3         = pinDirRev;
+  m_motors[channel].pinPwm       = pinPwm;
+  m_motors[channel].pinDirFwd    = pinDirFwd;
+  m_motors[channel].pinDirRev    = pinDirRev;
   m_motors[channel].pinEncoder   = pinEncoder;
   m_motors[channel].currentValue = 0;
   m_motors[channel].configured   = true;
@@ -212,15 +154,7 @@ bool MotorDriver::setMotorWithTrim(MotorChannel_e channel, int value, float trim
     (absValue * PWM_TOP_COUNT * trim) / MOTOR_VALUE_MAX);
   bool forward = (value > 0);
 
-  /* Apply output based on wiring mode */
-  if (m_mode == MODE_2PWM)
-  {
-    applyOutput2Pwm(m_motors[channel], dutyCycle, forward);
-  }
-  else
-  {
-    applyOutput1Pwm2Dir(m_motors[channel], dutyCycle, forward);
-  }
+  applyOutput(m_motors[channel], dutyCycle, forward);
 
   return true;
 }
@@ -232,19 +166,10 @@ void MotorDriver::coast(MotorChannel_e channel)
     return;
   }
 
-  if (m_mode == MODE_2PWM)
-  {
-    /* Coast: both PWM outputs LOW */
-    setPwmDuty(m_motors[channel].pin1, 0);
-    setPwmDuty(m_motors[channel].pin2, 0);
-  }
-  else
-  {
-    /* Coast: PWM = 0, direction pins LOW */
-    setPwmDuty(m_motors[channel].pin1, 0);
-    setDigitalOut(m_motors[channel].pin2, false);
-    setDigitalOut(m_motors[channel].pin3, false);
-  }
+  /* Coast: PWM = 0, direction pins LOW */
+  setPwmDuty(m_motors[channel].pinPwm, 0);
+  setDigitalOut(m_motors[channel].pinDirFwd, false);
+  setDigitalOut(m_motors[channel].pinDirRev, false);
 
   m_motors[channel].currentValue = 0;
 }
@@ -256,19 +181,10 @@ void MotorDriver::brake(MotorChannel_e channel)
     return;
   }
 
-  if (m_mode == MODE_2PWM)
-  {
-    /* Brake: both PWM outputs HIGH */
-    setPwmDuty(m_motors[channel].pin1, PWM_TOP_COUNT);
-    setPwmDuty(m_motors[channel].pin2, PWM_TOP_COUNT);
-  }
-  else
-  {
-    /* Brake: PWM = 100%, both direction pins HIGH */
-    setPwmDuty(m_motors[channel].pin1, PWM_TOP_COUNT);
-    setDigitalOut(m_motors[channel].pin2, true);
-    setDigitalOut(m_motors[channel].pin3, true);
-  }
+  /* Brake: PWM = 100%, both direction pins HIGH */
+  setPwmDuty(m_motors[channel].pinPwm, PWM_TOP_COUNT);
+  setDigitalOut(m_motors[channel].pinDirFwd, true);
+  setDigitalOut(m_motors[channel].pinDirRev, true);
 
   m_motors[channel].currentValue = 0;
 }
@@ -389,42 +305,24 @@ void MotorDriver::setDigitalOut(int pin, bool state)
   gpio_put(pin, state);
 }
 
-void MotorDriver::applyOutput2Pwm(const MotorConfig& motor,
-                                   uint16_t dutyCycle,
-                                   bool forward)
-{
-  if (forward)
-  {
-    /* Forward: IN1 = PWM, IN2 = 0 */
-    setPwmDuty(motor.pin1, dutyCycle);
-    setPwmDuty(motor.pin2, 0);
-  }
-  else
-  {
-    /* Reverse: IN1 = 0, IN2 = PWM */
-    setPwmDuty(motor.pin1, 0);
-    setPwmDuty(motor.pin2, dutyCycle);
-  }
-}
-
-void MotorDriver::applyOutput1Pwm2Dir(const MotorConfig& motor,
-                                       uint16_t dutyCycle,
-                                       bool forward)
+void MotorDriver::applyOutput(const MotorConfig& motor,
+                               uint16_t dutyCycle,
+                               bool forward)
 {
   /* Set direction pins first */
   if (forward)
   {
-    setDigitalOut(motor.pin2, true);   /* DIR_FWD = HIGH */
-    setDigitalOut(motor.pin3, false);  /* DIR_REV = LOW */
+    setDigitalOut(motor.pinDirFwd, true);
+    setDigitalOut(motor.pinDirRev, false);
   }
   else
   {
-    setDigitalOut(motor.pin2, false);  /* DIR_FWD = LOW */
-    setDigitalOut(motor.pin3, true);   /* DIR_REV = HIGH */
+    setDigitalOut(motor.pinDirFwd, false);
+    setDigitalOut(motor.pinDirRev, true);
   }
 
   /* Set PWM duty cycle */
-  setPwmDuty(motor.pin1, dutyCycle);
+  setPwmDuty(motor.pinPwm, dutyCycle);
 }
 
 float MotorDriver::calculateClockDivider(int freqHz) const

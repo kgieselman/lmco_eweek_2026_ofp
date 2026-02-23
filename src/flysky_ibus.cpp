@@ -9,7 +9,6 @@
 #include "error_handler.h"
 #include "hardware/irq.h"
 #include <string.h>
-#include <stdio.h>
 
 
 /* Global Variables ----------------------------------------------------------*/
@@ -113,9 +112,7 @@ FlySkyIBus::FlySkyIBus(uart_inst_t* pUart, int pinTx, int pinRx)
 
   m_initialized = true;
 
-#if ENABLE_DEBUG
-  printf("[IBus] Initialized on UART1\n");
-#endif
+  DEBUG_PRINTF("[IBus] Initialized on UART1\n");
 }
 
 FlySkyIBus::~FlySkyIBus()
@@ -151,9 +148,7 @@ bool FlySkyIBus::hasNewMessage(void)
   uint8_t msgLength = pMsg[IBUS_PROTOCOL_LEN_IDX];
   if (msgLength < IBUS_MIN_MSG_LENGTH || msgLength > IBUS_MAX_MSG_LENGTH)
   {
-#if ENABLE_DEBUG_IBUS_VERBOSE
-    printf("[IBus] Invalid length: %d\n", msgLength);
-#endif
+    DEBUG_PRINTF_IBUS("[IBus] Invalid length: %d\n", msgLength);
     return false;
   }
 
@@ -162,14 +157,12 @@ bool FlySkyIBus::hasNewMessage(void)
   {
     case IBUS_CMD_CHAN_DATA:
     {
-      // Command supported, continue
+      /* Command supported, continue */
       break;
     }
     default:
     {
-#if ENABLE_DEBUG_IBUS_VERBOSE
-        printf("[IBus] Unknown command: 0x%02X\n", pMsg[IBUS_PROTOCOL_CMD_IDX]);
-#endif
+      DEBUG_PRINTF_IBUS("[IBus] Unknown command: 0x%02X\n", pMsg[IBUS_PROTOCOL_CMD_IDX]);
       return false;
     }
   }
@@ -177,9 +170,7 @@ bool FlySkyIBus::hasNewMessage(void)
   /* Validate CRC */
   if (!validateCrc((const uint8_t*)pMsg, msgLength))
   {
-#if ENABLE_DEBUG_IBUS_VERBOSE
-    printf("[IBus] CRC mismatch\n");
-#endif
+    DEBUG_PRINTF_IBUS("[IBus] CRC mismatch\n");
     return false;
   }
 
@@ -242,19 +233,17 @@ uint32_t FlySkyIBus::getTimeSinceLastMessage(void) const
 
 void FlySkyIBus::debugPrint(void) const
 {
-#if ENABLE_DEBUG
-  printf("RStick(%4d,%4d) LStick(%4d,%4d) VR(%4d,%4d) SW(%4d,%4d,%4d,%4d)\n",
-         readChannelRaw(CHAN_RSTICK_HORIZ),
-         readChannelRaw(CHAN_RSTICK_VERT),
-         readChannelRaw(CHAN_LSTICK_HORIZ),
-         readChannelRaw(CHAN_LSTICK_VERT),
-         readChannelRaw(CHAN_VRA),
-         readChannelRaw(CHAN_VRB),
-         readChannelRaw(CHAN_SWA),
-         readChannelRaw(CHAN_SWB),
-         readChannelRaw(CHAN_SWC),
-         readChannelRaw(CHAN_SWD));
-#endif
+  DEBUG_PRINTF("RStick(%4d,%4d) LStick(%4d,%4d) VR(%4d,%4d) SW(%4d,%4d,%4d,%4d)\n",
+               readChannelRaw(CHAN_RSTICK_HORIZ),
+               readChannelRaw(CHAN_RSTICK_VERT),
+               readChannelRaw(CHAN_LSTICK_HORIZ),
+               readChannelRaw(CHAN_LSTICK_VERT),
+               readChannelRaw(CHAN_VRA),
+               readChannelRaw(CHAN_VRB),
+               readChannelRaw(CHAN_SWA),
+               readChannelRaw(CHAN_SWB),
+               readChannelRaw(CHAN_SWC),
+               readChannelRaw(CHAN_SWD));
 }
 
 bool FlySkyIBus::validateUartPin(uart_inst_t* pUart, bool isTx, int pinNum)

@@ -7,10 +7,6 @@
 #include "error_handler.h"
 #include "config.h"
 
-#if ENABLE_DEBUG
-#include <stdio.h>
-#endif
-
 
 /* Private Static Variable Declaration ---------------------------------------*/
 
@@ -109,7 +105,7 @@ void error_report(ErrorCode_t code, const char* file, int line)
       }
     }
 
-    printf("[ERROR] 0x%04X: %s (%s:%d)\n", code,
+    DEBUG_PRINTF("[ERROR] 0x%04X: %s (%s:%d)\n", code,
                                            error_get_string(code),
                                            filename,
                                            line);

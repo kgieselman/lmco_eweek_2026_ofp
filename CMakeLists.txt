@@ -165,6 +165,11 @@ set(SOURCES
 # Create executable
 add_executable(${PROJECT_NAME} ${SOURCES})
 
+# Generate PIO header from .pio source file
+pico_generate_pio_header(${PROJECT_NAME}
+  ${CMAKE_CURRENT_LIST_DIR}/src/stepper_pulse.pio
+)
+
 # Set program metadata
 pico_set_program_name(${PROJECT_NAME} "eweek_2026")
 pico_set_program_version(${PROJECT_NAME} "1.0.0")
@@ -185,6 +190,7 @@ target_link_libraries(${PROJECT_NAME}
   pico_stdlib
   pico_multicore
   hardware_pwm
+  hardware_pio
   hardware_timer
   hardware_clocks
   hardware_watchdog
