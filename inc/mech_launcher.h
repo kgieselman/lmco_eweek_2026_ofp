@@ -224,9 +224,10 @@ private:
   bool     m_incrementActive;   /**< True while PIO is emitting a burst          */
 
   /* PIO state */
-  uint     m_pioSmIdx;          /**< PIO state machine index (0-3)               */
-  uint     m_pioOffset;         /**< Instruction memory offset of loaded program */
+  uint32_t     m_pioSmIdx;          /**< PIO state machine index (0-3)               */
+  uint32_t     m_pioOffset;         /**< Instruction memory offset of loaded program */
   void*    m_pioInstance;       /**< PIO instance (pio0 or pio1), stored as void**/
+
 
   /** @brief Motor driver instance for flywheel motors */
   MotorDriver m_flywheelDriver;

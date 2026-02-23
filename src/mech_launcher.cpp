@@ -158,7 +158,7 @@ bool MechLauncher::init(void)
 
   m_initialized = true;
 
-  DEBUG_PRINTF("[Launcher] PIO stepper initialized  sm=%u  offset=%u  "
+  DEBUG_PRINTF("[Launcher] PIO stepper initialized  sm=%lu  offset=%lu  "
                "step_rate=%d Hz  steps/incr=%d  interval=%d ms  dir=%d  "
                "nSLEEP=GPIO%d (sleeping)\n",
                m_pioSmIdx, m_pioOffset,

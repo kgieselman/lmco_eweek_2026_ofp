@@ -72,6 +72,7 @@ static const errorString_t s_errorStrings[] =
   { ERROR_HW_PWM_FAILED,     "PWM hardware error" },
   { ERROR_HW_UART_FAILED,    "UART hardware error" },
   { ERROR_HW_WATCHDOG,       "Watchdog reset" },
+  { ERROR_HW_INIT_FAILED,    "HW resource init failed" },
 };
 
 /** @brief Number of entries in error string table */
