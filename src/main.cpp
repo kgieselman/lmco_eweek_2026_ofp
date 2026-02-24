@@ -291,30 +291,37 @@ static void process_rc_input(void)
   /* Update scoop servo position */
   g_pScoop->setPosition(scoop);
 
-    /*
-     * SWC is a 3-position switch.  readChannelUnsigned maps:
-     *   Position 0 (raw 1000) → ~0    → 100% flywheel speed (1000 permil)
-     *   Position 1 (raw 1500) → ~500  →  75% flywheel speed ( 750 permil)
-     *   Position 2 (raw 2000) → ~1000 →  50% flywheel speed ( 500 permil)
-     */
-    int flywheelSpeed;
-    if (flySpdSw < 250)
-    {
-      flywheelSpeed = 1000;   /* 100% */
-    }
-    else if (flySpdSw < 750)
-    {
-      flywheelSpeed = 750;    /*  75% */
-    }
-    else
-    {
-      flywheelSpeed = 500;    /*  50% */
-    }
+  /*
+   * SWC is a 3-position switch.  readChannelUnsigned maps:
+   *   Position 0 (raw 1000) → ~0    → 100% flywheel speed (1000 permil)
+   *   Position 1 (raw 1500) → ~500  →  75% flywheel speed ( 750 permil)
+   *   Position 2 (raw 2000) → ~1000 →  50% flywheel speed ( 500 permil)
+   */
+  // System runs on 3S (11.1 V)
+  // Flywheel motor is rated for 2S (7.4 V)
+  constexpr int FLYWHEEL_SPEED_LEVEL_1 = 667; // 100% of 2S battery
+  constexpr int FLYWHEEL_SPEED_LEVEL_2 = 500; // 75% of 2S battery
+  constexpr int FLYWHEEL_SPEED_LEVEL_3 = 334; // 50% of 2S battery
 
-    g_pLauncher->setFlywheelSpeed(flywheelSpeed);
+  int flywheelSpeed;
+  if (flySpdSw < 250)
+  {
+    // DEFAULT SWITCH POSITION
+    flywheelSpeed = FLYWHEEL_SPEED_LEVEL_1;
+  }
+  else if (flySpdSw < 750)
+  {
+    flywheelSpeed = FLYWHEEL_SPEED_LEVEL_2;
+  }
+  else
+  {
+    flywheelSpeed = FLYWHEEL_SPEED_LEVEL_3;
+  }
+
+  g_pLauncher->setFlywheelSpeed(flywheelSpeed);
 
   /* SWD controls the launcher stepper: HIGH (>500) = run, LOW = stop/sleep */
-    g_pLauncher->setEnabled(launchSw > 500);
+  g_pLauncher->setEnabled(launchSw > 500);
 }
 
 /*******************************************************************************
