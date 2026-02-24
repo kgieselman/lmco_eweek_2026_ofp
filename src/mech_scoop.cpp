@@ -124,12 +124,12 @@ void MechScoop::setPosition(int position)
   m_position = position;
 
   /*
-   * Map  [-1000 … +1000]  →  [PULSE_MIN … PULSE_MAX]
+   * Map  [0 … 1000]  →  [PULSE_MIN … PULSE_MAX]
    *
-   *   pulseUs = center + (position * half_range / 1000)
+   *   pulseUs = min + (position * range / 1000)
    */
-  const int halfRangeUs = (SCOOP_SERVO_PULSE_MAX_US - SCOOP_SERVO_PULSE_MIN_US) / 2;
-  int pulseUs = SCOOP_SERVO_PULSE_CTR_US + (position * halfRangeUs / 1000);
+  const int rangeUs = SCOOP_SERVO_PULSE_MAX_US - SCOOP_SERVO_PULSE_MIN_US;
+  int pulseUs = SCOOP_SERVO_PULSE_MIN_US + (position * rangeUs / 1000);
   pulseUs = clamp(pulseUs, SCOOP_SERVO_PULSE_MIN_US, SCOOP_SERVO_PULSE_MAX_US);
 
   writePulseUs(static_cast<uint16_t>(pulseUs));
