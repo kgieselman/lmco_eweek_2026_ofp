@@ -55,36 +55,51 @@
 /* Configuration Defaults ----------------------------------------------------*/
 
 /*******************************************************************************
- * @brief Full steps per motor revolution
+ * @brief Microsteps per full step
  *
- * Standard NEMA 17 = 200 steps/rev (1.8° per step).  Multiply by the
- * microstepping divisor if the DRV8825 MS pins are set for microstepping.
+ * DRV8825 microstepping divisor as configured by the MS0/MS1/MS2 pins.
+ * Common values: 1 (full), 2 (half), 4, 8, 16, 32.
  ******************************************************************************/
-#define LAUNCHER_STEPS_PER_REV          (200)
+#define LAUNCHER_MICROSTEP_DIV          (32)
 
 /*******************************************************************************
- * @brief Steps per launcher increment
+ * @brief Microsteps per motor revolution
  *
- * Each increment rotates the feeder by 1/5 of a revolution.
- * 200 / 5 = 40 full-steps.
+ * Standard NEMA 17 = 200 full-steps/rev (1.8° per step).
+ * 200 × 32 = 6400 microsteps/rev at 1/32 microstepping.
  ******************************************************************************/
-#define LAUNCHER_STEPS_PER_INCREMENT    (LAUNCHER_STEPS_PER_REV / 5)
+#define LAUNCHER_STEPS_PER_REV          (200 * LAUNCHER_MICROSTEP_DIV)
 
 /*******************************************************************************
- * @brief Stepper step rate (steps per second)
- *
- * The PIO clock divider is derived from this value.  Higher values make each
- * increment burst complete faster.  At 400 Hz a 40-step burst takes 100 ms.
+ * @brief Number of positions in the launcher
  ******************************************************************************/
-#define LAUNCHER_STEP_RATE_HZ           (400)
+#define LAUNCHER_POSITIONS_PER_REV      (5)
+
+/*******************************************************************************
+ * @brief Microsteps per launcher increment
+ *
+ * Each increment rotates the feeder by 1/LAUNCHER_POSITIONS_PER_REV of a revolution.
+ * e.g. for 5 positions: 6400 / 5 = 1280 microsteps.
+ ******************************************************************************/
+#define LAUNCHER_STEPS_PER_INCREMENT    (LAUNCHER_STEPS_PER_REV / LAUNCHER_POSITIONS_PER_REV)
+
+/*******************************************************************************
+ * @brief Stepper step rate (microsteps per second)
+ *
+ * The PIO clock divider is derived from this value.  At 12800 Hz a
+ * 1280-microstep burst completes in 100 ms, well within the 750 ms
+ * interval.  The DRV8825 minimum pulse width is 1.9 µs (max ~263 kHz),
+ * so 12.8 kHz is comfortably within spec.
+ ******************************************************************************/
+#define LAUNCHER_STEP_RATE_HZ           (12800)
 
 /*******************************************************************************
  * @brief Interval between increments (milliseconds)
  *
  * After each burst completes, the state machine waits this long before
- * kicking the next increment.  250 ms → ~4 shots per second.
+ * kicking the next increment.  750 ms → ~1.3 shots per second.
  ******************************************************************************/
-#define LAUNCHER_INCREMENT_INTERVAL_MS  (250)
+#define LAUNCHER_INCREMENT_INTERVAL_MS  (750)
 
 /*******************************************************************************
  * @brief Stepper rotation direction (0 or 1)
@@ -98,7 +113,7 @@
  * The DRV8825 datasheet specifies t_SLEEP ≈ 1.7 ms typical.  We round up
  * for margin.
  ******************************************************************************/
-#define LAUNCHER_WAKE_DELAY_MS          (2)
+#define LAUNCHER_WAKE_DELAY_MS          (5)
 
 /*******************************************************************************
  * @brief Flywheel motor speed (permil)
@@ -227,7 +242,6 @@ private:
   uint32_t     m_pioSmIdx;          /**< PIO state machine index (0-3)               */
   uint32_t     m_pioOffset;         /**< Instruction memory offset of loaded program */
   void*    m_pioInstance;       /**< PIO instance (pio0 or pio1), stored as void**/
-
 
   /** @brief Motor driver instance for flywheel motors */
   MotorDriver m_flywheelDriver;
