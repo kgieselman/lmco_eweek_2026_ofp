@@ -16,7 +16,7 @@ logic without needing to flash the hardware.
 | `test_ring_buffer.cpp` | Tests for circular buffer implementation |
 | `test_ibus.cpp` | Tests for iBUS protocol (CRC, message parsing) |
 | `test_differential.cpp` | Tests for differential drive motor mixing |
-| `test_mecanum.cpp` | Tests for mecanum drive motor mixing |
+| `test_motor_driver.cpp` | Tests for MotorDriver (1-PWM + 2-DIR H-bridge driver) |
 
 ## Building and Running
 
@@ -43,7 +43,7 @@ make test
 make test-ring      # Ring buffer tests
 make test-ibus      # iBUS protocol tests
 make test-diff      # Differential drive tests
-make test-mecanum   # Mecanum drive tests
+make test-motor     # Motor driver tests
 ```
 
 ### Clean Build Artifacts
@@ -115,10 +115,12 @@ Tests are organized by:
 Since tests run on the host, Pico SDK functions are not available. Tests either:
 
 1. Re-implement the logic being tested directly
-2. Provide mock implementations of SDK functions
+2. Provide mock/stub implementations of SDK functions
 
 For example, `test_ring_buffer.cpp` includes a copy of the `RingBuffer` class
-because the actual implementation depends on Pico SDK types.
+because the actual implementation depends on Pico SDK types. Similarly,
+`test_motor_driver.cpp` stubs out PWM and GPIO calls so the driver logic can
+be exercised without hardware.
 
 ## Continuous Integration
 
@@ -134,9 +136,9 @@ make test && echo "All tests passed!"
 Current test coverage includes:
 
 - **Ring Buffer**: Basic operations, FIFO ordering, wraparound, edge cases
-- **iBUS**: CRC calculation, message validation, channel extraction
-- **Differential Drive**: Motor mixing, PWM scaling, symmetry
-- **Mecanum Drive**: Motor mixing, strafe, rotation, combined movements
+- **iBUS**: CRC calculation, message validation, channel extraction, normalization
+- **Differential Drive**: Motor mixing, PWM scaling, symmetry, boundary conditions
+- **Motor Driver**: Pin validation, configuration, set/clamp, trim, stop modes, state tracking
 
 ## Known Limitations
 

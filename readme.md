@@ -25,11 +25,33 @@ at targets.
 - These are separate ping pong balls from those being collected
 - Balls are manually fed by a teammate near the ball pit
 
+## Architecture
+
+### Source Modules
+
+| Module | Header | Description |
+|--------|--------|-------------|
+| Motor Driver | `motor_driver.h` | Dual H-bridge driver (1-PWM + 2-DIR wiring, e.g. L298N, BTS7960) |
+| Differential Drive | `drive_train_differential.h` | Two-motor tank-style drive with speed/turn mixing |
+| FlySky iBUS | `flysky_ibus.h` | RC receiver protocol interface (115200 baud, 14 channels) |
+| Scoop | `mech_scoop.h` | Servo-driven scoop mechanism for ball collection |
+| Launcher | `mech_launcher.h` | Stepper feeder (DRV8825 via PIO) + dual flywheel launcher |
+| Display View | `display_view.h` | Robot telemetry HUD on SSD1306 OLED (runs on core 1) |
+| SSD1306 Driver | `ssd1306_display.h` | Low-level I2C OLED driver with 5×7 font framebuffer |
+| Error Handler | `error_handler.h` | Error codes, reporting, and debug output utilities |
+| Config | `config.h` | Compile-time feature flags and timing parameters |
+| Pinout | `pinout.h` | All GPIO pin assignments |
+
+### Dual-Core Usage
+
+- **Core 0:** Main control loop (RC input, motor mixing, mechanism control, watchdog)
+- **Core 1:** SSD1306 OLED display refresh (~20 FPS) with lock-free shared data from core 0
+
 ## Building
 
 ### Prerequisites
 
-1. Raspberry Pi Pico SDK (v2.0.0 or later)
+1. Raspberry Pi Pico SDK (v2.2.0 or later)
 2. CMake (v3.13 or later)
 3. ARM GCC toolchain
 4. (Optional) VS Code with Pico extension
@@ -60,10 +82,13 @@ After building, the following files will be in the `build/` directory:
 ## Configuration
 
 Edit `inc/config.h` to configure:
-- Drive train type (differential or mecanum)
-- Debug output enable/disable
-- Watchdog timeout
-- Other feature flags
+- Debug output enable/disable (`ENABLE_DEBUG`)
+- Verbose iBUS logging (`ENABLE_DEBUG_IBUS_VERBOSE`)
+- Watchdog timer (`ENABLE_WATCHDOG`)
+- Motor safety cutoff on RC signal loss (`ENABLE_SIGNAL_LOSS_CUTOFF`)
+- Encoder calibration (`ENABLE_ENCODER_CALIBRATION`)
+- UART and USB stdio output (`ENABLE_STDIO_UART`, `ENABLE_STDIO_USB`)
+- OLED display on core 1 (`ENABLE_DISPLAY`)
 
 ## Version Information
 
@@ -109,28 +134,52 @@ The version information is defined in `inc/version.h.in` and automatically popul
 
 See `inc/pinout.h` for complete pin mappings. Key connections:
 
-| Function | GPIO      |
-|----------|-----------|
-| iBUS RX  | 5         |
-| iBUS TX  | 4         |
-| UART0 TX | 0 (debug) |
-| UART0 RX | 1 (debug) |
+| Function | GPIO |
+|----------|------|
+| iBUS TX | 4 |
+| iBUS RX | 5 |
+| UART0 TX (debug) | 0 |
+| UART0 RX (debug) | 1 |
 
-### Drive Train Pins
+### Differential Drive
 
-#### Differential Drive
-| Motor | PWM | DIR_FWD | DIR_REV |
-|-------|-----|---------|---------|
-| Left  | 9   | 7       | 6       |
-| Right | 8   | 10      | 11      |
+| Motor | PWM (Enable) | DIR_FWD | DIR_REV | Encoder |
+|-------|-------------|---------|---------|---------|
+| Left | 2 | 6 | 3 | N/A |
+| Right | 9 | 8 | 7 | N/A |
 
-#### Mecanum Drive
-| Motor | PWM | DIR_FWD | DIR_REV |
-|-------|-----|---------|---------|
-| FL    | 20  | 18      | 19      |
-| FR    | 8   | 10      | 11      |
-| RR    | 9   | 7       | 6       |
-| RL    | 21  | 27      | 26      |
+### Scoop Mechanism
+
+| Function | GPIO |
+|----------|------|
+| Scoop Servo PWM | 28 |
+
+### Launcher (DRV8825 Stepper + Dual Flywheel)
+
+| Function | GPIO |
+|----------|------|
+| Stepper STEP (PIO) | 22 |
+| Stepper DIR | 21 |
+| Stepper nSLEEP | 20 |
+| Left Flywheel PWM | 15 |
+| Left Flywheel DIR_FWD | 13 |
+| Left Flywheel DIR_REV | 14 |
+| Right Flywheel PWM | 10 |
+| Right Flywheel DIR_FWD | 12 |
+| Right Flywheel DIR_REV | 11 |
+
+### I2C Display (SSD1306 OLED)
+
+| Function | GPIO |
+|----------|------|
+| I2C0 SDA | 16 |
+| I2C0 SCL | 17 |
+
+### Status
+
+| Function | GPIO |
+|----------|------|
+| Onboard LED | 25 |
 
 ## Testing
 
@@ -146,18 +195,8 @@ See `test/README.md` for more details.
 ## Safety Features
 
 - **Watchdog Timer:** Automatically resets system if main loop stalls
-- **Motor Timeout:** Motors stop if no valid RC signal received
-- **Error Handling:** Comprehensive error reporting and recovery
-
-## Bill of Materials
-
-| Part | Description | Quantity | Unit Cost | Cost |
-|------|-------------|----------|-----------|------|
-| TBD  | TBD         | TBD      | TBD       | TBD  |
-
-## Lessons Learned
-
-*To be filled in after competition*
+- **Motor Timeout:** Motors stop if no valid RC signal received within 500 ms
+- **Error Handling:** Categorized error codes (general, drive train, RC, mechanism, hardware) with debug reporting
 
 ## License
 
@@ -166,6 +205,3 @@ This project is developed for the 2026 Lockheed Martin E-Week competition.
 ## Authors
 
 E-Week 2026 Team
-
----
-*Last Updated: January 2026*

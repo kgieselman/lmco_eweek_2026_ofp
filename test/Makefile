@@ -18,7 +18,7 @@ LDFLAGS  = -lm
 BUILD_DIR = build
 
 # Test executables
-TESTS = test_ring_buffer test_ibus test_differential test_mecanum
+TESTS = test_ring_buffer test_ibus test_differential test_motor_driver
 
 # Default target
 .PHONY: all
@@ -43,10 +43,10 @@ test_differential: $(BUILD_DIR) test_differential.cpp unit_test.h
 	$(CXX) $(CXXFLAGS) test_differential.cpp -o $(BUILD_DIR)/test_differential $(LDFLAGS)
 	@echo "Built: $(BUILD_DIR)/test_differential"
 
-# Build mecanum drive test
-test_mecanum: $(BUILD_DIR) test_mecanum.cpp unit_test.h
-	$(CXX) $(CXXFLAGS) test_mecanum.cpp -o $(BUILD_DIR)/test_mecanum $(LDFLAGS)
-	@echo "Built: $(BUILD_DIR)/test_mecanum"
+# Build motor driver test
+test_motor_driver: $(BUILD_DIR) test_motor_driver.cpp unit_test.h
+	$(CXX) $(CXXFLAGS) test_motor_driver.cpp -o $(BUILD_DIR)/test_motor_driver $(LDFLAGS)
+	@echo "Built: $(BUILD_DIR)/test_motor_driver"
 
 # Run all tests
 .PHONY: test
@@ -58,7 +58,7 @@ test: all
 	@./$(BUILD_DIR)/test_ring_buffer
 	@./$(BUILD_DIR)/test_ibus
 	@./$(BUILD_DIR)/test_differential
-	@./$(BUILD_DIR)/test_mecanum
+	@./$(BUILD_DIR)/test_motor_driver
 	@echo "========================================"
 	@echo "All tests complete"
 	@echo "========================================"
@@ -76,9 +76,9 @@ test-ibus: test_ibus
 test-diff: test_differential
 	@./$(BUILD_DIR)/test_differential
 
-.PHONY: test-mecanum
-test-mecanum: test_mecanum
-	@./$(BUILD_DIR)/test_mecanum
+.PHONY: test-motor
+test-motor: test_motor_driver
+	@./$(BUILD_DIR)/test_motor_driver
 
 # Clean build artifacts
 .PHONY: clean
@@ -95,7 +95,7 @@ help:
 	@echo "  test-ring     - Run ring buffer tests only"
 	@echo "  test-ibus     - Run iBUS protocol tests only"
 	@echo "  test-diff     - Run differential drive tests only"
-	@echo "  test-mecanum  - Run mecanum drive tests only"
+	@echo "  test-motor    - Run motor driver tests only"
 	@echo "  clean         - Remove build artifacts"
 	@echo "  help          - Show this help message"
 
