@@ -97,7 +97,7 @@
  * @brief Interval between increments (milliseconds)
  *
  * After each burst completes, the state machine waits this long before
- * kicking the next increment.  700 ms → ~1 shot per second.
+ * kicking the next increment.  1000 ms → ~1 shot per second.
  ******************************************************************************/
 #define LAUNCHER_INCREMENT_INTERVAL_MS  (1000)
 

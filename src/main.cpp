@@ -267,7 +267,6 @@ static void process_rc_input(void)
 
   /* Read updated channel values */
   int speed    = g_pIBus->readChannelCentered(FlySkyIBus::CHAN_RSTICK_VERT);  // [-1000..1000]
-  //int turn     = g_pIBus->readChannelCentered(FlySkyIBus::CHAN_LSTICK_HORIZ); // [-1000..1000]
   int turn     = g_pIBus->readChannelCentered(FlySkyIBus::CHAN_RSTICK_HORIZ); // [-1000..1000]
   int scoop    = g_pIBus->readChannelCentered(FlySkyIBus::CHAN_LSTICK_VERT);  // [-1000..1000]
   int turnTrim = g_pIBus->readChannelCentered(FlySkyIBus::CHAN_VRA);          // [-1000..1000]
