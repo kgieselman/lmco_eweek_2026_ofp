@@ -17,10 +17,6 @@
 #include "hardware/pwm.h"
 #include "hardware/clocks.h"
 
-#if ENABLE_DEBUG
-#include <stdio.h>
-#endif
-
 
 /* Private Helpers -----------------------------------------------------------*/
 
@@ -60,9 +56,7 @@ bool MechScoop::init(void)
 {
   if (PIN_SCOOP_SERVO == PIN_INVALID)
   {
-#if ENABLE_DEBUG
-    printf("[Scoop] No servo pin assigned (PIN_INVALID) — skipping init\n");
-#endif
+    DEBUG_PRINTF("[Scoop] No servo pin assigned (PIN_INVALID) — skipping init\n");
     return false;
   }
 
@@ -98,10 +92,8 @@ bool MechScoop::init(void)
 
   m_initialized = true;
 
-#if ENABLE_DEBUG
-  printf("[Scoop] Servo initialized on GPIO %d  (slice %u, ch %u, wrap %u)\n",
-         PIN_SCOOP_SERVO, m_pwmSlice, m_pwmChannel, m_pwmWrap);
-#endif
+  DEBUG_PRINTF("[Scoop] Servo initialized on GPIO %d  (slice %u, ch %u, wrap %u)\n",
+               PIN_SCOOP_SERVO, m_pwmSlice, m_pwmChannel, m_pwmWrap);
 
   return true;
 }

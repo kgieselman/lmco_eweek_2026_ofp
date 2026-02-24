@@ -7,10 +7,6 @@
 #include "error_handler.h"
 #include "config.h"
 
-#if ENABLE_DEBUG
-#include <stdio.h>
-#endif
-
 
 /* Private Static Variable Declaration ---------------------------------------*/
 
@@ -76,6 +72,7 @@ static const errorString_t s_errorStrings[] =
   { ERROR_HW_PWM_FAILED,     "PWM hardware error" },
   { ERROR_HW_UART_FAILED,    "UART hardware error" },
   { ERROR_HW_WATCHDOG,       "Watchdog reset" },
+  { ERROR_HW_INIT_FAILED,    "HW resource init failed" },
 };
 
 /** @brief Number of entries in error string table */
@@ -109,7 +106,7 @@ void error_report(ErrorCode_t code, const char* file, int line)
       }
     }
 
-    printf("[ERROR] 0x%04X: %s (%s:%d)\n", code,
+    DEBUG_PRINTF("[ERROR] 0x%04X: %s (%s:%d)\n", code,
                                            error_get_string(code),
                                            filename,
                                            line);

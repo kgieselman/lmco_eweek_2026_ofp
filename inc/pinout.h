@@ -65,9 +65,7 @@ constexpr int PIN_IBUS_RX = 5;
 /*******************************************************************************
  * @name Differential Left Motor
  *
- * Pin usage depends on motor driver wiring mode (see config.h):
- * - MODE_2PWM:      DIR_FWD = IN1 (PWM), DIR_REV = IN2 (PWM), ENABLE = unused
- * - MODE_1PWM_2DIR: ENABLE = PWM, DIR_FWD = digital, DIR_REV = digital
+ * Wiring: ENABLE = PWM speed, DIR_FWD = forward digital, DIR_REV = reverse digital
  * @{
  ******************************************************************************/
 constexpr int PIN_DIFF_MOTOR_LEFT_ENABLE  = 2; /**< PWM enable (Slice 1 Chan A) */
@@ -79,9 +77,7 @@ constexpr int PIN_DIFF_MOTOR_LEFT_ENC     = PIN_INVALID; /**< Encoder (Optional)
 /*******************************************************************************
  * @name Differential Right Motor
  *
- * Pin usage depends on motor driver wiring mode (see config.h):
- * - MODE_2PWM:      DIR_FWD = IN1 (PWM), DIR_REV = IN2 (PWM), ENABLE = unused
- * - MODE_1PWM_2DIR: ENABLE = PWM, DIR_FWD = digital, DIR_REV = digital
+ * Wiring: ENABLE = PWM speed, DIR_FWD = forward digital, DIR_REV = reverse digital
  * @{
  ******************************************************************************/
 constexpr int PIN_DIFF_MOTOR_RIGHT_ENABLE  = 9; /**< PWM enable (Slice 4 Chan B) */
@@ -108,13 +104,14 @@ constexpr int PIN_SCOOP_SERVO = 28;  /**< Scoop servo PWM (Slice 6 Chan A) */
  * @name Launcher Stepper Motor Pins (NEMA 17 via DRV8825)
  *
  * The DRV8825 requires a STEP pulse train and a DIR level.
- * STEP uses hardware PWM so the pulse train runs autonomously.
+ * STEP is driven by a PIO state machine (sideset output) which emits
+ * precise pulse counts with zero CPU overhead.
  * The nSLEEP pin is active-low: HIGH = awake, LOW = sleep (outputs disabled,
  * minimal power draw).
  *
  * @{
  ******************************************************************************/
-constexpr int PIN_LAUNCHER_STEP   = 22;  /**< DRV8825 STEP   input (PWM Slice 3 Chan A)  */
+constexpr int PIN_LAUNCHER_STEP   = 22;  /**< DRV8825 STEP   input (PIO sideset)         */
 constexpr int PIN_LAUNCHER_DIR    = 21;  /**< DRV8825 DIR    input (digital)             */
 constexpr int PIN_LAUNCHER_NSLEEP = 20;  /**< DRV8825 nSLEEP input (digital, active-low) */
 

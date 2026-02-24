@@ -7,12 +7,12 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "display_view.h"
+#include "config.h"
 #include "version.h"
 
 #include "pico/stdlib.h"
 #include "hardware/sync.h"
 
-#include <stdio.h>
 #include <string.h>
 
 
@@ -59,7 +59,7 @@ bool DisplayView::init(void)
 {
   if (m_initialized)
   {
-    printf("[Display] ERROR - Already Initialized!\n");
+    DEBUG_PRINTF("[Display] ERROR - Already Initialized!\n");
     return true;
   }
 
@@ -74,14 +74,14 @@ bool DisplayView::init(void)
   m_spinlock = spin_lock_init(m_spinlockNum);
 
   /* Initialize the SSD1306 display */
-  printf("[Display] Init SSD1306\n");
+  DEBUG_PRINTF("[Display] Init SSD1306\n");
   if (!m_display.init())
   {
     spin_lock_unclaim(m_spinlockNum);
     m_spinlock = nullptr;
     return false;
   }
-  printf("[Display] SSD1306 initialized\n");
+  DEBUG_PRINTF("[Display] SSD1306 initialized\n");
 
   /* Record boot time for uptime calculation */
   m_bootTimeMs = to_ms_since_boot(get_absolute_time());

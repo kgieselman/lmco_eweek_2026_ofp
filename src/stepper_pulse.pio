@@ -1,0 +1,30 @@
+;
+; stepper_pulse.pio — Emit exactly N rising-edge pulses on a sideset pin.
+;
+; Usage:
+;   1. Load the program and map the STEP GPIO as the sideset pin.
+;   2. Set the SM clock divider for the desired step rate:
+;        clk_div = sys_clk_hz / (step_rate_hz * 2)
+;      (each instruction = 1 cycle, so one high + one low = 2 cycles = 1 pulse)
+;   3. Push the desired pulse count N (≥ 1) into the TX FIFO.
+;   4. The SM emits N pulses, pushes a completion token into the RX FIFO,
+;      then blocks on the next pull — keeping STEP LOW.
+;
+; Note on count: the caller pushes N directly.  The program subtracts 1
+; internally because jmp x-- tests-then-decrements.
+;
+
+.program stepper_pulse
+.side_set 1
+
+    pull block       side 0    ; Wait for pulse count N from TX FIFO → OSR
+    mov  x, osr      side 0    ; X = N
+    jmp  x-- loop    side 0    ; X = N-1 (pre-decrement); N≥1 guaranteed by caller
+
+loop:
+    nop              side 1    ; STEP HIGH — rising edge triggers one DRV8825 step
+    jmp  x-- loop    side 0    ; STEP LOW, X--; loop while X was > 0
+
+done:
+    push noblock     side 0    ; Signal completion via RX FIFO
+                               ; Wraps to pull block → idles with STEP LOW

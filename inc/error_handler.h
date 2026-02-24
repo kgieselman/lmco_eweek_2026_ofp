@@ -66,6 +66,7 @@ typedef enum {
   ERROR_HW_PWM_FAILED     = 0x0401,  /**< PWM hardware error */
   ERROR_HW_UART_FAILED    = 0x0402,  /**< UART hardware error */
   ERROR_HW_WATCHDOG       = 0x0403,  /**< Watchdog reset occurred */
+  ERROR_HW_INIT_FAILED    = 0x0404,  /**< Hardware resource init failed (e.g. PIO) */
 } ErrorCode_t;
 
 /* Function Definitions ------------------------------------------------------*/

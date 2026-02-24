@@ -14,28 +14,6 @@
 
 
 /*============================================================================*/
-/* Hardware Selection                                                         */
-/*============================================================================*/
-
-/** @defgroup hw_select Hardware Selection
- *  @brief Select which hardware components are installed
- *  @{
- */
-
-/*******************************************************************************
- * @brief Motor driver wiring mode selection
- *
- * Enable exactly ONE of the following options:
- * - MOTOR_DRIVER_MODE_2PWM:      Two PWM pins per motor (e.g. DRV8833, TB6612FNG)
- * - MOTOR_DRIVER_MODE_1PWM_2DIR: One PWM + two direction pins per motor (e.g. L298N)
- ******************************************************************************/
-#define MOTOR_DRIVER_MODE_2PWM        (0)
-#define MOTOR_DRIVER_MODE_1PWM_2DIR   (1)
-
-/** @} */ /* End of hw_select */
-
-
-/*============================================================================*/
 /* Feature Enables                                                            */
 /*============================================================================*/
 
@@ -219,13 +197,6 @@
  *  @{
  */
 
-/* Validate motor driver mode selection (exactly one must be enabled) */
-#if (MOTOR_DRIVER_MODE_2PWM + MOTOR_DRIVER_MODE_1PWM_2DIR) == 0
-  #error "No motor driver mode selected. Enable MOTOR_DRIVER_MODE_2PWM or MOTOR_DRIVER_MODE_1PWM_2DIR."
-#elif (MOTOR_DRIVER_MODE_2PWM + MOTOR_DRIVER_MODE_1PWM_2DIR) > 1
-  #error "Multiple motor driver modes selected. Enable only ONE of MOTOR_DRIVER_MODE_2PWM or MOTOR_DRIVER_MODE_1PWM_2DIR."
-#endif
-
 /* Validate watchdog timeout range */
 #if ENABLE_WATCHDOG
   #if (TIMING_WATCHDOG_TIMEOUT_MS < 1) || (TIMING_WATCHDOG_TIMEOUT_MS > 8388)
@@ -242,26 +213,36 @@
 
 
 /*============================================================================*/
-/* Motor Driver Mode Alias                                                    */
+/* Debug Output Macros                                                        */
 /*============================================================================*/
 
-/** @defgroup mode_alias Motor Driver Mode Alias
- *  @brief Maps config flag to MotorDriver::Mode_e at compile time
+/** @defgroup debug_macros Debug Output Macros
+ *  @brief Convenience macros that compile to nothing when debug is disabled.
  *
- *  Provides a compile-time constant that drive train code can use to
- *  construct the motor driver with the correct mode.
+ *  Use these instead of wrapping every printf in `#if ENABLE_DEBUG` guards.
+ *  A module-level variant (DEBUG_PRINTF_IBUS) is provided for the verbose
+ *  iBUS channel so it can be independently silenced.
+ *
+ *  @note <stdio.h> is intentionally included here so that callers don't need
+ *        to conditionally include it themselves.
  *  @{
  */
 
-#include "motor_driver.h"
-
-#if MOTOR_DRIVER_MODE_2PWM
-  constexpr MotorDriver::Mode_e MOTOR_DRIVER_MODE = MotorDriver::MODE_2PWM;
-#elif MOTOR_DRIVER_MODE_1PWM_2DIR
-  constexpr MotorDriver::Mode_e MOTOR_DRIVER_MODE = MotorDriver::MODE_1PWM_2DIR;
+#if ENABLE_DEBUG
+  #include <stdio.h>
+  #define DEBUG_PRINTF(fmt, ...)  printf(fmt, ##__VA_ARGS__)
+#else
+  #define DEBUG_PRINTF(fmt, ...)  ((void)0)
 #endif
 
-/** @} */ /* End of mode_alias */
+#if ENABLE_DEBUG && ENABLE_DEBUG_IBUS_VERBOSE
+  #define DEBUG_PRINTF_IBUS(fmt, ...)  printf(fmt, ##__VA_ARGS__)
+#else
+  #define DEBUG_PRINTF_IBUS(fmt, ...)  ((void)0)
+#endif
+
+/** @} */ /* End of debug_macros */
+
 
 
 /* EOF -----------------------------------------------------------------------*/

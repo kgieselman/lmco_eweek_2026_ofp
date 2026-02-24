@@ -14,12 +14,11 @@
  ******************************************************************************/
 
 /* Includes ------------------------------------------------------------------*/
-#include <stdio.h>
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
 #include "hardware/watchdog.h"
 
-// Project headers
+/* Project headers */
 #include "config.h"
 #include "pinout.h"
 #include "version.h"
@@ -84,19 +83,15 @@ static void core1_main(void)
 
   if (!pDisplay->init())
   {
-#if ENABLE_DEBUG
     /* Note: printf from core 1 is safe with pico_stdlib's mutex-protected stdio */
-    printf("[Display] OLED initialization failed on core 1\n");
-#endif
+    DEBUG_PRINTF("[Display] OLED initialization failed on core 1\n");
     /* Signal core 0 that init failed (send null) */
     multicore_fifo_push_blocking(0);
     delete pDisplay;
     return;
   }
 
-#if ENABLE_DEBUG
-  printf("[Display] OLED initialized on core 1\n");
-#endif
+  DEBUG_PRINTF("[Display] OLED initialized on core 1\n");
 
   /* Pass the pointer back to core 0 so it can call pushData() */
   multicore_fifo_push_blocking(reinterpret_cast<uint32_t>(pDisplay));
@@ -116,8 +111,7 @@ static void core1_main(void)
 /*******************************************************************************
  * @brief Initialize the differential drive motors
  *
- * Configures left and right motors with the appropriate pin assignments
- * based on the motor driver wiring mode selected in config.h.
+ * Configures left and right motors with the appropriate pin assignments.
  *
  * @param pDriveTrain Pointer to the drive train controller
  ******************************************************************************/
@@ -125,16 +119,6 @@ static void init_motors(DriveTrainDifferential* pDriveTrain)
 {
   if (pDriveTrain != nullptr)
   {
-#if MOTOR_DRIVER_MODE_2PWM
-    pDriveTrain->addMotor(DriveTrainDifferential::MOTOR_LEFT,
-                          PIN_DIFF_MOTOR_LEFT_DIR_FWD,
-                          PIN_DIFF_MOTOR_LEFT_DIR_REV,
-                          PIN_DIFF_MOTOR_LEFT_ENC);
-    pDriveTrain->addMotor(DriveTrainDifferential::MOTOR_RIGHT,
-                          PIN_DIFF_MOTOR_RIGHT_DIR_FWD,
-                          PIN_DIFF_MOTOR_RIGHT_DIR_REV,
-                          PIN_DIFF_MOTOR_RIGHT_ENC);
-#elif MOTOR_DRIVER_MODE_1PWM_2DIR
     pDriveTrain->addMotor(DriveTrainDifferential::MOTOR_LEFT,
                           PIN_DIFF_MOTOR_LEFT_ENABLE,
                           PIN_DIFF_MOTOR_LEFT_DIR_FWD,
@@ -145,7 +129,6 @@ static void init_motors(DriveTrainDifferential* pDriveTrain)
                           PIN_DIFF_MOTOR_RIGHT_DIR_FWD,
                           PIN_DIFF_MOTOR_RIGHT_DIR_REV,
                           PIN_DIFF_MOTOR_RIGHT_ENC);
-#endif
   }
 }
 
@@ -161,18 +144,16 @@ static bool system_init(void)
   /* Initialize error handler first */
   error_handler_init();
 
-#if ENABLE_DEBUG
-  printf("\n");
-  printf("========================================\n");
-  printf("  E-Week 2026 Robot Controller\n");
-  printf("  %s\n", BUILD_INFO_STRING);
-  printf("----------------------------------------\n");
-  printf("  Branch: %s\n", GIT_BRANCH);
+  DEBUG_PRINTF("\n");
+  DEBUG_PRINTF("========================================\n");
+  DEBUG_PRINTF("  E-Week 2026 Robot Controller\n");
+  DEBUG_PRINTF("  %s\n", BUILD_INFO_STRING);
+  DEBUG_PRINTF("----------------------------------------\n");
+  DEBUG_PRINTF("  Branch: %s\n", GIT_BRANCH);
 #if GIT_IS_DIRTY
-  printf("  Status: UNCOMMITTED CHANGES\n");
+  DEBUG_PRINTF("  Status: UNCOMMITTED CHANGES\n");
 #endif
-  printf("========================================\n\n");
-#endif
+  DEBUG_PRINTF("========================================\n\n");
 
 #if ENABLE_WATCHDOG
   if (watchdog_caused_reboot())
@@ -181,16 +162,12 @@ static bool system_init(void)
 #if ENABLE_DISPLAY
     g_watchdogRebooted = true;
 #endif
-#if ENABLE_DEBUG
-    printf("[WARN] System rebooted by watchdog!\n");
-#endif
+    DEBUG_PRINTF("[WARN] System rebooted by watchdog!\n");
   }
 #endif
 
   /* Initialize iBUS receiver */
-#if ENABLE_DEBUG
-  printf("[Init] Configuring iBUS receiver...\n");
-#endif
+  DEBUG_PRINTF("[Init] Configuring iBUS receiver...\n");
   g_pIBus = new FlySkyIBus(uart1, PIN_IBUS_TX, PIN_IBUS_RX);
   if (g_pIBus == nullptr)
   {
@@ -199,9 +176,7 @@ static bool system_init(void)
   }
 
   /* Initialize drive train */
-#if ENABLE_DEBUG
-  printf("[Init] Configuring Differential drive train...\n");
-#endif
+  DEBUG_PRINTF("[Init] Configuring Differential drive train...\n");
 
   g_pDriveTrain = new DriveTrainDifferential();
   init_motors(g_pDriveTrain);
@@ -214,18 +189,14 @@ static bool system_init(void)
   }
 
   /* Initialize mechanisms */
-#if ENABLE_DEBUG
-  printf("[Init] Configuring scoop mechanism...\n");
-#endif // ENABLE_DEBUG
+  DEBUG_PRINTF("[Init] Configuring scoop mechanism...\n");
   g_pScoop = new MechScoop();
   if (g_pScoop != nullptr)
   {
     g_pScoop->init();
   }
 
-#if ENABLE_DEBUG
-  printf("[Init] Configuring launcher mechanism...\n");
-#endif
+  DEBUG_PRINTF("[Init] Configuring launcher mechanism...\n");
   g_pLauncher = new MechLauncher();
   if (g_pLauncher != nullptr)
   {
@@ -234,9 +205,8 @@ static bool system_init(void)
 
   /* Initialize display view (constructed and initialized on core 1) */
 #if ENABLE_DISPLAY
-#if ENABLE_DEBUG
-  printf("[Init] Launching core 1 for display...\n");
-#endif
+  DEBUG_PRINTF("[Init] Launching core 1 for display...\n");
+
   /* Launch core 1 — it will construct and init the DisplayView */
   multicore_launch_core1(core1_main);
 
@@ -246,36 +216,28 @@ static bool system_init(void)
 
   if (g_pDisplayView == nullptr)
   {
-#if ENABLE_DEBUG
-    printf("[WARN] Display initialization failed on core 1\n");
-#endif
+    DEBUG_PRINTF("[WARN] Display initialization failed on core 1\n");
   }
   else
   {
-#if ENABLE_DEBUG
-    printf("[Init] Display ready on core 1\n");
-#endif
+    DEBUG_PRINTF("[Init] Display ready on core 1\n");
   }
 #endif /* ENABLE_DISPLAY */
 
   /* Enable watchdog */
 #if ENABLE_WATCHDOG
-#if ENABLE_DEBUG
-  printf("[Init] Enabling watchdog (timeout: %d ms)...\n", TIMING_WATCHDOG_TIMEOUT_MS);
-#endif
+  DEBUG_PRINTF("[Init] Enabling watchdog (timeout: %d ms)...\n", TIMING_WATCHDOG_TIMEOUT_MS);
   watchdog_enable(TIMING_WATCHDOG_TIMEOUT_MS, true);
 #endif
 
-#if ENABLE_DEBUG
   if (success)
   {
-    printf("\n[Init] System initialization complete!\n\n");
+    DEBUG_PRINTF("\n[Init] System initialization complete!\n\n");
   }
   else
   {
-    printf("\n[Init] System initialization FAILED!\n\n");
+    DEBUG_PRINTF("\n[Init] System initialization FAILED!\n\n");
   }
-#endif
 
   return success;
 }
@@ -363,7 +325,7 @@ static void handle_signal_loss(void)
   uint32_t now = to_ms_since_boot(get_absolute_time());
   if (now - lastWarnTime > TIMING_SIGNAL_LOSS_PRINT_MS)
   {
-    printf("[WARN] RC signal lost!\n");
+    DEBUG_PRINTF("[WARN] RC signal lost!\n");
     lastWarnTime = now;
   }
 #endif
@@ -450,9 +412,7 @@ int main(void)
 
   if (!system_init())
   {
-#if ENABLE_DEBUG
-    printf("[ERROR] System initialization failed. Halting.\n");
-#endif
+    DEBUG_PRINTF("[ERROR] System initialization failed. Halting.\n");
 
     /* Blink LED to indicate error */
     gpio_init(PIN_LED_ONBOARD);
@@ -471,9 +431,7 @@ int main(void)
     }
   }
 
-#if ENABLE_DEBUG
-  printf("[Main] Entering main loop\n");
-#endif
+  DEBUG_PRINTF("[Main] Entering main loop\n");
 
   /* Main control loop */
   while (true)

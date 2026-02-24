@@ -17,10 +17,6 @@
 #include <cmath>
 #include <cstdlib>
 
-#if ENABLE_DEBUG
-#include <stdio.h>
-#endif
-
 
 /* Interrupt Service Routines ------------------------------------------------*/
 #if ENABLE_ENCODER_CALIBRATION && !defined(UNIT_TEST)
@@ -53,7 +49,7 @@ void __isr_encoder_right(uint gpio, uint32_t events)
 
 /* Method Definitions --------------------------------------------------------*/
 DriveTrainDifferential::DriveTrainDifferential()
-  : m_motorDriver(MOTOR_DRIVER_MODE)
+  : m_motorDriver()
   , m_speed(0)
   , m_turn(0)
   , m_turnRate(TURN_RATE_MAX)
@@ -125,49 +121,6 @@ bool DriveTrainDifferential::configureEncoder(MotorId_e motor, int pinEncoder)
   return true;
 }
 
-#if MOTOR_DRIVER_MODE_2PWM
-bool DriveTrainDifferential::addMotor(MotorId_e motor,
-                                      int       pinFwd,
-                                      int       pinRev,
-                                      int       pinEncoder)
-{
-  /* Validate motor ID */
-  if (motor < MOTOR_LEFT || motor >= MOTOR_COUNT)
-  {
-    ERROR_REPORT(ERROR_DT_INVALID_MOTOR);
-    return false;
-  }
-
-  /* Get motor channel using helper */
-  MotorDriver::MotorChannel_e channel = getChannelForMotor(motor);
-
-  /* Configure motor through driver */
-  if (!m_motorDriver.configureMotor(channel, pinFwd, pinRev, pinEncoder))
-  {
-    ERROR_REPORT(ERROR_DT_NOT_INIT);
-    return false;
-  }
-
-  /* Configure encoder using helper */
-  configureEncoder(motor, pinEncoder);
-
-  /* Reset trim values and mark initialized */
-  m_motorState[motor].trimFwd      = DEFAULT_TRIM;
-  m_motorState[motor].trimRev      = DEFAULT_TRIM;
-  m_motorState[motor].calibTrimFwd = DEFAULT_TRIM;
-  m_motorState[motor].calibTrimRev = DEFAULT_TRIM;
-  m_motorState[motor].initialized  = true;
-
-#if ENABLE_DEBUG
-  printf("[DriveTrain] Motor %d configured (2-PWM): FWD=%d, REV=%d\n",
-         motor, pinFwd, pinRev);
-#endif
-
-  return true;
-}
-
-#elif MOTOR_DRIVER_MODE_1PWM_2DIR
-
 bool DriveTrainDifferential::addMotor(MotorId_e motor,
                                       int       pinPwm,
                                       int       pinDirFwd,
@@ -201,14 +154,11 @@ bool DriveTrainDifferential::addMotor(MotorId_e motor,
   m_motorState[motor].calibTrimRev = DEFAULT_TRIM;
   m_motorState[motor].initialized  = true;
 
-#if ENABLE_DEBUG
-  printf("[DriveTrain] Motor %d configured (1-PWM+2-DIR): PWM=%d, FWD=%d, REV=%d\n",
-         motor, pinPwm, pinDirFwd, pinDirRev);
-#endif
+  DEBUG_PRINTF("[DriveTrain] Motor %d configured: PWM=%d, FWD=%d, REV=%d\n",
+               motor, pinPwm, pinDirFwd, pinDirRev);
 
   return true;
 }
-#endif /* MOTOR_DRIVER_MODE selection */
 
 bool DriveTrainDifferential::setSpeed(int speed)
 {
@@ -445,14 +395,12 @@ void DriveTrainDifferential::calibrate(void)
     }
   }
 
-#if ENABLE_DEBUG
-  printf("[Calibration] Fwd pulses: L=%d R=%d\n", fwdPulses[MOTOR_LEFT], fwdPulses[MOTOR_RIGHT]);
-  printf("[Calibration] Rev pulses: L=%d R=%d\n", revPulses[MOTOR_LEFT], revPulses[MOTOR_RIGHT]);
-  printf("[Calibration] Calib Trim L: fwd=%.3f rev=%.3f\n",
-         m_motorState[MOTOR_LEFT].calibTrimFwd, m_motorState[MOTOR_LEFT].calibTrimRev);
-  printf("[Calibration] Calib Trim R: fwd=%.3f rev=%.3f\n",
-         m_motorState[MOTOR_RIGHT].calibTrimFwd, m_motorState[MOTOR_RIGHT].calibTrimRev);
-#endif
+  DEBUG_PRINTF("[Calibration] Fwd pulses: L=%d R=%d\n", fwdPulses[MOTOR_LEFT], fwdPulses[MOTOR_RIGHT]);
+  DEBUG_PRINTF("[Calibration] Rev pulses: L=%d R=%d\n", revPulses[MOTOR_LEFT], revPulses[MOTOR_RIGHT]);
+  DEBUG_PRINTF("[Calibration] Calib Trim L: fwd=%.3f rev=%.3f\n",
+               m_motorState[MOTOR_LEFT].calibTrimFwd, m_motorState[MOTOR_LEFT].calibTrimRev);
+  DEBUG_PRINTF("[Calibration] Calib Trim R: fwd=%.3f rev=%.3f\n",
+               m_motorState[MOTOR_RIGHT].calibTrimFwd, m_motorState[MOTOR_RIGHT].calibTrimRev);
 
 #else
   /* Encoders not enabled - use default trim */
@@ -667,19 +615,15 @@ void DriveTrainDifferential::setManualTrimMode(bool useManual)
       m_motorState[i].trimRev = m_motorState[i].calibTrimRev;
     }
 
-#if ENABLE_DEBUG
-    printf("[DriveTrain] Switched to CALIBRATED trim mode\n");
-    printf("[DriveTrain] Trim L: fwd=%.3f rev=%.3f\n",
-           m_motorState[MOTOR_LEFT].trimFwd, m_motorState[MOTOR_LEFT].trimRev);
-    printf("[DriveTrain] Trim R: fwd=%.3f rev=%.3f\n",
-           m_motorState[MOTOR_RIGHT].trimFwd, m_motorState[MOTOR_RIGHT].trimRev);
-#endif
+    DEBUG_PRINTF("[DriveTrain] Switched to CALIBRATED trim mode\n");
+    DEBUG_PRINTF("[DriveTrain] Trim L: fwd=%.3f rev=%.3f\n",
+                 m_motorState[MOTOR_LEFT].trimFwd, m_motorState[MOTOR_LEFT].trimRev);
+    DEBUG_PRINTF("[DriveTrain] Trim R: fwd=%.3f rev=%.3f\n",
+                 m_motorState[MOTOR_RIGHT].trimFwd, m_motorState[MOTOR_RIGHT].trimRev);
   }
   else
   {
-#if ENABLE_DEBUG
-    printf("[DriveTrain] Switched to MANUAL trim mode\n");
-#endif
+    DEBUG_PRINTF("[DriveTrain] Switched to MANUAL trim mode\n");
     /* When switching to manual mode, keep current trim values until
      * explicitly changed by setForwardTrim/setReverseTrim */
   }

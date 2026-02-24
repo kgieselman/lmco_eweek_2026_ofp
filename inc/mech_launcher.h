@@ -6,12 +6,19 @@
  * ping pong balls into the launcher, and two DC flywheel motors that propel
  * the balls.
  *
+ * @par Stepper Operation:
+ * The stepper rotates in fixed increments (1/5 revolution = 40 full-steps)
+ * at a configurable interval (LAUNCHER_INCREMENT_INTERVAL_MS).  Each burst
+ * is produced by a PIO state machine that autonomously emits the exact
+ * number of STEP pulses with zero CPU overhead.  Between bursts the stepper
+ * holds position (DRV8825 remains awake with STEP idle-low).
+ *
  * @par Stepper Hardware Wiring:
- * - PIN_LAUNCHER_STEP   → DRV8825 STEP   (PWM output)
+ * - PIN_LAUNCHER_STEP   → DRV8825 STEP   (PIO sideset output)
  * - PIN_LAUNCHER_DIR    → DRV8825 DIR    (digital output)
  * - PIN_LAUNCHER_NSLEEP → DRV8825 nSLEEP (digital output, active-low)
  *
- * @par Flywheel Hardware Wiring (same driver mode as drive train):
+ * @par Flywheel Hardware Wiring:
  * - PIN_LAUNCHER_LEFT_ENABLE   → Left flywheel PWM enable
  * - PIN_LAUNCHER_LEFT_DIR_FWD  → Left flywheel forward direction
  * - PIN_LAUNCHER_LEFT_DIR_REV  → Left flywheel reverse direction
@@ -21,22 +28,19 @@
  *
  * @par Sleep Behaviour:
  * The DRV8825 nSLEEP pin is active-low.  When the launcher is disabled the
- * driver is put to sleep (nSLEEP LOW) to cut quiescent current and prevent
- * the motor from heating up at standstill.  On enable the driver is woken
- * (nSLEEP HIGH) and a brief stabilisation delay is observed before the
- * STEP pulse train starts, per the DRV8825 datasheet (sleep-to-step wake-up
- * time t_SLEEP ≈ 1.7 ms typ).
+ * driver is put to sleep (nSLEEP LOW) to cut quiescent current.  On enable
+ * the driver is woken and a brief stabilisation delay is observed before the
+ * first increment fires.
  *
- * @par Flywheel Spin-Up:
- * When enabled, the flywheel motors spin up to LAUNCHER_FLYWHEEL_SPEED_PERMIL
- * immediately.  A configurable spin-up delay (LAUNCHER_FLYWHEEL_SPINUP_MS)
- * elapses before the stepper feeder starts, giving the flywheels time to
- * reach operating speed.
+ * @par State Machine:
+ * @code
+ * IDLE →(enable)→ SPINNING_UP →(timer)→ WAKING →(timer)→ RUNNING
+ *                                                         ↓
+ *                                          kick increment every 250 ms
+ *                                          PIO emits N pulses autonomously
  *
- * @par Control:
- * - SWD on the RC transmitter enables / disables the launcher.
- *   SWD HIGH (switch on)  → flywheels spin up, then stepper runs
- *   SWD LOW  (switch off)  → stepper stopped, flywheels stopped, driver sleeping
+ * any state →(disable)→ IDLE
+ * @endcode
  ******************************************************************************/
 #pragma once
 
@@ -51,20 +55,56 @@
 /* Configuration Defaults ----------------------------------------------------*/
 
 /*******************************************************************************
- * @brief Stepper step rate (steps per second)
+ * @brief Microsteps per full step
  *
- * With a 1.8°/step NEMA 17 (200 steps/rev) and the DRV8825 set to full-step
- * mode, 200 steps/s = 1 rev/s = 60 RPM.  Adjust for microstepping or
- * desired feed speed.
+ * DRV8825 microstepping divisor as configured by the MS0/MS1/MS2 pins.
+ * Common values: 1 (full), 2 (half), 4, 8, 16, 32.
  ******************************************************************************/
-#define LAUNCHER_STEP_RATE_HZ     (500)
+#define LAUNCHER_MICROSTEP_DIV          (32)
 
 /*******************************************************************************
- * @brief Stepper rotation direction
+ * @brief Microsteps per motor revolution
  *
- * Set to 0 or 1 to reverse the motor direction without re-wiring.
+ * Standard NEMA 17 = 200 full-steps/rev (1.8° per step).
+ * 200 × 32 = 6400 microsteps/rev at 1/32 microstepping.
  ******************************************************************************/
-#define LAUNCHER_DIR_FORWARD      (1)
+#define LAUNCHER_STEPS_PER_REV          (200 * LAUNCHER_MICROSTEP_DIV)
+
+/*******************************************************************************
+ * @brief Number of positions in the launcher
+ ******************************************************************************/
+#define LAUNCHER_POSITIONS_PER_REV      (5)
+
+/*******************************************************************************
+ * @brief Microsteps per launcher increment
+ *
+ * Each increment rotates the feeder by 1/LAUNCHER_POSITIONS_PER_REV of a revolution.
+ * e.g. for 5 positions: 6400 / 5 = 1280 microsteps.
+ ******************************************************************************/
+#define LAUNCHER_STEPS_PER_INCREMENT    (LAUNCHER_STEPS_PER_REV / LAUNCHER_POSITIONS_PER_REV)
+
+/*******************************************************************************
+ * @brief Stepper step rate (microsteps per second)
+ *
+ * The PIO clock divider is derived from this value.  At 12800 Hz a
+ * 1280-microstep burst completes in 100 ms, well within the 750 ms
+ * interval.  The DRV8825 minimum pulse width is 1.9 µs (max ~263 kHz),
+ * so 12.8 kHz is comfortably within spec.
+ ******************************************************************************/
+#define LAUNCHER_STEP_RATE_HZ           (12800)
+
+/*******************************************************************************
+ * @brief Interval between increments (milliseconds)
+ *
+ * After each burst completes, the state machine waits this long before
+ * kicking the next increment.  750 ms → ~1.3 shots per second.
+ ******************************************************************************/
+#define LAUNCHER_INCREMENT_INTERVAL_MS  (750)
+
+/*******************************************************************************
+ * @brief Stepper rotation direction (0 or 1)
+ ******************************************************************************/
+#define LAUNCHER_DIR_FORWARD            (1)
 
 /*******************************************************************************
  * @brief DRV8825 wake-up delay (milliseconds)
@@ -73,7 +113,7 @@
  * The DRV8825 datasheet specifies t_SLEEP ≈ 1.7 ms typical.  We round up
  * for margin.
  ******************************************************************************/
-#define LAUNCHER_WAKE_DELAY_MS    (2)
+#define LAUNCHER_WAKE_DELAY_MS          (5)
 
 /*******************************************************************************
  * @brief Flywheel motor speed (permil)
@@ -99,17 +139,9 @@
  * @class MechLauncher
  * @brief Launcher mechanism controller (stepper feeder + dual flywheels)
  *
- * Manages a NEMA 17 stepper motor via a DRV8825 driver for ball feeding,
- * and two DC flywheel motors via an H-bridge driver for ball propulsion.
- *
- * The STEP signal is produced by hardware PWM so there is zero CPU overhead
- * while running.  The flywheel motors are driven through the same MotorDriver
- * class used by the drive train.
- *
- * Calling setEnabled(true) starts the flywheels, waits for spin-up, then
- * wakes the stepper driver and starts the feeder pulse train.
- * Calling setEnabled(false) stops the stepper, stops the flywheels, and
- * puts the stepper driver to sleep.
+ * The STEP signal is produced by a PIO state machine that emits a precise
+ * number of pulses per increment, with zero CPU overhead during a burst.
+ * The flywheels remain running between increments.
  ******************************************************************************/
 class MechLauncher
 {
@@ -129,11 +161,8 @@ public:
   /*****************************************************************************
    * @brief Initialize the launcher mechanism
    *
-   * Configures STEP (PWM), DIR (digital), and nSLEEP (digital) GPIO pins
-   * for the stepper feeder, and configures the left and right flywheel
-   * motors through the MotorDriver interface.
-   * The stepper is left stopped, the driver is put to sleep, and flywheels
-   * are stopped.
+   * Configures PIO for STEP pulse generation, DIR and nSLEEP GPIOs, and
+   * flywheel motors.  The stepper driver starts in sleep mode.
    *
    * @return true if initialization successful
    ****************************************************************************/
@@ -142,23 +171,18 @@ public:
   /*****************************************************************************
    * @brief Update mechanism state machine
    *
-   * Must be called periodically from the main loop.  Advances the
-   * non-blocking spin-up state machine: once the flywheel spin-up delay
-   * has elapsed, the stepper feeder is engaged.
+   * Must be called periodically from the main loop.  Handles spin-up,
+   * DRV8825 wake, and kicks stepper increments at the configured interval.
    ****************************************************************************/
   void update(void);
 
   /*****************************************************************************
    * @brief Enable or disable the launcher
    *
-   * When enabled, the flywheel motors spin up to the pre-determined speed.
-   * After the spin-up delay, the stepper driver is woken and the feeder
-   * pulse train begins.
+   * Enable:  flywheels spin up → DRV8825 wakes → increments begin.
+   * Disable: stepper stops, driver sleeps, flywheels stop.
    *
-   * When disabled, the stepper pulse train is stopped, the driver is put
-   * to sleep, and the flywheel motors are stopped.
-   *
-   * @param enable  true to start the launcher, false to stop
+   * @param enable  true to start, false to stop
    ****************************************************************************/
   void setEnabled(bool enable);
 
@@ -190,32 +214,36 @@ private:
   /*****************************************************************************
    * @brief Launcher state machine states
    *
-   * The launcher uses a non-blocking state machine so that the flywheel
-   * spin-up delay does not block the main control loop.
-   *
    * State transitions:
-   *   IDLE  →(enable)→  SPINNING_UP  →(timer expired)→  RUNNING
-   *   RUNNING / SPINNING_UP  →(disable)→  IDLE
+   *   IDLE →(enable)→ SPINNING_UP →(spinup timer)→ WAKING →(wake timer)→ RUNNING
+   *   RUNNING: fires PIO burst, waits for completion, waits interval, repeats
+   *   any →(disable)→ IDLE
    ****************************************************************************/
   enum State_e {
-    STATE_IDLE,         /**< Launcher off: flywheels stopped, stepper sleeping */
-    STATE_SPINNING_UP,  /**< Flywheels running, waiting for spin-up delay     */
-    STATE_RUNNING       /**< Flywheels at speed, stepper feeder active        */
+    STATE_IDLE,         /**< Launcher off: flywheels stopped, stepper sleeping   */
+    STATE_SPINNING_UP,  /**< Flywheels running, waiting for spin-up delay        */
+    STATE_WAKING,       /**< nSLEEP asserted, waiting for charge pump to settle  */
+    STATE_RUNNING       /**< Active: kicking increments at the configured rate   */
   };
 
 
   /* Private Variables -------------------------------------------------------*/
-  bool     m_initialized;       /**< Initialization status                       */
-  bool     m_running;           /**< true while the launcher is active           */
-  bool     m_flywheelsRunning;  /**< true while flywheel motors are spinning     */
-  bool     m_stepperRunning;    /**< true while stepper is runnning              */
-  State_e  m_state;             /**< Current state machine state                 */
-  uint32_t m_spinupStartMs;     /**< Timestamp when spin-up began (ms)           */
-  uint8_t  m_pwmSlice;          /**< RP2040 PWM slice for STEP pin               */
-  uint8_t  m_pwmChannel;        /**< RP2040 PWM channel (A or B)                 */
-  uint16_t m_pwmWrap;           /**< PWM counter wrap value for desired rate     */
+  bool     m_initialized;
+  bool     m_running;
+  bool     m_flywheelsRunning;
+  bool     m_stepperRunning;
+  State_e  m_state;
+  uint32_t m_spinupStartMs;     /**< Timestamp: flywheel spin-up began           */
+  uint32_t m_wakeStartMs;       /**< Timestamp: nSLEEP asserted                  */
+  uint32_t m_lastIncrementMs;   /**< Timestamp: last PIO burst kicked            */
+  bool     m_incrementActive;   /**< True while PIO is emitting a burst          */
 
-  /** @brief Motor driver instance for left and right flywheel motors */
+  /* PIO state */
+  uint32_t     m_pioSmIdx;          /**< PIO state machine index (0-3)               */
+  uint32_t     m_pioOffset;         /**< Instruction memory offset of loaded program */
+  void*    m_pioInstance;       /**< PIO instance (pio0 or pio1), stored as void**/
+
+  /** @brief Motor driver instance for flywheel motors */
   MotorDriver m_flywheelDriver;
 
 
@@ -232,16 +260,32 @@ private:
   void stopFlywheels(void);
 
   /*****************************************************************************
-   * @brief Start the stepper feeder (wake driver + enable PWM)
-   *
-   * @note The DRV8825 wake-up delay (LAUNCHER_WAKE_DELAY_MS = 2 ms) is still
-   *       a blocking sleep_ms() call.  At 2 ms this is negligible compared to
-   *       the 1 ms main loop period and well within watchdog tolerance.
+   * @brief Wakes up stepper driver
    ****************************************************************************/
-  void startStepper(void);
-
+  void wakeStepper(void);
+  
   /*****************************************************************************
-   * @brief Stop the stepper feeder (disable PWM + sleep driver)
+   * @brief Puts the stepper driver into sleep mode to conserve energy and
+   *   reduce the audible noise it produces
+   ****************************************************************************/
+  void sleepStepper(void);
+  
+  /*****************************************************************************
+   * @brief Sends command to the PIO state machine to move launcher to next
+   *   index
+   ****************************************************************************/
+  void kickIncrement(void);
+  
+  /*****************************************************************************
+   * @brief Checks the response from the PIO state machine to see if it has
+   *   completed moving to the next index
+   * 
+   * @return true if launcher has completed the incremental rotation
+   ****************************************************************************/
+  bool isIncrementComplete(void);
+  
+  /*****************************************************************************
+   * @brief Stops the stepper driver
    ****************************************************************************/
   void stopStepper(void);
 };
