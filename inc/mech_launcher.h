@@ -207,6 +207,24 @@ public:
    ****************************************************************************/
   bool areFlywheelsRunning(void) const { return m_flywheelsRunning; }
 
+  /*****************************************************************************
+   * @brief Set flywheel motor speed
+   *
+   * Updates the flywheel speed.  If the flywheels are currently running the
+   * new speed is applied immediately; otherwise it takes effect the next
+   * time the launcher is enabled.
+   *
+   * @param speedPermil  Speed in permil (0–1000, where 1000 = 100%)
+   ****************************************************************************/
+  void setFlywheelSpeed(int speedPermil);
+
+  /*****************************************************************************
+   * @brief Get the current flywheel speed setting
+   *
+   * @return Current flywheel speed in permil (0–1000)
+   ****************************************************************************/
+  int getFlywheelSpeed(void) const { return m_flywheelSpeedPermil; }
+
 
 private:
   /* Private Types -----------------------------------------------------------*/
@@ -237,6 +255,7 @@ private:
   uint32_t m_wakeStartMs;       /**< Timestamp: nSLEEP asserted                  */
   uint32_t m_lastIncrementMs;   /**< Timestamp: last PIO burst kicked            */
   bool     m_incrementActive;   /**< True while PIO is emitting a burst          */
+  int      m_flywheelSpeedPermil; /**< Current flywheel speed setting (0–1000)  */
 
   /* PIO state */
   uint32_t     m_pioSmIdx;          /**< PIO state machine index (0-3)               */

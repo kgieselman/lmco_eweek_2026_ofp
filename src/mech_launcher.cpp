@@ -49,6 +49,7 @@ MechLauncher::MechLauncher()
   , m_wakeStartMs(0)
   , m_lastIncrementMs(0)
   , m_incrementActive(false)
+  , m_flywheelSpeedPermil(LAUNCHER_FLYWHEEL_SPEED_PERMIL)
   , m_pioSmIdx(0)
   , m_pioOffset(0)
   , m_pioInstance(nullptr)
@@ -279,9 +280,25 @@ void MechLauncher::setEnabled(bool enable)
 
 void MechLauncher::startFlywheels(void)
 {
-  m_flywheelDriver.setMotor(MotorDriver::MOTOR_A, LAUNCHER_FLYWHEEL_SPEED_PERMIL);
-  m_flywheelDriver.setMotor(MotorDriver::MOTOR_B, LAUNCHER_FLYWHEEL_SPEED_PERMIL);
+  m_flywheelDriver.setMotor(MotorDriver::MOTOR_A, m_flywheelSpeedPermil);
+  m_flywheelDriver.setMotor(MotorDriver::MOTOR_B, m_flywheelSpeedPermil);
   m_flywheelsRunning = true;
+}
+
+void MechLauncher::setFlywheelSpeed(int speedPermil)
+{
+  /* Clamp to valid range */
+  if (speedPermil < 0)   speedPermil = 0;
+  if (speedPermil > 1000) speedPermil = 1000;
+
+  m_flywheelSpeedPermil = speedPermil;
+
+  /* If flywheels are already running, apply the new speed immediately */
+  if (m_flywheelsRunning)
+  {
+    m_flywheelDriver.setMotor(MotorDriver::MOTOR_A, m_flywheelSpeedPermil);
+    m_flywheelDriver.setMotor(MotorDriver::MOTOR_B, m_flywheelSpeedPermil);
+  }
 }
 
 void MechLauncher::stopFlywheels(void)
