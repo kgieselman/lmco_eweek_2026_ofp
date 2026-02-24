@@ -270,7 +270,7 @@ static void process_rc_input(void)
   /* Read updated channel values */
   int speed    = g_pIBus->readChannelCentered(FlySkyIBus::CHAN_RSTICK_VERT);  // [-1000..1000]
   int turn     = g_pIBus->readChannelCentered(FlySkyIBus::CHAN_RSTICK_HORIZ); // [-1000..1000]
-  int scoop    = g_pIBus->readChannelCentered(FlySkyIBus::CHAN_LSTICK_VERT);  // [-1000..1000]
+  int scoop    = g_pIBus->readChannelUnsigned(FlySkyIBus::CHAN_LSTICK_VERT);  // [0..1000]
   int turnTrim = g_pIBus->readChannelCentered(FlySkyIBus::CHAN_VRA);          // [-1000..1000]
   int turnRate = g_pIBus->readChannelUnsigned(FlySkyIBus::CHAN_VRB);          // [0..1000]
   int flySpdSw = g_pIBus->readChannelUnsigned(FlySkyIBus::CHAN_SWC);          // [0..1000]
@@ -291,30 +291,30 @@ static void process_rc_input(void)
   /* Update scoop servo position */
   g_pScoop->setPosition(scoop);
 
-  /*
-   * SWC is a 3-position switch.  readChannelUnsigned maps:
-   *   Position 0 (raw 1000) → ~0    → 100% flywheel speed (1000 permil)
-   *   Position 1 (raw 1500) → ~500  →  75% flywheel speed ( 750 permil)
-   *   Position 2 (raw 2000) → ~1000 →  50% flywheel speed ( 500 permil)
-   */
-  int flywheelSpeed;
-  if (flySpdSw < 250)
-  {
-    flywheelSpeed = 1000;   /* 100% */
-  }
-  else if (flySpdSw < 750)
-  {
-    flywheelSpeed = 750;    /*  75% */
-  }
-  else
-  {
-    flywheelSpeed = 500;    /*  50% */
-  }
+    /*
+     * SWC is a 3-position switch.  readChannelUnsigned maps:
+     *   Position 0 (raw 1000) → ~0    → 100% flywheel speed (1000 permil)
+     *   Position 1 (raw 1500) → ~500  →  75% flywheel speed ( 750 permil)
+     *   Position 2 (raw 2000) → ~1000 →  50% flywheel speed ( 500 permil)
+     */
+    int flywheelSpeed;
+    if (flySpdSw < 250)
+    {
+      flywheelSpeed = 1000;   /* 100% */
+    }
+    else if (flySpdSw < 750)
+    {
+      flywheelSpeed = 750;    /*  75% */
+    }
+    else
+    {
+      flywheelSpeed = 500;    /*  50% */
+    }
 
-  g_pLauncher->setFlywheelSpeed(flywheelSpeed);
+    g_pLauncher->setFlywheelSpeed(flywheelSpeed);
 
   /* SWD controls the launcher stepper: HIGH (>500) = run, LOW = stop/sleep */
-  g_pLauncher->setEnabled(launchSw > 500);
+    g_pLauncher->setEnabled(launchSw > 500);
 }
 
 /*******************************************************************************

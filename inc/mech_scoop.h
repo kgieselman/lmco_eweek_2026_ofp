@@ -4,8 +4,8 @@
  * Header for the scoop mechanism.
  *
  * The scoop is driven by a single hobby servo, controlled via hardware PWM
- * on the RP2040.  The public interface accepts a signed position value
- * in the range -1000 … +1000 (permil) so that the caller can map any
+ * on the RP2040.  The public interface accepts an unsigned position value
+ * in the range 0 … 1000 (permil) so that the caller can map any
  * input source directly to setPosition().
  ******************************************************************************/
 #pragma once
@@ -38,12 +38,12 @@
 /*******************************************************************************
  * @brief Servo Min limit (avoid hitting the floor)
  ******************************************************************************/
-#define SCOOP_SERVO_MIN_PERMIL    (-1000)
+#define SCOOP_SERVO_MIN_PERMIL     (0)
 
 /*******************************************************************************
  * @brief Servo Max limit (avoid hitting the wheels)
  ******************************************************************************/
-#define SCOOP_SERVO_MAX_PERMIL     (400)
+#define SCOOP_SERVO_MAX_PERMIL     (580)
 
 /* Class Definition ----------------------------------------------------------*/
 class MechScoop
@@ -81,21 +81,19 @@ class MechScoop
     /***************************************************************************
      * @brief Set the scoop position
      *
-     * Maps the input range [-1000 … +1000] (permil) to the full servo
-     * travel.
+     * Maps the input range [0 … 1000] (permil) to the full servo travel.
      *
-     *   -1000  →  SCOOP_SERVO_PULSE_MIN_US  (fully retracted)
-     *       0  →  SCOOP_SERVO_PULSE_CTR_US  (center)
+     *       0  →  SCOOP_SERVO_PULSE_MIN_US  (fully retracted)
      *   +1000  →  SCOOP_SERVO_PULSE_MAX_US  (fully extended)
      *
-     * @param position Signed position value [-1000 … +1000]
+     * @param position Unsigned position value [0 … 1000]
      **************************************************************************/
     void setPosition(int position);
 
     /***************************************************************************
      * @brief Get the current scoop position
      *
-     * @return Current position in the range [-1000 … +1000]
+     * @return Current position in the range [0 … 1000]
      **************************************************************************/
     int getPosition(void) const { return m_position; }
 
@@ -119,7 +117,7 @@ class MechScoop
 
   /* Private Variables -------------------------------------------------------*/
     bool     m_initialized;      /**< Initialization status          */
-    int      m_position;         /**< Current position [-1000 … +1000] */
+    int      m_position;         /**< Current position [0 … 1000]    */
     uint8_t  m_pwmSlice;         /**< RP2040 PWM slice number        */
     uint8_t  m_pwmChannel;       /**< RP2040 PWM channel (A=0, B=1)  */
     uint16_t m_pwmWrap;          /**< PWM counter wrap value         */
