@@ -39,7 +39,8 @@
  *                                          kick increment every 250 ms
  *                                          PIO emits N pulses autonomously
  *
- * any state →(disable)→ IDLE
+ * RUNNING →(disable)→ STOPPING →(burst complete)→ IDLE
+ * other states →(disable)→ IDLE
  * @endcode
  ******************************************************************************/
 #pragma once
@@ -241,7 +242,8 @@ private:
     STATE_IDLE,         /**< Launcher off: flywheels stopped, stepper sleeping   */
     STATE_SPINNING_UP,  /**< Flywheels running, waiting for spin-up delay        */
     STATE_WAKING,       /**< nSLEEP asserted, waiting for charge pump to settle  */
-    STATE_RUNNING       /**< Active: kicking increments at the configured rate   */
+    STATE_RUNNING,      /**< Active: kicking increments at the configured rate   */
+    STATE_STOPPING      /**< Waiting for in-progress PIO burst to finish         */
   };
 
 

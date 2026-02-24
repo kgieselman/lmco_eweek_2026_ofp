@@ -18,7 +18,9 @@
  * Flywheels remain running between increments.
  *
  * Sleep management:
- *   - On disable: abort any in-progress PIO burst, force STEP LOW, assert
+ *   - On disable: if a PIO burst is in progress, transition to STOPPING
+ *     state and wait for the burst to complete before stopping.  If no
+ *     burst is active, stop immediately.  Then force STEP LOW, assert
  *     nSLEEP LOW, stop flywheels.
  *   - On enable:  start flywheels, wait spin-up (non-blocking), de-assert
  *     nSLEEP HIGH, wait wake delay (non-blocking), then begin increments.
@@ -242,6 +244,34 @@ void MechLauncher::update(void)
       }
       break;
     }
+
+    case STATE_STOPPING:
+    {
+      /* Wait for the in-progress PIO burst to finish so we don't
+       * stop mid-pulse (which would break stepper alignment). */
+      if (m_incrementActive)
+      {
+        if (isIncrementComplete())
+        {
+          m_incrementActive = false;
+        }
+        else
+        {
+          break;   /* Burst still running — keep waiting */
+        }
+      }
+
+      /* Burst complete (or was never active) — safe to shut down */
+      stopStepper();
+      stopFlywheels();
+
+      m_state           = STATE_IDLE;
+      m_incrementActive = false;
+
+      DEBUG_PRINTF("[Launcher] DISABLED — burst finished, stepper STOPPED, "
+                   "flywheels OFF\n");
+      break;
+    }
   }
 }
 
@@ -262,16 +292,30 @@ void MechLauncher::setEnabled(bool enable)
     DEBUG_PRINTF("[Launcher] ENABLED — flywheels ON, spinning up (%d ms)...\n",
                  LAUNCHER_FLYWHEEL_SPINUP_MS);
   }
-  else if (!enable && (m_state != STATE_IDLE))
+  else if (!enable && (m_state != STATE_IDLE) && (m_state != STATE_STOPPING))
   {
-    stopStepper();
-    stopFlywheels();
+    if (m_incrementActive)
+    {
+      /* A PIO burst is in progress — transition to STOPPING so the burst
+       * can finish cleanly before we shut down.  Flywheels keep running
+       * during this brief window to avoid a ball jam. */
+      m_state   = STATE_STOPPING;
+      m_running = false;
 
-    m_state           = STATE_IDLE;
-    m_running         = false;
-    m_incrementActive = false;
+      DEBUG_PRINTF("[Launcher] DISABLING — waiting for burst to complete...\n");
+    }
+    else
+    {
+      /* No burst in progress — safe to stop immediately */
+      stopStepper();
+      stopFlywheels();
 
-    DEBUG_PRINTF("[Launcher] DISABLED — stepper STOPPED, flywheels OFF\n");
+      m_state           = STATE_IDLE;
+      m_running         = false;
+      m_incrementActive = false;
+
+      DEBUG_PRINTF("[Launcher] DISABLED — stepper STOPPED, flywheels OFF\n");
+    }
   }
 }
 
