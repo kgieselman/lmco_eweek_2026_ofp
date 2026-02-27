@@ -1,5 +1,7 @@
 # Lockheed Martin E-Week Competition 2026
 
+![Thumbnail of Robot](./images/front_left.jpg)
+
 ## Overview
 
 This project provides the operational flight program (OFP) for a remote-controlled
