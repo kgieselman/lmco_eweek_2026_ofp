@@ -63,6 +63,7 @@ at targets.
 
 ### Build Steps
 
+Manual steps
 ```bash
 # Create build directory
 mkdir build && cd build
@@ -73,6 +74,11 @@ cmake -DPICO_SDK_PATH=/path/to/pico-sdk ..
 # Build
 make -j4
 ```
+
+With the VSCode extention there is a compile button that works well.
+Conect Raspberry Pi Pico in boot mode and then use the Run (USB) button
+and the code will upload to the microcontroller. Otherwise drag and drop
+the .uf2 file to the Raspberry Pi Pico in the file explorer.
 
 ### Output Files
 
@@ -199,6 +205,14 @@ See `test/README.md` for more details.
 - **Watchdog Timer:** Automatically resets system if main loop stalls
 - **Motor Timeout:** Motors stop if no valid RC signal received within 500 ms
 - **Error Handling:** Categorized error codes (general, drive train, RC, mechanism, hardware) with debug reporting
+
+## Photos
+
+![Right Side](./images/right.jpg)
+
+![Back](./images/back.jpg)
+
+![Side Display](./images/display.jpg)
 
 ## License
 
