@@ -293,15 +293,16 @@ static void process_rc_input(void)
 
   /*
    * SWC is a 3-position switch.  readChannelUnsigned maps:
-   *   Position 0 (raw 1000) → ~0    → 100% flywheel speed (1000 permil)
-   *   Position 1 (raw 1500) → ~500  →  75% flywheel speed ( 750 permil)
-   *   Position 2 (raw 2000) → ~1000 →  50% flywheel speed ( 500 permil)
+   *   Position 0 (raw 1000) → ~0    → Level 1 flywheel speed
+   *   Position 1 (raw 1500) → ~500  → Level 2 flywheel speed
+   *   Position 2 (raw 2000) → ~1000 → Level 3 flywheel speed
    */
+
   // System runs on 3S (11.1 V)
   // Flywheel motor is rated for 2S (7.4 V)
-  constexpr int FLYWHEEL_SPEED_LEVEL_1 = 667; // 100% of 2S battery
-  constexpr int FLYWHEEL_SPEED_LEVEL_2 = 500; // 75% of 2S battery
-  constexpr int FLYWHEEL_SPEED_LEVEL_3 = 334; // 50% of 2S battery
+  constexpr int FLYWHEEL_SPEED_LEVEL_1 = 1000; // 100% of 3S battery
+  constexpr int FLYWHEEL_SPEED_LEVEL_2 = 750;  //  75% of 3S battery
+  constexpr int FLYWHEEL_SPEED_LEVEL_3 = 667;  // 100% of 2S battery
 
   int flywheelSpeed;
   if (flySpdSw < 250)
